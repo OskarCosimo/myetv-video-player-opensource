@@ -74,8 +74,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `language` | string | `null` | Interface language code |
 | `debug` | boolean | `false` | Enable debug logs |
 
-### API Methods
-## Basic Controls
+## API Methods
+### Basic Controls
 ```
 // Playback
 player.play();                     // Start playback
@@ -88,7 +88,7 @@ player.getVolume();               // Get current volume
 player.toggleMute();              // Toggle mute
 player.setMuted(true);            // Set mute
 ```
-## Time Controls
+### Time Controls
 ```
 // Position
 player.setCurrentTime(120);       // Go to second 120
@@ -97,7 +97,7 @@ player.getDuration();             // Total duration
 player.skipTime(10);              // Skip 10 seconds forward
 player.skipTime(-10);             // Skip 10 seconds backward
 ```
-## Quality Controls
+### Quality Controls
 ```
 // Video quality
 player.setDefaultQuality('720p'); // Set default quality
@@ -106,7 +106,7 @@ player.getSelectedQuality();      // Selected quality
 player.getCurrentPlayingQuality(); // Actual playing quality
 player.enableAutoQuality();       // Enable automatic selection
 ```
-## Subtitle Controls
+### Subtitle Controls
 ```
 // Subtitles
 player.toggleSubtitles();         // Toggle subtitles
@@ -114,7 +114,7 @@ player.enableSubtitleTrack(0);    // Enable subtitle track
 player.disableSubtitles();        // Disable subtitles
 player.getAvailableSubtitles();   // List available subtitles
 ```
-## Screen Controls
+### Screen Controls
 ```
 // Fullscreen and Picture-in-Picture
 player.toggleFullscreen();        // Toggle fullscreen
@@ -242,7 +242,7 @@ player.addEventListener('played', onVideoPlay);
 // ... later
 player.removeEventListener('played', onVideoPlay);
 ```
-## Complete Example
+### Complete Example
 ```
 // Initialize the player
 const player = new MYETVvideoplayer('myVideo', {

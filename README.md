@@ -1,6 +1,4 @@
-# myetv-video-player-opensource
-
-# MYETV Video Player
+# MYETV Video Player Open Source
 
 A modern and complete HTML5 + JavaScript + css video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.
 

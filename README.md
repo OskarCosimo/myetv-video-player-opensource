@@ -118,21 +118,24 @@ player.togglePictureInPicture();  // Toggle Picture-in-Picture
 
 ## Keyboard Controls
 
-Key    Action
-Space	Play/Pause
-M	Mute/Unmute
-F	Fullscreen
-P	Picture-in-Picture
-S	Toggle subtitles
-T	Toggle title overlay
-D	Enable/disable debug
-←	Backward 10 seconds
-→	Forward 10 seconds
-↑	Increase volume
-↓	Decrease volume
+## Keyboard Controls
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play/Pause |
+| `M` | Mute/Unmute |
+| `F` | Fullscreen |
+| `P` | Picture-in-Picture |
+| `S` | Toggle subtitles |
+| `T` | Toggle title overlay |
+| `D` | Enable/disable debug |
+| `←` | Backward 10 seconds |
+| `→` | Forward 10 seconds |
+| `↑` | Increase volume |
+| `↓` | Decrease volume |
 
 ## CSS Customization
-
+```
 .video-wrapper {
     --player-primary-color: #ff6b35;
     --player-secondary-color: #004643;
@@ -143,6 +146,7 @@ D	Enable/disable debug
     --player-transition: all 0.3s ease;
     --player-volume-fill: 100%;
 }
+```
 
 ## Supported Browsers
 Chrome 60+

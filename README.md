@@ -21,7 +21,11 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 
 ### Include Required Files
 
-```<!-- Player CSS --> <link rel="stylesheet" href="myetv-player.css"> <!-- Internationalization file (must be loaded FIRST) --> <script src="myetv-player-i18n.js"></script> <!-- Player JavaScript (must be loaded AFTER i18n) --> <script src="myetv-player.js"></script>```
+```
+<!-- Player CSS --><link rel="stylesheet" href="myetv-player.css">
+<!-- Internationalization file (must be loaded FIRST) --><script src="myetv-player-i18n.js"></script>
+<!-- Player JavaScript (must be loaded AFTER i18n) --><script src="myetv-player.js"></script>
+```
 
 ## Basic Usage
 

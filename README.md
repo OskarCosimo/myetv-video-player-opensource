@@ -284,7 +284,7 @@ Debug: Enable debug: true in options to see event logs
 
 Error Handling: Errors in callbacks don't interrupt the player
 
-## Event Data Reference
+### Event Data Reference
 
 | Property | Type | Description |
 |:---------|:----:|:------------|

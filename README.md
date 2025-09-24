@@ -2,7 +2,7 @@
 
 # MYETV Video Player
 
-A modern and complete JavaScript video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.
+A modern and complete HTML5 + JavaScript + css video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.
 
 ## Features
 
@@ -69,7 +69,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `language` | string | `null` | Interface language code |
 | `debug` | boolean | `false` | Enable debug logs |
 
-## API Methods
+### API Methods
 ## Basic Controls
 ```
 // Playback
@@ -135,18 +135,242 @@ player.togglePictureInPicture();  // Toggle Picture-in-Picture
 | `↓` | Decrease volume |
 
 ## CSS Customization
+
+The MYETV Video Player is fully customizable using CSS variables and themes. The player includes a comprehensive set of CSS custom properties that allow you to modify colors, sizes, spacing, and animations without touching the core stylesheet.
+
+### CSS Variables
+
+The player uses CSS custom properties (variables) for easy theming:
 ```
 .video-wrapper {
-    --player-primary-color: #ff6b35;
-    --player-secondary-color: #004643;
-    --player-text-color: #ffffff;
-    --player-bg-color: rgba(0, 0, 0, 0.8);
-    --player-accent-color: #f25f4c;
-    --player-border-radius: 8px;
-    --player-transition: all 0.3s ease;
-    --player-volume-fill: 100%;
+/* Primary Colors */
+--player-primary-color: goldenrod;
+--player-primary-hover: #daa520;
+--player-primary-dark: #b8860b;
+/* Control Colors */
+--player-button-color: white;
+--player-button-hover: rgba(255, 255, 255, 0.1);
+--player-button-active: rgba(255, 255, 255, 0.2);
+
+/* Text Colors */
+--player-text-color: white;
+--player-text-secondary: rgba(255, 255, 255, 0.8);
+
+/* Background Colors */
+--player-bg-primary: #000;
+--player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+--player-bg-title-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+--player-bg-menu: rgba(20, 20, 20, 0.95);
+
+/* Dimensions */
+--player-border-radius: 12px;
+--player-progress-height: 6px;
+--player-volume-height: 4px;
+--player-icon-size: 20px;
+
+/* Transitions */
+--player-transition-fast: 0.2s ease;
+--player-transition-normal: 0.3s ease;
 }
 ```
+### Pre-built Themes
+
+The player includes several pre-built themes that you can apply:
+
+#### Blue Theme
+.video-wrapper.player-theme-blue {
+/* Automatically uses blue color scheme */
+}
+
+#### Green Theme
+.video-wrapper.player-theme-green {
+/* Automatically uses green color scheme */
+}
+
+#### Red Theme
+.video-wrapper.player-theme-red {
+/* Automatically uses red color scheme */
+}
+
+#### Dark Theme
+.video-wrapper.player-theme-dark {
+/* Enhanced dark mode with improved contrast */
+}
+
+### Control Size Variants
+
+#### Large Controls
+.video-wrapper.player-large-controls {
+/* Bigger buttons and controls for better accessibility */
+}
+
+#### Compact Controls
+.video-wrapper.player-compact-controls {
+/* Smaller, space-efficient controls */
+}
+
+### Custom Theme Examples
+
+#### Custom Purple Theme
+.video-wrapper.my-purple-theme {
+--player-primary-color: #9c27b0;
+--player-primary-hover: #7b1fa2;
+--player-primary-dark: #6a1b9a;
+--player-bg-primary: #1a0d1a;
+--player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(26, 13, 26, 0.9) 100%);
+}
+
+#### High Contrast Theme
+.video-wrapper.high-contrast-theme {
+--player-primary-color: #ffff00;
+--player-primary-hover: #ffeb3b;
+--player-text-color: #ffffff;
+--player-bg-primary: #000000;
+--player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 100%);
+--player-border-radius: 0; /* Sharp corners for accessibility */
+}
+
+#### Minimal Theme
+.video-wrapper.minimal-theme {
+--player-bg-controls: rgba(0, 0, 0, 0.3);
+--player-bg-title-overlay: rgba(0, 0, 0, 0.3);
+--player-border-radius: 0;
+--player-progress-height: 3px;
+--player-volume-height: 2px;
+--player-button-padding: 4px;
+}
+
+### Responsive Customization
+
+The player automatically adapts to different screen sizes. You can customize the responsive behavior:
+
+/* Custom mobile adjustments /
+@media (max-width: 768px) {
+.video-wrapper {
+--player-icon-size: 18px;
+--player-progress-height: 8px; / Thicker for touch /
+--player-button-padding: 12px; / Larger touch targets */
+}
+}
+
+@media (max-width: 480px) {
+.video-wrapper {
+--player-controls-padding: 12px 8px 8px;
+--player-border-radius: 0; /* Full width on small screens */
+}
+}
+
+### Custom Subtitle Styling
+
+Customize the appearance of subtitles:
+
+.video-player::cue {
+background: rgba(0, 0, 0, 0.9);
+color: #ffffff;
+font-size: 18px;
+font-family: 'Your Custom Font', sans-serif;
+padding: 10px 15px;
+border-radius: 8px;
+text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Highlighted subtitle text */
+.video-player::cue(.highlight) {
+background: var(--player-primary-color);
+color: black;
+}
+
+### Animation Customization
+
+Control the player's animations:
+
+.video-wrapper {
+/* Faster animations */
+--player-transition-fast: 0.1s ease;
+--player-transition-normal: 0.15s ease;
+}
+
+/* Disable animations (accessibility) */
+.video-wrapper.no-animations {
+--player-transition-fast: 0s;
+--player-transition-normal: 0s;
+}
+
+.video-wrapper.no-animations * {
+transition: none !important;
+animation: none !important;
+}
+
+### Quality Selector Customization
+
+The dual-quality indicator can be customized:
+
+.quality-btn {
+min-height: 40px; /* More space for two lines */
+}
+
+.selected-quality {
+font-size: 16px; /* Larger selected quality text */
+font-weight: 600;
+}
+
+.current-quality {
+font-size: 11px; /* Current playing quality */
+opacity: 0.7;
+}
+
+### Usage Examples
+
+#### Apply Theme via JavaScript
+// Apply theme when initializing
+const player = new MYETVvideoplayer('video', {
+// ... other options
+});
+
+// Add theme class
+document.querySelector('.video-wrapper').classList.add('player-theme-blue');
+
+#### Apply Theme via HTML
+```<div class="video-wrapper player-theme-dark player-large-controls"> <video id="my-video"> <!-- video sources --> </video> </div> ```
+
+#### Dynamic Theme Switching
+```
+function switchTheme(themeName) {
+    const wrapper = document.querySelector('.video-wrapper');
+    
+    // Remove existing theme classes
+    wrapper.className = wrapper.className.replace(/player-theme-\w+/g, '');
+    
+    // Add new theme
+    if (themeName !== 'default') {
+        wrapper.classList.add(`player-theme-${themeName}`);
+    }
+}
+
+// Usage
+switchTheme('blue');    // Switch to blue theme
+switchTheme('dark');    // Switch to dark theme
+switchTheme('default'); // Switch to default theme
+```
+## Browser Compatibility
+The CSS uses modern features with fallbacks:
+
+CSS Custom Properties: Supported in all modern browsers
+
+CSS Grid/Flexbox: Full support in Chrome 60+, Firefox 55+, Safari 11+
+
+Backdrop Filter: Enhanced blur effects where supported
+
+CSS Variables: Graceful fallback to default values
+
+Performance Tips
+Use transform and opacity for animations (GPU accelerated)
+
+CSS variables are cached by the browser for better performance
+
+Minimal DOM manipulation thanks to CSS-based theming
+
+Hardware-accelerated transitions for smooth playback
 
 ## Supported Browsers
 Chrome 60+

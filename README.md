@@ -178,40 +178,47 @@ The player uses CSS custom properties (variables) for easy theming:
 The player includes several pre-built themes that you can apply:
 
 #### Blue Theme
+```
 .video-wrapper.player-theme-blue {
 /* Automatically uses blue color scheme */
 }
-
+```
 #### Green Theme
+```
 .video-wrapper.player-theme-green {
 /* Automatically uses green color scheme */
 }
-
+```
 #### Red Theme
+```
 .video-wrapper.player-theme-red {
 /* Automatically uses red color scheme */
 }
-
+```
 #### Dark Theme
+```
 .video-wrapper.player-theme-dark {
 /* Enhanced dark mode with improved contrast */
 }
-
+```
 ### Control Size Variants
 
 #### Large Controls
+```
 .video-wrapper.player-large-controls {
 /* Bigger buttons and controls for better accessibility */
 }
-
+```
 #### Compact Controls
+```
 .video-wrapper.player-compact-controls {
 /* Smaller, space-efficient controls */
 }
-
+```
 ### Custom Theme Examples
 
 #### Custom Purple Theme
+```
 .video-wrapper.my-purple-theme {
 --player-primary-color: #9c27b0;
 --player-primary-hover: #7b1fa2;
@@ -219,8 +226,9 @@ The player includes several pre-built themes that you can apply:
 --player-bg-primary: #1a0d1a;
 --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(26, 13, 26, 0.9) 100%);
 }
-
+```
 #### High Contrast Theme
+```
 .video-wrapper.high-contrast-theme {
 --player-primary-color: #ffff00;
 --player-primary-hover: #ffeb3b;
@@ -229,8 +237,9 @@ The player includes several pre-built themes that you can apply:
 --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 100%);
 --player-border-radius: 0; /* Sharp corners for accessibility */
 }
-
+```
 #### Minimal Theme
+```
 .video-wrapper.minimal-theme {
 --player-bg-controls: rgba(0, 0, 0, 0.3);
 --player-bg-title-overlay: rgba(0, 0, 0, 0.3);
@@ -239,11 +248,11 @@ The player includes several pre-built themes that you can apply:
 --player-volume-height: 2px;
 --player-button-padding: 4px;
 }
-
+```
 ### Responsive Customization
 
 The player automatically adapts to different screen sizes. You can customize the responsive behavior:
-
+```
 /* Custom mobile adjustments /
 @media (max-width: 768px) {
 .video-wrapper {
@@ -259,11 +268,11 @@ The player automatically adapts to different screen sizes. You can customize the
 --player-border-radius: 0; /* Full width on small screens */
 }
 }
-
+```
 ### Custom Subtitle Styling
 
 Customize the appearance of subtitles:
-
+```
 .video-player::cue {
 background: rgba(0, 0, 0, 0.9);
 color: #ffffff;
@@ -279,11 +288,11 @@ text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 background: var(--player-primary-color);
 color: black;
 }
-
+```
 ### Animation Customization
 
 Control the player's animations:
-
+```
 .video-wrapper {
 /* Faster animations */
 --player-transition-fast: 0.1s ease;
@@ -300,11 +309,11 @@ Control the player's animations:
 transition: none !important;
 animation: none !important;
 }
-
+```
 ### Quality Selector Customization
 
 The dual-quality indicator can be customized:
-
+```
 .quality-btn {
 min-height: 40px; /* More space for two lines */
 }
@@ -318,10 +327,11 @@ font-weight: 600;
 font-size: 11px; /* Current playing quality */
 opacity: 0.7;
 }
-
+```
 ### Usage Examples
 
 #### Apply Theme via JavaScript
+```
 // Apply theme when initializing
 const player = new MYETVvideoplayer('video', {
 // ... other options
@@ -329,7 +339,7 @@ const player = new MYETVvideoplayer('video', {
 
 // Add theme class
 document.querySelector('.video-wrapper').classList.add('player-theme-blue');
-
+```
 #### Apply Theme via HTML
 ```<div class="video-wrapper player-theme-dark player-large-controls"> <video id="my-video"> <!-- video sources --> </video> </div> ```
 

@@ -27,7 +27,8 @@ A modern and complete JavaScript video player with custom controls, multiple qua
 
 ### HTML
 
-```<video id="my-video" width="800" height="450"> <source src="video-480p.mp4" type="video/mp4" data-quality="480p"> <source src="video-720p.mp4" type="video/mp4" data-quality="720p"> <source src="video-1080p.mp4" type="video/mp4" data-quality="1080p">
+```
+<video id="my-video" width="800" height="450"> <source src="video-480p.mp4" type="video/mp4" data-quality="480p"> <source src="video-720p.mp4" type="video/mp4" data-quality="720p"> <source src="video-1080p.mp4" type="video/mp4" data-quality="1080p">
 <!-- Optional subtitles -->
 <track kind="subtitles" src="subtitles-en.vtt" srclang="en" label="English">
 <track kind="subtitles" src="subtitles-it.vtt" srclang="it" label="Italiano">
@@ -130,7 +131,8 @@ text
     --player-border-radius: 8px;
     --player-transition: all 0.3s ease;
     --player-volume-fill: 100%;
-}```
+}
+```
 
 Supported Browsers
 Chrome 60+

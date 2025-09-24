@@ -48,7 +48,7 @@ const player = new MYETVvideoplayer('my-video', {
 });
 ```
 
-##Initialization Options
+## Initialization Options
 
 Option	            Type    Default    Description
 showQualitySelector	boolean	true	Show video quality selector
@@ -67,9 +67,9 @@ defaultQuality	string	'auto'	Default video quality
 videoTitle	string	''	Title to show in overlay
 language	string	null	Interface language code
 debug	boolean	false	Enable debug logs
+
 API Methods
-Basic Controls
-text
+## Basic Controls
 // Playback
 player.play();                     // Start playback
 player.pause();                    // Pause playback
@@ -80,38 +80,42 @@ player.setVolume(0.8);            // Set volume (0-1)
 player.getVolume();               // Get current volume
 player.toggleMute();              // Toggle mute
 player.setMuted(true);            // Set mute
-Time Controls
-text
+
+## Time Controls
+
 // Position
 player.setCurrentTime(120);       // Go to second 120
 player.getCurrentTime();          // Current position
 player.getDuration();             // Total duration
 player.skipTime(10);              // Skip 10 seconds forward
 player.skipTime(-10);             // Skip 10 seconds backward
-Quality Controls
-text
+
+## Quality Controls
+
 // Video quality
 player.setDefaultQuality('720p'); // Set default quality
 player.setQuality('1080p');       // Change quality
 player.getSelectedQuality();      // Selected quality
 player.getCurrentPlayingQuality(); // Actual playing quality
 player.enableAutoQuality();       // Enable automatic selection
-Subtitle Controls
-text
+
+## Subtitle Controls
+
 // Subtitles
 player.toggleSubtitles();         // Toggle subtitles
 player.enableSubtitleTrack(0);    // Enable subtitle track
 player.disableSubtitles();        // Disable subtitles
 player.getAvailableSubtitles();   // List available subtitles
-Screen Controls
-text
+
+## Screen Controls
+
 // Fullscreen and Picture-in-Picture
 player.toggleFullscreen();        // Toggle fullscreen
 player.enterFullscreen();         // Enter fullscreen
 player.exitFullscreen();          // Exit fullscreen
 player.togglePictureInPicture();  // Toggle Picture-in-Picture
 
-##Keyboard Controls
+## Keyboard Controls
 
 Key    Action
 Space	Play/Pause
@@ -126,7 +130,7 @@ D	Enable/disable debug
 ↑	Increase volume
 ↓	Decrease volume
 
-##CSS Customization
+## CSS Customization
 
 .video-wrapper {
     --player-primary-color: #ff6b35;
@@ -139,17 +143,17 @@ D	Enable/disable debug
     --player-volume-fill: 100%;
 }
 
-Supported Browsers
+## Supported Browsers
 Chrome 60+
 Firefox 55+
 Safari 11+
 Edge 79+
 Mobile browsers with HTML5 support
 
-License
+## License
 This project is released under the MIT License.
 
-Contributing
+## Contributing
 Fork the repository
 
 Create a feature branch (git checkout -b feature/feature-name)
@@ -160,5 +164,5 @@ Push to the branch (git push origin feature/feature-name)
 
 Create a Pull Request
 
-Bug Reports
+## Bug Reports
 To report bugs or request features, open an issue in the repository.

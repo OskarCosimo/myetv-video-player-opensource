@@ -130,7 +130,7 @@ Description: Triggered when the video starts playing
 When: User presses play or video starts automatically
 ```
 player.addEventListener('played', (event) => {
-    console.log('🎬 Video started!', {
+    console.log('Video started!', {
         currentTime: event.currentTime,
         duration: event.duration
     });
@@ -141,7 +141,7 @@ Description: Triggered when the video is pause
 When: User presses pause or video stops
 ```
 player.addEventListener('paused', (event) => {
-    console.log('⏸️ Video paused at:', event.currentTime + 's');
+    console.log('Video paused at:', event.currentTime + 's');
 });
 ```
 ### subtitlechange
@@ -150,9 +150,9 @@ When: User toggles subtitles or switches subtitle tracks
 ```
 player.addEventListener('subtitlechange', (event) => {
     if (event.enabled) {
-        console.log('📝 Subtitles enabled:', event.trackLabel);
+        console.log('Subtitles enabled:', event.trackLabel);
     } else {
-        console.log('📝 Subtitles disabled');
+        console.log('Subtitles disabled');
     }
 });
 ```
@@ -161,7 +161,7 @@ Description: Triggered when Picture-in-Picture mode changes
 When: Video enters or exits PiP mode
 ```
 player.addEventListener('pipchange', (event) => {
-    console.log('📺 Picture-in-Picture:', event.active ? 'Activated' : 'Deactivated');
+    console.log('Picture-in-Picture:', event.active ? 'Activated' : 'Deactivated');
 });
 ```
 ### fullscreenchange
@@ -169,7 +169,7 @@ Description: Triggered when fullscreen mode changes
 When: Player enters or exits fullscreen mode
 ```
 player.addEventListener('fullscreenchange', (event) => {
-    console.log('🖥️ Fullscreen:', event.active ? 'Activated' : 'Deactivated');
+    console.log('Fullscreen:', event.active ? 'Activated' : 'Deactivated');
 });
 ```
 ### speedchange
@@ -177,7 +177,7 @@ Description: Triggered when playback speed changes
 When: User modifies playback speed (0.5x, 1x, 1.5x, 2x, etc.)
 ```
 player.addEventListener('speedchange', (event) => {
-    console.log('⚡ Speed changed to:', event.speed + 'x');
+    console.log('Speed changed to:', event.speed + 'x');
 });
 ```
 ### timeupdate
@@ -185,7 +185,7 @@ Description: Triggered during playback to update progress
 When: Every 250ms during playback (throttled for performance)
 ```
 player.addEventListener('timeupdate', (event) => {
-    console.log('⏱️ Progress:', event.progress.toFixed(1) + '%');
+    console.log('Progress:', event.progress.toFixed(1) + '%');
     // Update custom progress bar
     updateProgressBar(event.progress);
 });
@@ -196,9 +196,9 @@ When: User modifies volume or toggles mute
 ```
 player.addEventListener('volumechange', (event) => {
     if (event.muted) {
-        console.log('🔇 Audio muted');
+        console.log('Audio muted');
     } else {
-        console.log('🔊 Volume:', Math.round(event.volume * 100) + '%');
+        console.log('Volume:', Math.round(event.volume * 100) + '%');
     }
 });
 ```
@@ -242,7 +242,7 @@ player.addEventListener('played', onVideoPlay);
 // ... later
 player.removeEventListener('played', onVideoPlay);
 ```
-## 🚀 Complete Example
+## Complete Example
 ```
 // Initialize the player
 const player = new MYETVvideoplayer('myVideo', {
@@ -266,7 +266,7 @@ player.addEventListener('timeupdate', (e) => {
 
 player.addEventListener('volumechange', (e) => {
     document.getElementById('volume-indicator').textContent = 
-        e.muted ? '🔇' : `🔊 ${Math.round(e.volume * 100)}%`;
+        e.muted ? 'muted' : `volume: ${Math.round(e.volume * 100)}%`;
 });
 
 // Helper function to update UI
@@ -284,7 +284,7 @@ Debug: Enable debug: true in options to see event logs
 
 Error Handling: Errors in callbacks don't interrupt the player
 
-## 📊 Event Data Reference
+## Event Data Reference
 
 | Property | Type | Description |
 |:---------|:----:|:------------|

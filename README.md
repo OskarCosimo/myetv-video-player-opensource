@@ -50,25 +50,26 @@ const player = new MYETVvideoplayer('my-video', {
 
 ## Initialization Options
 
-Option	            Type    Default    Description
-showQualitySelector	boolean	true	Show video quality selector
-showSpeedControl	boolean	true	Show playback speed controls
-showFullscreen	boolean	true	Show fullscreen button
-showPictureInPicture	boolean	true	Show Picture-in-Picture button
-showSubtitles	boolean	true	Show subtitles controls
-showSeekTooltip	boolean	true	Show tooltip during seek
-showTitleOverlay	boolean	false	Show video title overlay
-autoplay	boolean	false	Start video automatically
-autoHide	boolean	true	Auto-hide controls
-autoHideDelay	number	3000	Auto-hide delay in milliseconds
-keyboardControls	boolean	true	Enable keyboard controls
-persistentTitle	boolean	false	Keep title always visible
-defaultQuality	string	'auto'	Default video quality
-videoTitle	string	''	Title to show in overlay
-language	string	null	Interface language code
-debug	boolean	false	Enable debug logs
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `showQualitySelector` | boolean | `true` | Show video quality selector |
+| `showSpeedControl` | boolean | `true` | Show playback speed controls |
+| `showFullscreen` | boolean | `true` | Show fullscreen button |
+| `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
+| `showSubtitles` | boolean | `true` | Show subtitles controls |
+| `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
+| `showTitleOverlay` | boolean | `false` | Show video title overlay |
+| `autoplay` | boolean | `false` | Start video automatically |
+| `autoHide` | boolean | `true` | Auto-hide controls |
+| `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |
+| `keyboardControls` | boolean | `true` | Enable keyboard controls |
+| `persistentTitle` | boolean | `false` | Keep title always visible |
+| `defaultQuality` | string | `'auto'` | Default video quality |
+| `videoTitle` | string | `''` | Title to show in overlay |
+| `language` | string | `null` | Interface language code |
+| `debug` | boolean | `false` | Enable debug logs |
 
-API Methods
+## API Methods
 ## Basic Controls
 // Playback
 player.play();                     // Start playback

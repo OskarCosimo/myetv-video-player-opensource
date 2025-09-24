@@ -125,6 +125,184 @@ player.exitFullscreen();          // Exit fullscreen
 player.togglePictureInPicture();  // Toggle Picture-in-Picture
 ```
 
+## API Events
+The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.
+### played
+Description: Triggered when the video starts playing
+When: User presses play or video starts automatically
+```
+player.addEventListener('played', (event) => {
+    console.log('🎬 Video started!', {
+        currentTime: event.currentTime,
+        duration: event.duration
+    });
+});
+```
+### paused
+Description: Triggered when the video is pause
+When: User presses pause or video stops
+```
+player.addEventListener('paused', (event) => {
+    console.log('⏸️ Video paused at:', event.currentTime + 's');
+});
+```
+### subtitlechange
+Description: Triggered when subtitles are enabled/disabled or track changes
+When: User toggles subtitles or switches subtitle tracks
+```
+player.addEventListener('subtitlechange', (event) => {
+    if (event.enabled) {
+        console.log('📝 Subtitles enabled:', event.trackLabel);
+    } else {
+        console.log('📝 Subtitles disabled');
+    }
+});
+```
+### pipchange
+Description: Triggered when Picture-in-Picture mode changes
+When: Video enters or exits PiP mode
+```
+player.addEventListener('pipchange', (event) => {
+    console.log('📺 Picture-in-Picture:', event.active ? 'Activated' : 'Deactivated');
+});
+```
+### fullscreenchange
+Description: Triggered when fullscreen mode changes
+When: Player enters or exits fullscreen mode
+```
+player.addEventListener('fullscreenchange', (event) => {
+    console.log('🖥️ Fullscreen:', event.active ? 'Activated' : 'Deactivated');
+});
+```
+### speedchange
+Description: Triggered when playback speed changes
+When: User modifies playback speed (0.5x, 1x, 1.5x, 2x, etc.)
+```
+player.addEventListener('speedchange', (event) => {
+    console.log('⚡ Speed changed to:', event.speed + 'x');
+});
+```
+### timeupdate
+Description: Triggered during playback to update progress
+When: Every 250ms during playback (throttled for performance)
+```
+player.addEventListener('timeupdate', (event) => {
+    console.log('⏱️ Progress:', event.progress.toFixed(1) + '%');
+    // Update custom progress bar
+    updateProgressBar(event.progress);
+});
+```
+### volumechange
+Description: Triggered when volume or mute state changes
+When: User modifies volume or toggles mute
+```
+player.addEventListener('volumechange', (event) => {
+    if (event.muted) {
+        console.log('🔇 Audio muted');
+    } else {
+        console.log('🔊 Volume:', Math.round(event.volume * 100) + '%');
+    }
+});
+```
+### Main APIs
+getEventData()
+Returns all requested state data in a single object:
+```
+const state = player.getEventData();
+console.log(state);
+/* Output:
+{
+    played: true,
+    paused: false,
+    subtitleEnabled: false,
+    pipMode: false,
+    fullscreenMode: false,
+    speed: 1,
+    controlBarLength: 45.23,
+    volumeIsMuted: false,
+    duration: 3600,
+    volume: 0.8,
+    quality: "1080p",
+    buffered: 120.5
+}
+*/
+```
+### Event Listener Management
+```
+// Add listener
+player.addEventListener('played', callback);
+
+// Remove listener  
+player.removeEventListener('played', callback);
+
+// Complete example
+const onVideoPlay = (event) => {
+    console.log('Video started!', event.currentTime);
+};
+
+player.addEventListener('played', onVideoPlay);
+// ... later
+player.removeEventListener('played', onVideoPlay);
+```
+## 🚀 Complete Example
+```
+// Initialize the player
+const player = new MYETVvideoplayer('myVideo', {
+    debug: true,
+    autoplay: false
+});
+
+// Monitor all main events
+player.addEventListener('played', (e) => {
+    updateUI('playing', e.currentTime);
+});
+
+player.addEventListener('paused', (e) => {
+    updateUI('paused', e.currentTime);
+});
+
+player.addEventListener('timeupdate', (e) => {
+    document.getElementById('progress').textContent = 
+        `${e.currentTime.toFixed(0)}s / ${e.duration.toFixed(0)}s`;
+});
+
+player.addEventListener('volumechange', (e) => {
+    document.getElementById('volume-indicator').textContent = 
+        e.muted ? '🔇' : `🔊 ${Math.round(e.volume * 100)}%`;
+});
+
+// Helper function to update UI
+function updateUI(state, time) {
+    document.getElementById('player-status').textContent = 
+        `Status: ${state} at ${time.toFixed(1)}s`;
+}
+```
+### Technical Notes
+Performance: The timeupdate event is throttled to 250ms to avoid overload
+
+Compatibility: All events maintain compatibility with existing code
+
+Debug: Enable debug: true in options to see event logs
+
+Error Handling: Errors in callbacks don't interrupt the player
+
+## 📊 Event Data Reference
+
+| Property | Type | Description |
+|:---------|:----:|:------------|
+| `played` | `boolean` | Video is currently playing |
+| `paused` | `boolean` | Video is currently paused |
+| `subtitleEnabled` | `boolean` | Subtitles are enabled |
+| `pipMode` | `boolean` | Picture-in-Picture is active |
+| `fullscreenMode` | `boolean` | Fullscreen mode is active |
+| `speed` | `number` | Current playback speed |
+| `controlBarLength` | `number` | Current video time in seconds |
+| `volumeIsMuted` | `boolean` | Audio is muted |
+| `duration` | `number` | Total video duration |
+| `volume` | `number` | Volume level (0-1) |
+| `quality` | `string` | Current video quality |
+| `buffered` | `number` | Buffered time in seconds |
+
 ## Keyboard Controls
 
 | Key | Action |

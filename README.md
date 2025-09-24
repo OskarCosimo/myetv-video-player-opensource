@@ -46,8 +46,11 @@ const player = new MYETVvideoplayer('my-video', {
     language: 'en',
     debug: false
 });
-Initialization Options
-Option	Type	Default	Description
+```
+
+##Initialization Options
+
+Option	            Type    Default    Description
 showQualitySelector	boolean	true	Show video quality selector
 showSpeedControl	boolean	true	Show playback speed controls
 showFullscreen	boolean	true	Show fullscreen button
@@ -107,8 +110,10 @@ player.toggleFullscreen();        // Toggle fullscreen
 player.enterFullscreen();         // Enter fullscreen
 player.exitFullscreen();          // Exit fullscreen
 player.togglePictureInPicture();  // Toggle Picture-in-Picture
-Keyboard Controls
-Key	Action
+
+##Keyboard Controls
+
+Key    Action
 Space	Play/Pause
 M	Mute/Unmute
 F	Fullscreen
@@ -120,8 +125,9 @@ D	Enable/disable debug
 →	Forward 10 seconds
 ↑	Increase volume
 ↓	Decrease volume
-CSS Customization
-text
+
+##CSS Customization
+
 .video-wrapper {
     --player-primary-color: #ff6b35;
     --player-secondary-color: #004643;
@@ -132,7 +138,6 @@ text
     --player-transition: all 0.3s ease;
     --player-volume-fill: 100%;
 }
-```
 
 Supported Browsers
 Chrome 60+

@@ -58,14 +58,14 @@ const player = new MYETVvideoplayer('my-video', {
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
 | `showSubtitles` | boolean | `true` | Show subtitles controls |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
-| `showTitleOverlay` | boolean | `false` | Show video title overlay |
 | `autoplay` | boolean | `false` | Start video automatically |
 | `autoHide` | boolean | `true` | Auto-hide controls |
 | `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |
 | `keyboardControls` | boolean | `true` | Enable keyboard controls |
-| `persistentTitle` | boolean | `false` | Keep title always visible |
 | `defaultQuality` | string | `'auto'` | Default video quality |
+| `showTitleOverlay` | boolean | `false` | Show video title overlay |
 | `videoTitle` | string | `''` | Title to show in overlay |
+| `persistentTitle` | boolean | `false` | Keep title always visible |
 | `language` | string | `null` | Interface language code |
 | `debug` | boolean | `false` | Enable debug logs |
 

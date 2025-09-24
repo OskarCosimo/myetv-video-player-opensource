@@ -71,6 +71,7 @@ const player = new MYETVvideoplayer('my-video', {
 
 ## API Methods
 ## Basic Controls
+```
 // Playback
 player.play();                     // Start playback
 player.pause();                    // Pause playback
@@ -81,42 +82,41 @@ player.setVolume(0.8);            // Set volume (0-1)
 player.getVolume();               // Get current volume
 player.toggleMute();              // Toggle mute
 player.setMuted(true);            // Set mute
-
+```
 ## Time Controls
-
+```
 // Position
 player.setCurrentTime(120);       // Go to second 120
 player.getCurrentTime();          // Current position
 player.getDuration();             // Total duration
 player.skipTime(10);              // Skip 10 seconds forward
 player.skipTime(-10);             // Skip 10 seconds backward
-
+```
 ## Quality Controls
-
+```
 // Video quality
 player.setDefaultQuality('720p'); // Set default quality
 player.setQuality('1080p');       // Change quality
 player.getSelectedQuality();      // Selected quality
 player.getCurrentPlayingQuality(); // Actual playing quality
 player.enableAutoQuality();       // Enable automatic selection
-
+```
 ## Subtitle Controls
-
+```
 // Subtitles
 player.toggleSubtitles();         // Toggle subtitles
 player.enableSubtitleTrack(0);    // Enable subtitle track
 player.disableSubtitles();        // Disable subtitles
 player.getAvailableSubtitles();   // List available subtitles
-
+```
 ## Screen Controls
-
+```
 // Fullscreen and Picture-in-Picture
 player.toggleFullscreen();        // Toggle fullscreen
 player.enterFullscreen();         // Enter fullscreen
 player.exitFullscreen();          // Exit fullscreen
 player.togglePictureInPicture();  // Toggle Picture-in-Picture
-
-## Keyboard Controls
+```
 
 ## Keyboard Controls
 

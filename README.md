@@ -628,8 +628,30 @@ The playlist detection will work through HTML attributes on your video elements:
     <source src="video2-480p.mp4" type="video/mp4" data-quality="480p">
 </video>
 ```
+## Adaptive streaming (HLS/DASH)
+### Adaptive Streaming APIs
+```
+// Info adaptive streaming
+player.getAdaptiveStreamingInfo();
 
+// Change quality of adaptive streaming  
+player.setAdaptiveQuality(1);     // Specify quality
+player.setAdaptiveQuality('auto'); // Auto-switching
+```
+### Example Playlist+Adaptive Streaming
+```
+<!-- Video 1: DASH -->
+<video data-playlist-id="series" data-playlist-index="0" src="ep1.mpd">
 
+<!-- Video 2: HLS --> 
+<video data-playlist-id="series" data-playlist-index="1" src="ep2.m3u8">
+
+<!-- Video 3: Traditional -->
+<video data-playlist-id="series" data-playlist-index="2">
+    <source src="ep3-1080p.mp4" data-quality="1080p">
+    <source src="ep3-720p.mp4" data-quality="720p">
+</video>
+```
 ## Supported Browsers
 Chrome 60+
 Firefox 55+

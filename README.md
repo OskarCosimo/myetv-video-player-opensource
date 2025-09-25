@@ -75,10 +75,13 @@ const player = new MYETVvideoplayer('my-video', {
 | `showTitleOverlay` | boolean | `false` | Show video title overlay |
 | `videoTitle` | string | `''` | Title to show in overlay |
 | `persistentTitle` | boolean | `false` | Keep title always visible |
-| `language` | string | `null` | Interface language code |
+| `language` | string | `en` | Interface language code |
 | `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
 | `brandLogoUrl` | string | `''` | Brand logo url (png, jpg, gif) - image height 44px - image width 120px |
 | `brandLogoLinkUrl` | string | `''` | Optional URL to open in a new page when clicking the logo
+| `playlistEnabled` | boolean | `false` | Optional if the playlist of video is enabled (html structured)
+| `playlistAutoPlay` | boolean | `false` | Optional if the playlist should autoplay
+| `playlistLoop` | boolean | `false` | Optional if the playlist should loop
 | `debug` | boolean | `false` | Enable debug logs |
 
 
@@ -338,6 +341,8 @@ Error Handling: Errors in callbacks don't interrupt the player
 | `P` | Picture-in-Picture |
 | `S` | Toggle subtitles |
 | `T` | Toggle title overlay |
+| `N` | Next video in playlist |
+| `P` | Previous video in playlist |
 | `D` | Enable/disable debug |
 | `←` | Backward 10 seconds |
 | `→` | Forward 10 seconds |

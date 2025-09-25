@@ -150,7 +150,7 @@ player.setPlaylistOptions({loop:true}); // Playlist Options
 ```
 ## API Events
 The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.
-### played
+### on played
 Description: Triggered when the video starts playing
 When: User presses play or video starts automatically
 ```
@@ -161,7 +161,7 @@ player.addEventListener('played', (event) => {
     });
 });
 ```
-### paused
+### on paused
 Description: Triggered when the video is pause
 When: User presses pause or video stops
 ```
@@ -169,7 +169,15 @@ player.addEventListener('paused', (event) => {
     console.log('Video paused at:', event.currentTime + 's');
 });
 ```
-### subtitlechange
+### on ended
+Description: Triggered when the video is ended
+When: Video is ended
+```
+player.addEventListener('ended', (e) => {
+    console.log('Video terminato!', e.currentTime, e.duration, e.playlistInfo);
+});
+```
+### on subtitle change
 Description: Triggered when subtitles are enabled/disabled or track changes
 When: User toggles subtitles or switches subtitle tracks
 ```
@@ -181,7 +189,7 @@ player.addEventListener('subtitlechange', (event) => {
     }
 });
 ```
-### pipchange
+### on pip change
 Description: Triggered when Picture-in-Picture mode changes
 When: Video enters or exits PiP mode
 ```
@@ -189,7 +197,7 @@ player.addEventListener('pipchange', (event) => {
     console.log('Picture-in-Picture:', event.active ? 'Activated' : 'Deactivated');
 });
 ```
-### fullscreenchange
+### on fullscreen change
 Description: Triggered when fullscreen mode changes
 When: Player enters or exits fullscreen mode
 ```
@@ -197,7 +205,7 @@ player.addEventListener('fullscreenchange', (event) => {
     console.log('Fullscreen:', event.active ? 'Activated' : 'Deactivated');
 });
 ```
-### speedchange
+### on speed change
 Description: Triggered when playback speed changes
 When: User modifies playback speed (0.5x, 1x, 1.5x, 2x, etc.)
 ```
@@ -205,7 +213,7 @@ player.addEventListener('speedchange', (event) => {
     console.log('Speed changed to:', event.speed + 'x');
 });
 ```
-### timeupdate
+### on time update
 Description: Triggered during playback to update progress
 When: Every 250ms during playback (throttled for performance)
 ```
@@ -215,7 +223,7 @@ player.addEventListener('timeupdate', (event) => {
     updateProgressBar(event.progress);
 });
 ```
-### volumechange
+### on volumechange
 Description: Triggered when volume or mute state changes
 When: User modifies volume or toggles mute
 ```

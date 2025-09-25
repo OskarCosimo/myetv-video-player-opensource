@@ -83,6 +83,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `playlistEnabled` | boolean | `false` | Optional if the playlist of video is enabled (html structured)
 | `playlistAutoPlay` | boolean | `false` | Optional if the playlist should autoplay
 | `playlistLoop` | boolean | `false` | Optional if the playlist should loop
+| `adaptiveStreaming` | boolean | `false` | Enable HLS/DASH adaptive streaming
+| `adaptiveQualityControl` | boolean | `false` | Enable the menu quality with adaptive streaming
 | `debug` | boolean | `false` | Enable debug logs |
 
 

@@ -76,7 +76,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `persistentTitle` | boolean | `false` | Keep title always visible |
 | `language` | string | `null` | Interface language code |
 | `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
-| `brandLogoUrl` | string | `null` | Brand logo url (png, jpg, gif): image height: 44px; image width: 120px |
+| `brandLogoUrl` | string | `null` | Brand logo url (png, jpg, gif) - image height 44px - image width 120px |
 | `debug` | boolean | `false` | Enable debug logs |
 
 

@@ -7,11 +7,12 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Custom controls** with intelligent auto-hide
 - **Multiple video qualities** with automatic selection based on connection
 - **Subtitles** with multiple track support
-- **Picture-in-Picture** (where supported)
+- **Picture-in-Picture** mode (where supported)
 - **Complete keyboard controls**
 - **Internationalization** (i18n) multilingual
 - **Responsive design** for mobile and desktop devices
-- **Customizable title overlay**
+- **Customizable** title overlay
+- **Customizable** brand logo in the controlbar
 - **Debug mode** for developers
 - **Extensive APIs** for programmatic control
 

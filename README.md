@@ -132,7 +132,7 @@ player.togglePictureInPicture();  // Toggle Picture-in-Picture
 ### Logo Controls
 ```
 // Fullscreen and Picture-in-Picture
-setBrandLogo(enabled, url)    //change logo dynamically
+setBrandLogo(enabled, url, linkUrl)    //change logo dynamically
 getBrandLogoSettings()    //get current logo settings
 ```
 

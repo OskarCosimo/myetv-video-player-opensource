@@ -133,10 +133,17 @@ player.togglePictureInPicture();  // Toggle Picture-in-Picture
 ### Logo Controls
 ```
 // Fullscreen and Picture-in-Picture
-setBrandLogo(enabled, url, linkUrl)    //change logo dynamically
-getBrandLogoSettings()    //get current logo settings
+player.setBrandLogo(enabled, url, linkUrl)    //change logo dynamically
+player.getBrandLogoSettings()    //get current logo settings
 ```
-
+### Playlist Controls
+```
+player.nextVideo();                    // Next Video
+player.prevVideo();                    // Previous Video  
+player.goToPlaylistIndex(2);          // Go to the specific video
+player.getPlaylistInfo();              // Info Playlist
+player.setPlaylistOptions({loop:true}); // Playlist Options
+```
 ## API Events
 The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.
 ### played
@@ -214,6 +221,12 @@ player.addEventListener('volumechange', (event) => {
     } else {
         console.log('Volume:', Math.round(event.volume * 100) + '%');
     }
+});
+```
+### Playlist API
+```
+player.addEventListener('playlistchange', (e) => {
+    console.log(`From "${e.fromTitle}" to "${e.toTitle}"`);
 });
 ```
 ### Main APIs
@@ -578,6 +591,28 @@ CSS variables are cached by the browser for better performance
 Minimal DOM manipulation thanks to CSS-based theming
 
 Hardware-accelerated transitions for smooth playback
+
+## Playlist feature
+### Playlist Detection System
+The playlist detection will work through HTML attributes on your video elements:
+```
+<!-- Example playlist setup -->
+<video id="myVideo" class="video-player" 
+       data-playlist-id="my-series" 
+       data-playlist-index="0">
+    <source src="video1-720p.mp4" type="video/mp4" data-quality="720p">
+    <source src="video1-480p.mp4" type="video/mp4" data-quality="480p">
+</video>
+
+<!-- Next video in playlist -->
+<video id="video2" class="video-player" 
+       data-playlist-id="my-series" 
+       data-playlist-index="1">
+    <source src="video2-720p.mp4" type="video/mp4" data-quality="720p">
+    <source src="video2-480p.mp4" type="video/mp4" data-quality="480p">
+</video>
+```
+
 
 ## Supported Browsers
 Chrome 60+

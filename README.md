@@ -75,7 +75,10 @@ const player = new MYETVvideoplayer('my-video', {
 | `videoTitle` | string | `''` | Title to show in overlay |
 | `persistentTitle` | boolean | `false` | Keep title always visible |
 | `language` | string | `null` | Interface language code |
+| `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
+| `brandLogoUrl` | string | `null` | Brand logo url (png, jpg, gif) |
 | `debug` | boolean | `false` | Enable debug logs |
+
 
 ## API Methods
 ### Basic Controls

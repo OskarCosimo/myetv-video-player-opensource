@@ -69,6 +69,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSubtitles` | boolean | `true` | Show subtitles controls |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `autoplay` | boolean | `false` | Start video automatically |
+| `resolution` | string | `normal` | resolution type: "normal" same resolution of the native video; "4:3"; "16:9"; "stretched" the video will be stretched in all the container; "fit-to-screen" the video will fit the screen but can be cutted |
 | `autoHide` | boolean | `true` | Auto-hide controls |
 | `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |
 | `pauseClick` | boolean | `true` | Enable or disable the click on the video to pause/resume |
@@ -151,6 +152,13 @@ player.prevVideo();                    // Previous Video
 player.goToPlaylistIndex(2);          // Go to the specific video
 player.getPlaylistInfo();              // Info Playlist
 player.setPlaylistOptions({loop:true}); // Playlist Options
+```
+### Resolution Controls
+```
+player.setResolution("4:3");           // Change to 4:3
+player.setResolution("stretched");     // Change to stretched: Stretch the video to the entire container
+player.setResolution("fit-to-screen"); // Change to fit to screen: It fits the screen, can cut parts of the video
+console.log(player.getCurrentResolution()); // Get current resolution
 ```
 ## API Events
 The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.

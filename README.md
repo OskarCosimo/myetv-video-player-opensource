@@ -71,6 +71,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `autoplay` | boolean | `false` | Start video automatically |
 | `autoHide` | boolean | `true` | Auto-hide controls |
 | `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |
+| `pauseClick` | boolean | `true` | Enable or disable the click on the video to pause/resume |
+| `doubleTapPause` | boolean | `true` | First touch shows controls, second touch pauses (only on touch devices) |
 | `keyboardControls` | boolean | `true` | Enable keyboard controls |
 | `defaultQuality` | string | `'auto'` | Default video quality |
 | `showTitleOverlay` | boolean | `false` | Show video title overlay |

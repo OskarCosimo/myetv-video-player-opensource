@@ -156,8 +156,10 @@ player.setPlaylistOptions({loop:true}); // Playlist Options
 ### Resolution Controls
 ```
 player.setResolution("4:3");           // Change to 4:3
+player.setResolution("16:9");           // Change to 16:9
 player.setResolution("stretched");     // Change to stretched: Stretch the video to the entire container
 player.setResolution("fit-to-screen"); // Change to fit to screen: It fits the screen, can cut parts of the video
+player.setResolution("scale-to-fit"); // Intelligently fit to screen without cut video parts
 console.log(player.getCurrentResolution()); // Get current resolution
 ```
 ## API Events

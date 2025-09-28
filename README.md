@@ -64,7 +64,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSpeedControl` | boolean | `true` | Show playback speed controls |
 | `showFullscreen` | boolean | `true` | Show fullscreen button |
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
-| `showSubtitles` | boolean | `true` | Show subtitles controls |
+| `showSubtitles` | boolean | `true` | Show subtitles controls (the button) |
+| `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `autoplay` | boolean | `false` | Start video automatically |
 | `loop` | boolean | `false` | Optional if the video should loop

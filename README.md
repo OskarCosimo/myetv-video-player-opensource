@@ -67,6 +67,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSubtitles` | boolean | `true` | Show subtitles controls |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `autoplay` | boolean | `false` | Start video automatically |
+| `loop` | boolean | `false` | Optional if the video should loop
 | `resolution` | string | `normal` | resolution type: "normal" same resolution of the native video; "4:3"; "16:9"; "stretched" the video will be stretched in all the container; "fit-to-screen" the video will fit the screen but can be cutted; "scale-to-fit" fit the screen but preserve aspect ration and not cut |
 | `autoHide` | boolean | `true` | Auto-hide controls |
 | `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |

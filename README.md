@@ -64,7 +64,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSpeedControl` | boolean | `true` | Show playback speed controls |
 | `showFullscreen` | boolean | `true` | Show fullscreen button |
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
-| `showSubtitles` | boolean | `true` | Show subtitles controls (the button) |
+| `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected. |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `autoplay` | boolean | `false` | Start video automatically |

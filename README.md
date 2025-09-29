@@ -67,9 +67,10 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSpeedControl` | boolean | `true` | Show playback speed controls |
 | `showFullscreen` | boolean | `true` | Show fullscreen button |
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
-| `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected. |
+| `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
+| `volumeSlider` | string | `horizontal` | Volume slider 'horizontal' or 'vertical': the horizontal slider have the automatic fallback to vertical under 550px of width; the vertical slider is only vertical at every width |
 | `autoplay` | boolean | `false` | Start video automatically |
 | `loop` | boolean | `false` | Optional if the video should loop
 | `resolution` | string | `normal` | resolution type: "normal" same resolution of the native video; "4:3"; "16:9"; "stretched" the video will be stretched in all the container; "fit-to-screen" the video will fit the screen but can be cutted; "scale-to-fit" fit the screen but preserve aspect ration and not cut |

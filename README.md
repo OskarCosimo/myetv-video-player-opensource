@@ -18,7 +18,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Extensive APIs** for programmatic control
 
 ## Demo page
-[MYETV Video Player Demo Page](https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html)
+[MYETV Video Player Demo Page: https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html](https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html)
 
 ## Installation
 

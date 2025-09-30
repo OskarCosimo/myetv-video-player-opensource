@@ -64,7 +64,7 @@ const player = new MYETVvideoplayer('my-video', {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `poster` | string | `` | URL of a cover image (optional) |
+| `poster` | string | `''` | URL of a cover image (optional) |
 | `showPosterOnEnd` | boolean | `false` | Show the cover image when the video ends |
 | `showQualitySelector` | boolean | `true` | Show video quality selector |
 | `showSpeedControl` | boolean | `true` | Show playback speed controls |

@@ -653,6 +653,7 @@ Minimal DOM manipulation thanks to CSS-based theming
 Hardware-accelerated transitions for smooth playback
 
 ## Chapters feature
+Supports flexible time formats (HH:MM:SS, MM:SS, or seconds) and images url (optional)
 ### JSON format
 ```
 const player = new VideoPlayer('myVideo', {

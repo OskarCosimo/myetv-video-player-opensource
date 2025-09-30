@@ -63,6 +63,8 @@ const player = new MYETVvideoplayer('my-video', {
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `poster` | string | `` | URL of a cover image (optional) |
+| `showPosterOnEnd` | boolean | `false` | Show the cover image when the video ends |
 | `showQualitySelector` | boolean | `true` | Show video quality selector |
 | `showSpeedControl` | boolean | `true` | Show playback speed controls |
 | `showFullscreen` | boolean | `true` | Show fullscreen button |
@@ -118,6 +120,26 @@ player.getCurrentTime();          // Current position
 player.getDuration();             // Total duration
 player.skipTime(10);              // Skip 10 seconds forward
 player.skipTime(-10);             // Skip 10 seconds backward
+```
+### Poster Image (cover image)
+```
+// Set poster after initialization
+player.setPoster('https://example.com/poster.jpg');
+
+// Get current poster
+const currentPoster = player.getPoster();
+
+// Remove poster
+player.removePoster();
+
+// Toggle poster visibility
+player.togglePoster(true);  // Show
+player.togglePoster(false); // Hide
+
+// Check if poster is visible
+if (player.isPosterVisible()) {
+    console.log('Poster is visible');
+}
 ```
 ### Quality Controls
 ```

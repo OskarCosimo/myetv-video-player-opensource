@@ -670,7 +670,7 @@ const player = new VideoPlayer('myVideo', {
             color: "#FF5722" // Custom color (optional)
         },
         {
-            time: 300,
+            time: '8:30',
             title: "Conclusion"
             // No image (optional)
         }

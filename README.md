@@ -69,6 +69,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
 | `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
+| `chapters` | string | json | Enable/Disable chapters: chapter can be in json format or string format (see below) |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `volumeSlider` | string | `horizontal` | Volume slider 'horizontal' or 'vertical': the horizontal slider is always visible and have the automatic fallback to vertical under 550px of width; the vertical slider is only vertical at any width and automatically disapper if mouse is not hover the volume button |
 | `autoplay` | boolean | `false` | Start video automatically |
@@ -134,6 +135,25 @@ player.toggleSubtitles();         // Toggle subtitles
 player.enableSubtitleTrack(0);    // Enable subtitle track
 player.disableSubtitles();        // Disable subtitles
 player.getAvailableSubtitles();   // List available subtitles
+```
+### Chapters Controls
+```
+// Get current chapter
+const current = player.getCurrentChapter();
+
+// Navigate chapters
+player.nextChapter();
+player.previousChapter();
+player.jumpToChapter(2);
+
+// Get all chapters
+const allChapters = player.getChapters();
+
+// Update chapters dynamically
+player.setChapters([...]);
+
+// Clear chapters
+player.clearChapters();
 ```
 ### Screen Controls
 ```
@@ -205,6 +225,14 @@ player.addEventListener('subtitlechange', (event) => {
     } else {
         console.log('Subtitles disabled');
     }
+});
+```
+### on chapters change
+Description: Triggered when chapters are changes
+When: User switches chapters tracks
+```
+player.on('chapterchange', (data) => {
+    console.log('Chapter changed:', data.chapter.title);
 });
 ```
 ### on pip change
@@ -624,6 +652,36 @@ Minimal DOM manipulation thanks to CSS-based theming
 
 Hardware-accelerated transitions for smooth playback
 
+## Chapters feature
+### JSON format
+```
+const player = new VideoPlayer('myVideo', {
+    chapters: [
+        {
+            time: 0,
+            title: "Introduction",
+            image: "https://example.com/intro.jpg"
+        },
+        {
+            time: 120,
+            title: "Main Content",
+            image: "https://example.com/main.jpg",
+            color: "#FF5722" // Custom color (optional)
+        },
+        {
+            time: 300,
+            title: "Conclusion"
+            // No image (optional)
+        }
+    ]
+});
+```
+### String format
+```
+const player = new VideoPlayer('myVideo', {
+    chapters: "0:00:00|Introduction|intro.jpg,0:02:00|Main Content|main.jpg,0:05:00|Conclusion"
+});
+```
 ## Playlist feature
 ### Playlist Detection System
 The playlist detection will work through HTML attributes on your video elements:

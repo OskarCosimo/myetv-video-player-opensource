@@ -9,6 +9,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Multiple video qualities** with automatic selection based on connection
 - **Subtitles** with multiple track support
 - **Chapters** with images and customized colors
+- Custom **Plugins** to enhance player's functionality
 - **Picture-in-Picture** mode (where supported)
 - **Complete keyboard controls**
 - **Internationalization** (i18n) multilingual

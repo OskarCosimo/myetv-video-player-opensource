@@ -704,8 +704,8 @@ The player supports custom plugins to extend its functionality. Every plugins mu
 <!-- Player bundle -->
 <script src="dist/myetv-player.min.js"></script>
 <!-- Plugin bundle -->
-<script src="plugins/youtube/myetv-player-youtube-plugin.min.js"></script>
-<script src="plugins/analytics/myetv-player-analytics-plugin.min.js"></script>
+<script src="plugins/youtube/myetv-player-youtube-plugin.js"></script>
+<script src="plugins/google-analytics/myetv-player-g-analytics-plugin.js"></script>
 ```
 ### Initialization exmples with plugins
 ```

@@ -73,6 +73,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `chapters` | string | json | Enable/Disable chapters: chapter can be in json format or string format (see below) |
+| `plugins` | string | json | Add a customized plugin to the player to extend its functionality (see below) |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `volumeSlider` | string | `horizontal` | Volume slider 'horizontal' or 'vertical': the horizontal slider is always visible and have the automatic fallback to vertical under 550px of width; the vertical slider is only vertical at any width and automatically disapper if mouse is not hover the volume button |
 | `autoplay` | boolean | `false` | Start video automatically |
@@ -177,6 +178,27 @@ player.setChapters([...]);
 
 // Clear chapters
 player.clearChapters();
+```
+### Plugins Controls
+```
+// Add plugins dynamically
+player.usePlugin('youtube', {
+    apiKey: 'your-api-key'
+});
+
+// Upload YouTube videos (based on the YouTube plugin example)
+player.loadYouTubeVideo('dQw4w9WgXcQ');
+
+// Check if a plugin is active
+if (player.hasPlugin('youtube')) {
+    console.log('YouTube plugin is active');
+}
+
+// Get plugin instance
+const youtubePlugin = player.getPlugin('youtube');
+
+// Remove plugins from the player
+player.removePlugin('youtube');
 ```
 ### Screen Controls
 ```
@@ -674,6 +696,33 @@ CSS variables are cached by the browser for better performance
 Minimal DOM manipulation thanks to CSS-based theming
 
 Hardware-accelerated transitions for smooth playback
+
+## Plguins feature
+The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it.
+### Add a plguin to the player
+```
+<!-- Player bundle -->
+<script src="dist/myetv-player.min.js"></script>
+<!-- Plugin bundle -->
+<script src="plugins/myetv-player-youtube-plugin.min.js"></script>
+<script src="plugins/myetv-player-analytics-plugin.min.js"></script>
+```
+### Initialization exmples with plugins
+```
+const player = new MYETVPlayer('my-video', {
+    debug: true,
+    plugins: {
+        youtube: {
+            videoId: 'dQw4w9WgXcQ',  // Video ID of YouTube (example)
+            apiKey: 'your-api-key',
+            autoplay: false
+        },
+        analytics: {
+            trackingId: 'UA-XXXXX-Y'
+        }
+    }
+});
+```
 
 ## Chapters feature
 Supports flexible time formats (HH:MM:SS, MM:SS, or seconds) and images url (optional)

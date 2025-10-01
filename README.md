@@ -698,9 +698,17 @@ Minimal DOM manipulation thanks to CSS-based theming
 Hardware-accelerated transitions for smooth playback
 
 ## Plguins feature
-The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it.
+The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
 ### Add a plguin to the player
 ```
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+</script>
 <!-- Player bundle -->
 <script src="dist/myetv-player.min.js"></script>
 <!-- Plugin bundle -->
@@ -718,8 +726,11 @@ const player = new MYETVPlayer('my-video', {
             autoplay: false
         },
         analytics: {
-            trackingId: 'UA-XXXXX-Y'
-        }
+                platform: 'ga4',
+                videoTitle: 'My Awesome Video',
+                videoCategory: 'Tutorial',
+                videoId: 'video-001'
+            }
     }
 });
 ```

@@ -97,6 +97,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `watermarkLink` | string | `''` | Optional URL to open in a new page when clicking the watermark logo in the video
 | `watermarkPosition` | string | `''` | Optional where to show the watermark logo in the video (values are: top-left, top-right, bottom-left, bottom-right)
 | `watermarkTitle` | string | `''` | Optional title to show when the mouse is over the watermark logo in the video
+| `hideWatermark` | boolean | `true` | Optional hide watermark logo with the controlbar or show the watermark logo always visible
 | `playlistEnabled` | boolean | `false` | Optional if the playlist of video is enabled (html structured)
 | `playlistAutoPlay` | boolean | `false` | Optional if the playlist should autoplay
 | `playlistLoop` | boolean | `false` | Optional if the playlist should loop

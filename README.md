@@ -91,8 +91,12 @@ const player = new MYETVvideoplayer('my-video', {
 | `persistentTitle` | boolean | `false` | Keep title always visible |
 | `language` | string | `en` | Interface language code |
 | `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
-| `brandLogoUrl` | string | `''` | Brand logo url (png, jpg, gif) - image height 44px - image width 120px |
-| `brandLogoLinkUrl` | string | `''` | Optional URL to open in a new page when clicking the logo
+| `brandLogoUrl` | string | `''` | Brand logo url in the controlbar (png, jpg, gif) - image height 44px - image width 120px |
+| `brandLogoLinkUrl` | string | `''` | Optional URL to open in a new page when clicking the brand logo in the controlbar
+| `watermarkUrl` | string | `''` | Optional URL of the image watermark over the video, reccomended dimension: width: 180px, height: 100px
+| `watermarkLink` | string | `''` | Optional URL to open in a new page when clicking the watermark logo in the video
+| `watermarkPosition` | string | `''` | Optional where to show the watermark logo in the video (values are: top-left, top-right, bottom-left, bottom-right)
+| `watermarkTitle` | string | `''` | Optional title to show when the mouse is over the watermark logo in the video
 | `playlistEnabled` | boolean | `false` | Optional if the playlist of video is enabled (html structured)
 | `playlistAutoPlay` | boolean | `false` | Optional if the playlist should autoplay
 | `playlistLoop` | boolean | `false` | Optional if the playlist should loop
@@ -209,11 +213,31 @@ player.enterFullscreen();         // Enter fullscreen
 player.exitFullscreen();          // Exit fullscreen
 player.togglePictureInPicture();  // Toggle Picture-in-Picture
 ```
-### Logo Controls
+### Brand Logo Controls
 ```
 // Fullscreen and Picture-in-Picture
-player.setBrandLogo(enabled, url, linkUrl)    //change logo dynamically
-player.getBrandLogoSettings()    //get current logo settings
+player.setBrandLogo(enabled, url, linkUrl)    //change brand logo dynamically
+player.getBrandLogoSettings()    //get current brand logo settings
+```
+### Watermark Logo Controls
+```
+// Change watermark dynamically
+player.setWatermark(
+    'https://example.com/new-logo.png',
+    'https://example.com/promo',
+    'topleft',
+    'Special promotion'
+);
+
+// Change only position
+player.setWatermarkPosition('topright');
+
+// Get current settings
+const settings = player.getWatermarkSettings();
+console.log(settings);
+
+// Remove watermark
+player.removeWatermark();
 ```
 ### Playlist Controls
 ```

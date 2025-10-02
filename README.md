@@ -239,6 +239,9 @@ console.log(settings);
 
 // Remove watermark
 player.removeWatermark();
+
+//hide with the controlbar or always show the watermark logo
+player.setWatermarkAutoHide(false);
 ```
 ### Playlist Controls
 ```

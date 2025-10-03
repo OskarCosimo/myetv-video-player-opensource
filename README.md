@@ -103,6 +103,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `playlistLoop` | boolean | `false` | Optional if the playlist should loop
 | `adaptiveStreaming` | boolean | `false` | Enable HLS/DASH adaptive streaming
 | `adaptiveQualityControl` | boolean | `false` | Enable the menu quality with adaptive streaming
+| `audiofile` | boolean | `false` | Optional if the file is only audio (no video) |
+| `audiowave` | boolean | `false` | Optional if the file is only audio, show the audio wave as video (with the browser Web Audio API) |
 | `debug` | boolean | `false` | Enable debug logs |
 
 

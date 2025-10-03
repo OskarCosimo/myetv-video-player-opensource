@@ -1,3 +1,5 @@
+[![Node.js Package](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml)
+
 # MYETV Audio/Video Player Open Source
 
 A modern and complete HTML5 + JavaScript + css video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.

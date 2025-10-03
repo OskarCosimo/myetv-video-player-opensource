@@ -1,0 +1,25 @@
+{
+  "name": "myetv-player",
+  "version": "1.0.0",
+  "description": "MYETV Video Player - Modular JavaScript and SCSS Build System",
+  "main": "dist/myetv-player.js",
+  "scripts": {
+    "build": "node build.js",
+    "build:js": "node build.js",
+    "build:scss": "npm run build:scss:expanded && npm run build:scss:min",
+    "build:scss:expanded": "sass --style=expanded --no-source-map scss/myetv-player.scss css/myetv-player.css",
+    "build:scss:min": "sass --style=compressed --no-source-map scss/myetv-player.scss css/myetv-player.min.css",
+    "watch:scss": "sass --watch --style=expanded scss/myetv-player.scss:css/myetv-player.css",
+    "watch:scss:dev": "sass --watch --source-map scss/myetv-player.scss:css/myetv-player.css",
+    "dev": "npm run watch:scss:dev"
+  },
+  "devDependencies": {
+    "sass": "^1.69.0"
+  },
+  "author": "MYETV - Oskar Cosimo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OskarCosimo/myetv-video-player-opensource"
+  }
+}

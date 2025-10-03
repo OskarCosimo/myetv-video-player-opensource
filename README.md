@@ -1,4 +1,4 @@
-[![Node.js Package](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml)
+[![CodeQL Advanced](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/codeql.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/codeql.yml) [![Node.js Package](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml)
 
 # MYETV Audio/Video Player Open Source
 

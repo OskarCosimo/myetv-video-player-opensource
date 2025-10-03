@@ -1,0 +1,51 @@
+// ===================================
+// MYETV VIDEO PLAYER - SCSS
+// Created by https://www.myetv.tv
+// https://oskarcosimo.com
+// ===================================
+
+// 1. Core: Variables and Mixins
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// 2. Base Styles (includes :root)
+@use 'base';
+
+// 3. Video Element
+@use 'video';
+
+// 4. Loading & Overlays
+@use 'loading';
+
+// 5. Title Overlay
+@use 'title-overlay';
+
+// 6. Controls
+@use 'controls';
+
+// 7. Progress Bar
+@use 'progress-bar';
+
+// 8. Volume Controls
+@use 'volume';
+
+// 9. Menus (Settings, Quality, Speed, Subtitles)
+@use 'menus';
+
+// 10. Poster Overlay
+@use 'poster';
+
+// 11. Watermark
+@use 'watermark';
+
+// 12. Tooltips
+@use 'tooltips';
+
+// 12.5 Audio Player (audiofile + audiowave)
+@use 'audio-player';
+
+// 13. Themes (Blue, Green, Red)
+@use 'themes';
+
+// 14. Responsive (must be last)
+@use 'responsive';

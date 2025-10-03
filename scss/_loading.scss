@@ -1,0 +1,111 @@
+// ===================================
+// LOADING & OVERLAYS
+// ===================================
+
+@use 'mixins' as *;
+@use 'variables' as *;
+
+/* INITIAL LOADING */
+.initial-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--player-bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+.video-wrapper.player-initialized .initial-loading {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition-delay: 0.2s;
+}
+
+.video-wrapper.player-initialized .initial-loading {
+    display: none;
+    transition-delay: 0.5s;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--player-bg-loading);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--player-transition-normal);
+    z-index: 15;
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid var(--player-primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* TITLE OVERLAY - WITH AUTO-HIDE */
+.title-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--player-bg-title-overlay);
+    padding: var(--player-title-overlay-padding);
+    opacity: 0;
+    transform: translateY(-100%);
+    transition: all var(--player-transition-normal);
+    z-index: 15;
+    pointer-events: none;
+}
+
+.title-overlay.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.title-overlay.show.persistent {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.title-text {
+    color: var(--player-text-color);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

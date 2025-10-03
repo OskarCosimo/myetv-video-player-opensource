@@ -1,0 +1,16 @@
+{
+  "name": "myetv-player",
+  "version": "1.0.0",
+  "description": "MYETV Video Player - SCSS Source Files",
+  "scripts": {
+    "scss": "sass myetv-player.scss myetv-player.css",
+    "scss:watch": "sass --watch myetv-player.scss:myetv-player.css",
+    "scss:prod": "sass --style=compressed myetv-player.scss:myetv-player.min.css",
+    "scss:dev": "sass --watch --source-map myetv-player.scss:myetv-player.css"
+  },
+  "devDependencies": {
+    "sass": "^1.69.0"
+  },
+  "author": "MYETV - Oskar Cosimo",
+  "license": "MIT"
+}

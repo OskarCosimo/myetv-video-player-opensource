@@ -1,0 +1,112 @@
+// ===================================
+// MIXINS
+// ===================================
+
+@use 'variables' as *;
+
+// Mixin for button hover effects
+@mixin button-hover {
+    transition: all $player-transition-fast;
+
+    &:hover {
+        background: $player-button-hover;
+        transform: scale(1.05);
+    }
+
+    &:active {
+        transform: scale(0.95);
+        background: $player-button-active;
+    }
+}
+
+// Mixin for overlay positioning
+@mixin overlay-base {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+// Mixin for menu styling
+@mixin menu-base {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: $player-bg-menu;
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    padding: 8px 0;
+    margin-bottom: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all $player-transition-fast;
+    min-width: 140px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 100;
+    box-shadow: $player-shadow-menu;
+}
+
+// Mixin for tooltip styling
+@mixin tooltip-base {
+    position: absolute;
+    bottom: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.15s ease;
+    z-index: 1000;
+    box-shadow: $player-shadow-tooltip;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid rgba(0, 0, 0, 0.9);
+    }
+}
+
+// Mixin for flex centering
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+// Mixin for smooth transition
+@mixin smooth-transition($properties...) {
+    transition: $properties $player-transition-normal;
+}
+
+// Responsive breakpoints
+@mixin tablet {
+    @media (max-width: 768px) {
+        @content;
+    }
+}
+
+@mixin mobile {
+    @media (max-width: 480px) {
+        @content;
+    }
+}
+
+@mixin small-mobile {
+    @media (max-width: 350px) {
+        @content;
+    }
+}

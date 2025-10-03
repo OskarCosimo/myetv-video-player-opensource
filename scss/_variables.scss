@@ -1,0 +1,49 @@
+// ===================================
+// VARIABLES
+// ===================================
+// Main colors
+$player-primary-color: goldenrod !default;
+$player-primary-hover: #daa520 !default;
+$player-primary-dark: #b8860b !default;
+
+// Control colors
+$player-button-color: white !default;
+$player-button-hover: rgba(255, 255, 255, 0.1) !default;
+$player-button-active: rgba(255, 255, 255, 0.2) !default;
+
+// Text colors
+$player-text-color: white !default;
+$player-text-secondary: rgba(255, 255, 255, 0.8) !default;
+
+// Background and overlay
+$player-bg-primary: #000 !default;
+$player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%) !default;
+$player-bg-title-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%) !default;
+$player-bg-menu: rgba(20, 20, 20, 0.95) !default;
+$player-bg-loading: rgba(0, 0, 0, 0.7) !default;
+
+// Dimensions
+$player-border-radius: 12px !default;
+$player-controls-padding: 20px 15px 15px !default;
+$player-title-overlay-padding: 15px 20px 25px !default;
+$player-button-padding: 8px !default;
+$player-icon-size: 20px !default;
+
+// Progress and Volume bars
+$player-progress-height: 6px !default;
+$player-progress-bg: rgba(255, 255, 255, 0.2) !default;
+$player-progress-buffer: rgba(255, 255, 255, 0.3) !default;
+$player-progress-handle-size: 16px !default;
+$player-volume-height: 4px !default;
+$player-volume-bg: rgba(255, 255, 255, 0.2) !default;
+$player-volume-handle-size: 14px !default;
+$player-volume-fill: 100% !default;
+
+// Transitions
+$player-transition-fast: 0.2s ease !default;
+$player-transition-normal: 0.3s ease !default;
+
+// Shadows
+$player-shadow-main: 0 8px 32px rgba(0, 0, 0, 0.3) !default;
+$player-shadow-menu: 0 4px 16px rgba(0, 0, 0, 0.2) !default;
+$player-shadow-tooltip: 0 3px 12px rgba(0, 0, 0, 0.4) !default;

@@ -1,0 +1,131 @@
+// ===================================
+// BASE STYLES
+// ===================================
+
+:root {
+    /* Main theme colors */
+    --player-primary-color: goldenrod;
+    --player-primary-hover: #daa520;
+    --player-primary-dark: #b8860b;
+    /* Control colors */
+    --player-button-color: white;
+    --player-button-hover: rgba(255, 255, 255, 0.1);
+    --player-button-active: rgba(255, 255, 255, 0.2);
+    /* Text colors */
+    --player-text-color: white;
+    --player-text-secondary: rgba(255, 255, 255, 0.8);
+    /* Background and overlay */
+    --player-bg-primary: #000;
+    --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+    --player-bg-title-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+    --player-bg-menu: rgba(20, 20, 20, 0.95);
+    --player-bg-loading: rgba(0, 0, 0, 0.7);
+    /* Dimensions */
+    --player-border-radius: 12px;
+    --player-controls-padding: 20px 15px 15px;
+    --player-title-overlay-padding: 15px 20px 25px;
+    --player-button-padding: 8px;
+    --player-icon-size: 20px;
+    /* Progress and Volume bars */
+    --player-progress-height: 6px;
+    --player-progress-bg: rgba(255, 255, 255, 0.2);
+    --player-progress-buffer: rgba(255, 255, 255, 0.3);
+    --player-progress-handle-size: 16px;
+    --player-volume-height: 4px;
+    --player-volume-bg: rgba(255, 255, 255, 0.2);
+    --player-volume-handle-size: 14px;
+    --player-volume-fill: 100%;
+    /* Transitions */
+    --player-transition-fast: 0.2s ease;
+    --player-transition-normal: 0.3s ease;
+    /* Shadows */
+    --player-shadow-main: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --player-shadow-menu: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --player-shadow-tooltip: 0 3px 12px rgba(0, 0, 0, 0.4);
+}
+
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.video-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--player-bg-primary);
+    border-radius: var(--player-border-radius);
+    box-shadow: var(--player-shadow-main);
+    position: relative;
+}
+
+.video-container:fullscreen,
+.video-container:-webkit-full-screen,
+.video-container:-moz-full-screen {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+}
+
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    background: var(--player-bg-primary);
+    overflow: visible !important;
+}
+
+.video-wrapper.player-initialized .video-player {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+.video-wrapper.player-initialized .initial-loading {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition-delay: 0.2s;
+    display: none;
+    transition-delay: 0.5s;
+}
+
+.video-wrapper:not(.has-controls) .video-watermark.hide-on-autohide {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
+.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+    bottom: 15px;
+}
+
+.video-wrapper.has-controls .video-watermark {
+    visibility: visible;
+    opacity: 0.7;
+}
+
+.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
+.video-wrapper.has-controls .video-watermark.watermark-bottomright {
+    bottom: 90px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* DARK MODE THEME */
+
+.player-theme-dark {
+    --player-bg-primary: #1a1a1a;
+    --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.9) 100%);
+    --player-bg-title-overlay: linear-gradient(180deg, rgba(30, 30, 30, 0.9) 0%, transparent 100%);
+    --player-bg-menu: rgba(30, 30, 30, 0.95);
+}

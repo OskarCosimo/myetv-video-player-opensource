@@ -1,5 +1,5 @@
 /**
- * MYETV Player - YouTube Plugin (Enhanced with Quality Control)
+ * MYETV Player - YouTube Plugin
  * File: myetv-player-youtube-plugin.js
  */
 (function () {
@@ -620,4 +620,5 @@
 
     // Register plugin globally
     window.registerMYETVPlugin('youtube', YouTubePlugin);
+
 })();

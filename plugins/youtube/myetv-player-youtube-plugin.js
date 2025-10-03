@@ -1,8 +1,7 @@
 /**
- * MYETV Player - YouTube Plugin (Enhanced)
+ * MYETV Player - YouTube Plugin (Enhanced with Quality Control)
  * File: myetv-player-youtube-plugin.js
  */
-
 (function () {
     'use strict';
 
@@ -10,18 +9,21 @@
         constructor(player, options = {}) {
             this.player = player;
             this.options = {
-                videoId: options.videoId || null,  // Direct video ID
+                videoId: options.videoId || null,
                 apiKey: options.apiKey || null,
                 autoplay: options.autoplay !== undefined ? options.autoplay : false,
                 showYouTubeUI: options.showYouTubeUI !== undefined ? options.showYouTubeUI : false,
                 autoLoadFromData: options.autoLoadFromData !== undefined ? options.autoLoadFromData : true,
-                quality: options.quality || 'default', // 'default', 'hd720', 'hd1080'
+                quality: options.quality || 'default', // 'default', 'small', 'medium', 'large', 'hd720', 'hd1080', 'highres'
+                enableQualityControl: options.enableQualityControl !== undefined ? options.enableQualityControl : true,
                 ...options
             };
 
             this.ytPlayer = null;
             this.isYouTubeReady = false;
             this.videoId = this.options.videoId;
+            this.availableQualities = [];
+            this.currentQuality = 'default';
 
             // Get plugin API
             this.api = player.getPluginAPI();
@@ -72,6 +74,21 @@
             // Check if YouTube is active
             this.player.isYouTubeActive = () => {
                 return this.ytPlayer !== null;
+            };
+
+            // Get available YouTube qualities
+            this.player.getYouTubeQualities = () => {
+                return this.getAvailableQualities();
+            };
+
+            // Set YouTube quality
+            this.player.setYouTubeQuality = (quality) => {
+                return this.setQuality(quality);
+            };
+
+            // Get current YouTube quality
+            this.player.getYouTubeCurrentQuality = () => {
+                return this.getCurrentQuality();
             };
         }
 
@@ -277,6 +294,7 @@
                 events: {
                     'onReady': (event) => this.onPlayerReady(event),
                     'onStateChange': (event) => this.onPlayerStateChange(event),
+                    'onPlaybackQualityChange': (event) => this.onPlaybackQualityChange(event),
                     'onError': (event) => this.onPlayerError(event)
                 }
             });
@@ -294,12 +312,169 @@
             // Sync controls with YouTube player
             this.syncControls();
 
-            // Set quality if specified
+            // Load available qualities
+            this.loadAvailableQualities();
+
+            // Set initial quality if specified
             if (this.options.quality && this.options.quality !== 'default') {
-                this.ytPlayer.setPlaybackQuality(this.options.quality);
+                setTimeout(() => {
+                    this.setQuality(this.options.quality);
+                }, 500);
             }
 
             this.api.triggerEvent('youtubeplugin:playerready', {});
+        }
+
+        /**
+         * Load available quality levels
+         */
+        loadAvailableQualities() {
+            if (!this.ytPlayer || !this.ytPlayer.getAvailableQualityLevels) {
+                return;
+            }
+
+            // Get available qualities from YouTube API
+            const rawQualities = this.ytPlayer.getAvailableQualityLevels();
+
+            if (rawQualities && rawQualities.length > 0) {
+                // Map YouTube quality levels to readable format
+                this.availableQualities = rawQualities.map(quality => {
+                    return {
+                        id: quality,
+                        label: this.getQualityLabel(quality),
+                        value: quality
+                    };
+                });
+
+                this.api.debug('Available YouTube qualities:', this.availableQualities);
+
+                // Trigger custom event with qualities
+                this.api.triggerEvent('youtubeplugin:qualitiesloaded', {
+                    qualities: this.availableQualities
+                });
+
+                // Update player quality menu if exists
+                this.updatePlayerQualityMenu();
+            } else {
+                // Retry after a delay (qualities might not be loaded immediately)
+                setTimeout(() => {
+                    this.loadAvailableQualities();
+                }, 1000);
+            }
+        }
+
+        /**
+         * Get human-readable quality label
+         */
+        getQualityLabel(quality) {
+            const qualityLabels = {
+                'highres': '4K (2160p)',
+                'hd1080': 'Full HD (1080p)',
+                'hd720': 'HD (720p)',
+                'large': '480p',
+                'medium': '360p',
+                'small': '240p',
+                'tiny': '144p',
+                'auto': 'Auto'
+            };
+
+            return qualityLabels[quality] || quality.toUpperCase();
+        }
+
+        /**
+         * Get available qualities
+         */
+        getAvailableQualities() {
+            return this.availableQualities;
+        }
+
+        /**
+         * Get current quality
+         */
+        getCurrentQuality() {
+            if (!this.ytPlayer || !this.ytPlayer.getPlaybackQuality) {
+                return this.currentQuality;
+            }
+
+            this.currentQuality = this.ytPlayer.getPlaybackQuality();
+            return this.currentQuality;
+        }
+
+        /**
+         * Set quality
+         */
+        setQuality(quality) {
+            if (!this.ytPlayer || !this.ytPlayer.setPlaybackQuality) {
+                this.api.debug('Cannot set quality: YouTube player not ready');
+                return false;
+            }
+
+            // Check if quality is available
+            const isAvailable = this.availableQualities.some(q => q.value === quality);
+
+            if (!isAvailable && quality !== 'default' && quality !== 'auto') {
+                this.api.debug(`Quality ${quality} not available. Available: ${this.availableQualities.map(q => q.value).join(', ')}`);
+            }
+
+            try {
+                this.ytPlayer.setPlaybackQuality(quality);
+                this.currentQuality = quality;
+
+                this.api.debug(`YouTube quality set to: ${quality}`);
+                this.api.triggerEvent('youtubeplugin:qualitychanged', { quality });
+
+                return true;
+            } catch (error) {
+                this.api.debug('Error setting YouTube quality:', error);
+                return false;
+            }
+        }
+
+        /**
+         * Update player quality menu with YouTube qualities
+         */
+        updatePlayerQualityMenu() {
+            if (!this.options.enableQualityControl) {
+                return;
+            }
+
+            // Try to find quality menu in player controls
+            // This depends on your player's UI structure
+            const qualityButton = this.api.container.querySelector('.quality-button, [data-quality-button]');
+            const qualityMenu = this.api.container.querySelector('.quality-menu, [data-quality-menu]');
+
+            if (qualityMenu && this.availableQualities.length > 0) {
+                // Clear existing menu items
+                qualityMenu.innerHTML = '';
+
+                // Add YouTube qualities to menu
+                this.availableQualities.forEach(quality => {
+                    const menuItem = document.createElement('div');
+                    menuItem.className = 'quality-menu-item';
+                    menuItem.textContent = quality.label;
+                    menuItem.dataset.quality = quality.value;
+
+                    // Add click handler
+                    menuItem.addEventListener('click', () => {
+                        this.setQuality(quality.value);
+
+                        // Update active state
+                        qualityMenu.querySelectorAll('.quality-menu-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        menuItem.classList.add('active');
+                    });
+
+                    qualityMenu.appendChild(menuItem);
+                });
+
+                // Show quality button if hidden
+                if (qualityButton) {
+                    qualityButton.style.display = '';
+                }
+
+                this.api.debug('Quality menu updated with YouTube qualities');
+            }
         }
 
         /**
@@ -309,6 +484,11 @@
             switch (event.data) {
                 case YT.PlayerState.PLAYING:
                     this.api.triggerEvent('played', {});
+
+                    // Load qualities when video starts playing (if not loaded yet)
+                    if (this.availableQualities.length === 0) {
+                        this.loadAvailableQualities();
+                    }
                     break;
                 case YT.PlayerState.PAUSED:
                     this.api.triggerEvent('paused', {});
@@ -319,6 +499,31 @@
                 case YT.PlayerState.BUFFERING:
                     this.api.debug('YouTube player buffering');
                     break;
+            }
+        }
+
+        /**
+         * YouTube playback quality change callback
+         */
+        onPlaybackQualityChange(event) {
+            this.currentQuality = event.data;
+
+            this.api.debug('YouTube playback quality changed to: ' + event.data);
+            this.api.triggerEvent('youtubeplugin:qualitychanged', {
+                quality: event.data,
+                label: this.getQualityLabel(event.data)
+            });
+
+            // Update active state in quality menu
+            const qualityMenu = this.api.container.querySelector('.quality-menu, [data-quality-menu]');
+            if (qualityMenu) {
+                qualityMenu.querySelectorAll('.quality-menu-item').forEach(item => {
+                    if (item.dataset.quality === event.data) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
             }
         }
 
@@ -378,6 +583,7 @@
                         if (this.api.player.progressFilled && duration) {
                             const progress = (currentTime / duration) * 100;
                             this.api.player.progressFilled.style.width = progress + '%';
+
                             if (this.api.player.progressHandle) {
                                 this.api.player.progressHandle.style.left = progress + '%';
                             }
@@ -414,5 +620,4 @@
 
     // Register plugin globally
     window.registerMYETVPlugin('youtube', YouTubePlugin);
-
 })();

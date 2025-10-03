@@ -11,7 +11,9 @@
     "build:scss:min": "sass --style=compressed --no-source-map scss/myetv-player.scss css/myetv-player.min.css",
     "watch:scss": "sass --watch --style=expanded scss/myetv-player.scss:css/myetv-player.css",
     "watch:scss:dev": "sass --watch --source-map scss/myetv-player.scss:css/myetv-player.css",
-    "dev": "npm run watch:scss:dev"
+    "dev": "npm run watch:scss:dev",
+    "test": "echo \"No tests specified\" && exit 0",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "sass": "^1.69.0"

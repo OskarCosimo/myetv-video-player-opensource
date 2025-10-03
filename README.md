@@ -28,9 +28,9 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 
 ```
 <!-- Player CSS -->
-<link rel="stylesheet" href="css/myetv-player.css">
+<link rel="stylesheet" href="css/myetv-player.min.css">
 <!-- Player JavaScript -->
-<script src="dist/myetv-player.js"></script>
+<script src="dist/myetv-player.min.js"></script>
 ```
 
 ## Basic Usage

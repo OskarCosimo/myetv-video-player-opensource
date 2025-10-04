@@ -110,32 +110,39 @@
         this.updateQualityMenu();
     }
 
-    updateQualityButton() {
-        const qualityBtn = this.controls?.querySelector('.quality-btn');
-        if (!qualityBtn) return;
+updateQualityButton() {
+    const qualityBtn = this.controls?.querySelector('.quality-btn');
+    if (!qualityBtn) return;
 
-        let btnText = qualityBtn.querySelector('.quality-btn-text');
-        if (!btnText) {
-            qualityBtn.innerHTML = `
-                <span class="icon">⚙</span>
-                <div class="quality-btn-text">
-                    <div class="selected-quality">${this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality}</div>
-                    <div class="current-quality">${this.currentPlayingQuality || ''}</div>
-                </div>
-            `;
-        } else {
-            const selectedEl = btnText.querySelector('.selected-quality');
-            const currentEl = btnText.querySelector('.current-quality');
+    let btnText = qualityBtn.querySelector('.quality-btn-text');
+    if (!btnText) {
+        // SECURITY: Use DOM methods instead of innerHTML to prevent XSS
+        qualityBtn.textContent = ''; // Clear existing content
 
-            if (selectedEl) {
-                selectedEl.textContent = this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality;
-            }
+        // Create icon element
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'icon';
+        iconSpan.textContent = '⚙';
+        qualityBtn.appendChild(iconSpan);
 
-            if (currentEl) {
-                currentEl.textContent = this.currentPlayingQuality || '';
-                currentEl.style.display = this.currentPlayingQuality ? 'block' : 'none';
-            }
-        }
+        // Create text container
+        btnText = document.createElement('div');
+        btnText.className = 'quality-btn-text';
+
+        // Create selected quality element
+        const selectedQualityDiv = document.createElement('div');
+        selectedQualityDiv.className = 'selected-quality';
+        selectedQualityDiv.textContent = this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality;
+        btnText.appendChild(selectedQualityDiv);
+
+        // Create current quality element
+        const currentQualityDiv = document.createElement('div');
+        currentQualityDiv.className = 'current-quality';
+        currentQualityDiv.textContent = this.currentPlayingQuality || '';
+        btnText.appendChild(currentQualityDiv);
+
+        // Append to button
+        qualityBtn.appendChild(btnText);
     }
 
 updateQualityMenu() {

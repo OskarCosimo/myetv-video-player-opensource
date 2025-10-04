@@ -284,13 +284,39 @@ class VideoPlayerI18n {
     // Add new translations
     addTranslations(lang, translations) {
         try {
+            // SECURITY: Prevent prototype pollution by validating lang parameter
+            if (!this.isValidLanguageKey(lang)) {
+                console.warn('Invalid language key rejected:', lang);
+                return;
+            }
+
             if (!this.translations[lang]) {
                 this.translations[lang] = {};
             }
-            Object.assign(this.translations[lang], translations);
+
+            // SECURITY: Only copy safe properties from translations object
+            for (const key in translations) {
+                if (translations.hasOwnProperty(key) && this.isValidLanguageKey(key)) {
+                    this.translations[lang][key] = translations[key];
+                }
+            }
         } catch (error) {
             console.warn('Error adding translations:', error);
         }
+    }
+
+    // SECURITY: Validate that a key is safe (not a prototype polluting key)
+    isValidLanguageKey(key) {
+        if (typeof key !== 'string') return false;
+
+        // Reject dangerous prototype-polluting keys
+        const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+        if (dangerousKeys.includes(key.toLowerCase())) {
+            return false;
+        }
+
+        // Accept only alphanumeric keys with underscore/dash (e.g., 'en', 'it', 'play_pause')
+        return /^[a-zA-Z0-9_-]+$/.test(key);
     }
 }
 

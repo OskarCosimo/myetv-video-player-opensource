@@ -41,7 +41,7 @@ createCustomSubtitleOverlay() {
         'bottom: 80px;' +
         'left: 50%;' +
         'transform: translateX(-50%);' +
-        'z-index: 5;' + 
+        'z-index: 5;' +
         'color: white;' +
         'font-family: Arial, sans-serif;' +
         'font-size: clamp(12px, 4vw, 18px);' +  // RESPONSIVE font-size
@@ -135,7 +135,7 @@ parseCustomSRT(srtText) {
             if (timeMatch) {
                 var startTime = this.customTimeToSeconds(timeMatch[1]);
                 var endTime = this.customTimeToSeconds(timeMatch[2]);
-                var text = lines.slice(2).join('\n').trim().replace(/<[^>]*>/g, '');
+                var text = this.sanitizeSubtitleText(lines.slice(2).join('\n').trim());
 
                 if (text.length > 0 && startTime < endTime) {
                     subtitles.push({

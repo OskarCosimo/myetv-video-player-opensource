@@ -1,6 +1,6 @@
 {
   "name": "myetv-player",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "MYETV Video Player - Modular JavaScript and SCSS Build System",
   "main": "dist/myetv-player.js",
   "scripts": {
@@ -25,3 +25,4 @@
     "url": "https://github.com/OskarCosimo/myetv-video-player-opensource"
   }
 }
+

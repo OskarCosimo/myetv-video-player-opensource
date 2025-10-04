@@ -4,6 +4,27 @@
 
 A modern and complete HTML5 + JavaScript + css video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.
 
+## Table of Contents
+
+- [Features](#features)
+- [Demo Page](#demo-page)
+- [Installation](#installation)
+- [Basic Usage](#basic-usage)
+- [Initialization Options](#initialization-options)
+- [Api Methods](#api-methods)
+- [Api Events](#api-events)
+- [Keyboard Controls](#keyboard-controls)
+- [CSS Customization](#css-customization)
+- [Browser Compatibility](#browser-compatibility)
+- [Plugins Feature](#plugins-feature)
+- [Chapters Feature](#chapters-feature)
+- [Playlist Feature](#playlist-feature)
+- [Adaptive Streaming (HLS/DASH)](#adaptive-streaming-hlsdash)
+- [Supported Browsers](#supported-browsers)
+- [License](#license)
+
+---
+
 ## Features
 
 - **Custom controls** with intelligent auto-hide
@@ -730,7 +751,7 @@ Minimal DOM manipulation thanks to CSS-based theming
 
 Hardware-accelerated transitions for smooth playback
 
-## Plguins feature
+## Plugins feature
 The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
 ### Add a plguin to the player
 ```

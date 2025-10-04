@@ -143,7 +143,20 @@ updateQualityButton() {
 
         // Append to button
         qualityBtn.appendChild(btnText);
+    } else {
+        // SECURITY: Update existing elements using textContent (not innerHTML)
+        const selectedEl = btnText.querySelector('.selected-quality');
+        const currentEl = btnText.querySelector('.current-quality');
+
+        if (selectedEl) {
+            selectedEl.textContent = this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality;
+        }
+
+        if (currentEl) {
+            currentEl.textContent = this.currentPlayingQuality || '';
+        }
     }
+}
 
 updateQualityMenu() {
     const qualityMenu = this.controls?.querySelector('.quality-menu');

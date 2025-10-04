@@ -283,13 +283,39 @@ class VideoPlayerI18n {
     // Add new translations
     addTranslations(lang, translations) {
         try {
+            // SECURITY: Prevent prototype pollution by validating lang parameter
+            if (!this.isValidLanguageKey(lang)) {
+                console.warn('Invalid language key rejected:', lang);
+                return;
+            }
+
             if (!this.translations[lang]) {
                 this.translations[lang] = {};
             }
-            Object.assign(this.translations[lang], translations);
+
+            // SECURITY: Only copy safe properties from translations object
+            for (const key in translations) {
+                if (translations.hasOwnProperty(key) && this.isValidLanguageKey(key)) {
+                    this.translations[lang][key] = translations[key];
+                }
+            }
         } catch (error) {
             console.warn('Error adding translations:', error);
         }
+    }
+
+    // SECURITY: Validate that a key is safe (not a prototype polluting key)
+    isValidLanguageKey(key) {
+        if (typeof key !== 'string') return false;
+
+        // Reject dangerous prototype-polluting keys
+        const dangerousKeys = ['__proto__', 'constructor', 'prototype'];
+        if (dangerousKeys.includes(key.toLowerCase())) {
+            return false;
+        }
+
+        // Accept only alphanumeric keys with underscore/dash (e.g., 'en', 'it', 'play_pause')
+        return /^[a-zA-Z0-9_-]+$/.test(key);
     }
 }
 
@@ -3453,32 +3479,39 @@ initializeQualityMonitoring() {
         this.updateQualityMenu();
     }
 
-    updateQualityButton() {
-        const qualityBtn = this.controls?.querySelector('.quality-btn');
-        if (!qualityBtn) return;
+updateQualityButton() {
+    const qualityBtn = this.controls?.querySelector('.quality-btn');
+    if (!qualityBtn) return;
 
-        let btnText = qualityBtn.querySelector('.quality-btn-text');
-        if (!btnText) {
-            qualityBtn.innerHTML = `
-                <span class="icon">⚙</span>
-                <div class="quality-btn-text">
-                    <div class="selected-quality">${this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality}</div>
-                    <div class="current-quality">${this.currentPlayingQuality || ''}</div>
-                </div>
-            `;
-        } else {
-            const selectedEl = btnText.querySelector('.selected-quality');
-            const currentEl = btnText.querySelector('.current-quality');
+    let btnText = qualityBtn.querySelector('.quality-btn-text');
+    if (!btnText) {
+        // SECURITY: Use DOM methods instead of innerHTML to prevent XSS
+        qualityBtn.textContent = ''; // Clear existing content
 
-            if (selectedEl) {
-                selectedEl.textContent = this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality;
-            }
+        // Create icon element
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'icon';
+        iconSpan.textContent = '⚙';
+        qualityBtn.appendChild(iconSpan);
 
-            if (currentEl) {
-                currentEl.textContent = this.currentPlayingQuality || '';
-                currentEl.style.display = this.currentPlayingQuality ? 'block' : 'none';
-            }
-        }
+        // Create text container
+        btnText = document.createElement('div');
+        btnText.className = 'quality-btn-text';
+
+        // Create selected quality element
+        const selectedQualityDiv = document.createElement('div');
+        selectedQualityDiv.className = 'selected-quality';
+        selectedQualityDiv.textContent = this.selectedQuality === 'auto' ? this.t('auto') : this.selectedQuality;
+        btnText.appendChild(selectedQualityDiv);
+
+        // Create current quality element
+        const currentQualityDiv = document.createElement('div');
+        currentQualityDiv.className = 'current-quality';
+        currentQualityDiv.textContent = this.currentPlayingQuality || '';
+        btnText.appendChild(currentQualityDiv);
+
+        // Append to button
+        qualityBtn.appendChild(btnText);
     }
 
 updateQualityMenu() {
@@ -4303,7 +4336,7 @@ createCustomSubtitleOverlay() {
         'bottom: 80px;' +
         'left: 50%;' +
         'transform: translateX(-50%);' +
-        'z-index: 5;' + 
+        'z-index: 5;' +
         'color: white;' +
         'font-family: Arial, sans-serif;' +
         'font-size: clamp(12px, 4vw, 18px);' +  // RESPONSIVE font-size
@@ -4397,7 +4430,7 @@ parseCustomSRT(srtText) {
             if (timeMatch) {
                 var startTime = this.customTimeToSeconds(timeMatch[1]);
                 var endTime = this.customTimeToSeconds(timeMatch[2]);
-                var text = lines.slice(2).join('\n').trim().replace(/<[^>]*>/g, '');
+                var text = this.sanitizeSubtitleText(lines.slice(2).join('\n').trim());
 
                 if (text.length > 0 && startTime < endTime) {
                     subtitles.push({

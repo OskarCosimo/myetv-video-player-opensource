@@ -2,113 +2,113 @@
 // Conservative modularization - original code preserved exactly
 // Created by https://www.myetv.tv https://oskarcosimo.com
 
-    initializeQualityMonitoring() {
-        this.qualityMonitorInterval = setInterval(() => {
-            if (!this.isChangingQuality) {
-                this.updateCurrentPlayingQuality();
-            }
-        }, 3000);
+initializeQualityMonitoring() {
+    this.qualityMonitorInterval = setInterval(() => {
+        if (!this.isChangingQuality) {
+            this.updateCurrentPlayingQuality();
+        }
+    }, 3000);
 
-        if (this.video) {
-            this.video.addEventListener('loadedmetadata', () => {
-                setTimeout(() => {
-                    if (!this.isChangingQuality) {
-                        this.updateCurrentPlayingQuality();
-                    }
-                }, 100);
-            });
-
-            this.video.addEventListener('resize', () => {
+    if (this.video) {
+        this.video.addEventListener('loadedmetadata', () => {
+            setTimeout(() => {
                 if (!this.isChangingQuality) {
                     this.updateCurrentPlayingQuality();
                 }
-            });
+            }, 100);
+        });
 
-            this.video.addEventListener('loadeddata', () => {
-                setTimeout(() => {
-                    if (!this.isChangingQuality) {
-                        this.updateCurrentPlayingQuality();
-                    }
-                }, 1000);
-            });
-        }
-    }
-
-    getCurrentPlayingQuality() {
-        if (!this.video) return null;
-
-        if (this.video.currentSrc && this.qualities && this.qualities.length > 0) {
-            const currentSource = this.qualities.find(q => {
-                const currentUrl = this.video.currentSrc.toLowerCase();
-                const qualityUrl = q.src.toLowerCase();
-
-                if (this.debugQuality) {
-                    if (this.options.debug) console.log('Quality comparison:', {
-                        current: currentUrl,
-                        quality: qualityUrl,
-                        qualityName: q.quality,
-                        match: currentUrl === qualityUrl || currentUrl.includes(qualityUrl) || qualityUrl.includes(currentUrl)
-                    });
-                }
-
-                return currentUrl === qualityUrl ||
-                    currentUrl.includes(qualityUrl) ||
-                    qualityUrl.includes(currentUrl);
-            });
-
-            if (currentSource) {
-                if (this.debugQuality) {
-                    if (this.options.debug) console.log('Quality found from source:', currentSource.quality);
-                }
-                return currentSource.quality;
+        this.video.addEventListener('resize', () => {
+            if (!this.isChangingQuality) {
+                this.updateCurrentPlayingQuality();
             }
-        }
+        });
 
-        if (this.video.videoHeight && this.video.videoWidth) {
-            const height = this.video.videoHeight;
-            const width = this.video.videoWidth;
+        this.video.addEventListener('loadeddata', () => {
+            setTimeout(() => {
+                if (!this.isChangingQuality) {
+                    this.updateCurrentPlayingQuality();
+                }
+            }, 1000);
+        });
+    }
+}
+
+getCurrentPlayingQuality() {
+    if (!this.video) return null;
+
+    if (this.video.currentSrc && this.qualities && this.qualities.length > 0) {
+        const currentSource = this.qualities.find(q => {
+            const currentUrl = this.video.currentSrc.toLowerCase();
+            const qualityUrl = q.src.toLowerCase();
 
             if (this.debugQuality) {
-                if (this.options.debug) console.log('Risoluzione video:', { height, width });
+                if (this.options.debug) console.log('Quality comparison:', {
+                    current: currentUrl,
+                    quality: qualityUrl,
+                    qualityName: q.quality,
+                    match: currentUrl === qualityUrl || currentUrl.includes(qualityUrl) || qualityUrl.includes(currentUrl)
+                });
             }
 
-            if (height >= 2160) return '4K';
-            if (height >= 1440) return '1440p';
-            if (height >= 1080) return '1080p';
-            if (height >= 720) return '720p';
-            if (height >= 480) return '480p';
-            if (height >= 360) return '360p';
-            if (height >= 240) return '240p';
+            return currentUrl === qualityUrl ||
+                currentUrl.includes(qualityUrl) ||
+                qualityUrl.includes(currentUrl);
+        });
 
-            return `${height}p`;
+        if (currentSource) {
+            if (this.debugQuality) {
+                if (this.options.debug) console.log('Quality found from source:', currentSource.quality);
+            }
+            return currentSource.quality;
         }
+    }
+
+    if (this.video.videoHeight && this.video.videoWidth) {
+        const height = this.video.videoHeight;
+        const width = this.video.videoWidth;
 
         if (this.debugQuality) {
-            if (this.options.debug) console.log('No quality detected:', {
-                currentSrc: this.video.currentSrc,
-                videoHeight: this.video.videoHeight,
-                videoWidth: this.video.videoWidth,
-                qualities: this.qualities
-            });
+            if (this.options.debug) console.log('Risoluzione video:', { height, width });
         }
 
-        return null;
+        if (height >= 2160) return '4K';
+        if (height >= 1440) return '1440p';
+        if (height >= 1080) return '1080p';
+        if (height >= 720) return '720p';
+        if (height >= 480) return '480p';
+        if (height >= 360) return '360p';
+        if (height >= 240) return '240p';
+
+        return `${height}p`;
     }
 
-    updateCurrentPlayingQuality() {
-        const newPlayingQuality = this.getCurrentPlayingQuality();
-
-        if (newPlayingQuality && newPlayingQuality !== this.currentPlayingQuality) {
-            if (this.options.debug) console.log(`Quality changed: ${this.currentPlayingQuality} → ${newPlayingQuality}`);
-            this.currentPlayingQuality = newPlayingQuality;
-            this.updateQualityDisplay();
-        }
+    if (this.debugQuality) {
+        if (this.options.debug) console.log('No quality detected:', {
+            currentSrc: this.video.currentSrc,
+            videoHeight: this.video.videoHeight,
+            videoWidth: this.video.videoWidth,
+            qualities: this.qualities
+        });
     }
 
-    updateQualityDisplay() {
-        this.updateQualityButton();
-        this.updateQualityMenu();
+    return null;
+}
+
+updateCurrentPlayingQuality() {
+    const newPlayingQuality = this.getCurrentPlayingQuality();
+
+    if (newPlayingQuality && newPlayingQuality !== this.currentPlayingQuality) {
+        if (this.options.debug) console.log(`Quality changed: ${this.currentPlayingQuality} → ${newPlayingQuality}`);
+        this.currentPlayingQuality = newPlayingQuality;
+        this.updateQualityDisplay();
     }
+}
+
+updateQualityDisplay() {
+    this.updateQualityButton();
+    this.updateQualityMenu();
+}
 
 updateQualityButton() {
     const qualityBtn = this.controls?.querySelector('.quality-btn');
@@ -210,212 +210,216 @@ updateQualityMenu() {
     qualityMenu.innerHTML = menuHTML;
 }
 
-    getQualityStatus() {
-        return {
-            selected: this.selectedQuality,
-            playing: this.currentPlayingQuality,
-            isAuto: this.selectedQuality === 'auto',
-            isChanging: this.isChangingQuality
-        };
+getQualityStatus() {
+    return {
+        selected: this.selectedQuality,
+        playing: this.currentPlayingQuality,
+        isAuto: this.selectedQuality === 'auto',
+        isChanging: this.isChangingQuality
+    };
+}
+
+getSelectedQuality() {
+    return this.selectedQuality;
+}
+
+isAutoQualityActive() {
+    return this.selectedQuality === 'auto';
+}
+
+enableQualityDebug() {
+    this.debugQuality = true;
+    this.enableAutoHideDebug(); // Abilita anche debug auto-hide
+    if (this.options.debug) console.log('Quality AND auto-hide debug enabled');
+    this.updateCurrentPlayingQuality();
+}
+
+disableQualityDebug() {
+    this.debugQuality = false;
+    this.disableAutoHideDebug();
+    if (this.options.debug) console.log('Quality AND auto-hide debug disabled');
+}
+
+changeQuality(e) {
+    if (!e.target.classList.contains('quality-option')) return;
+    if (this.isChangingQuality) return;
+
+    // Handle adaptive streaming quality change
+    const adaptiveQuality = e.target.getAttribute('data-adaptive-quality');
+    if (adaptiveQuality !== null && this.isAdaptiveStream) {
+        const qualityIndex = adaptiveQuality === 'auto' ? -1 : parseInt(adaptiveQuality);
+        this.setAdaptiveQuality(qualityIndex);
+        this.updateAdaptiveQualityMenu();
+        return;
     }
 
-    getSelectedQuality() {
-        return this.selectedQuality;
+    const quality = e.target.getAttribute('data-quality');
+    if (!quality || quality === this.selectedQuality) return;
+
+    if (this.options.debug) console.log(`Quality change requested: ${this.selectedQuality} → ${quality}`);
+
+    this.selectedQuality = quality;
+
+    if (quality === 'auto') {
+        this.enableAutoQuality();
+    } else {
+        this.setQuality(quality);
     }
 
-    isAutoQualityActive() {
-        return this.selectedQuality === 'auto';
+    this.updateQualityDisplay();
+}
+
+setQuality(targetQuality) {
+    if (this.options.debug) console.log(`setQuality("${targetQuality}") called`);
+
+    if (!targetQuality) {
+        if (this.options.debug) console.error('targetQuality is empty!');
+        return;
     }
 
-    enableQualityDebug() {
-        this.debugQuality = true;
-        this.enableAutoHideDebug(); // Abilita anche debug auto-hide
-        if (this.options.debug) console.log('Quality AND auto-hide debug enabled');
-        this.updateCurrentPlayingQuality();
+    if (!this.video || !this.qualities || this.qualities.length === 0) return;
+    if (this.isChangingQuality) return;
+
+    const newSource = this.qualities.find(q => q.quality === targetQuality);
+    if (!newSource || !newSource.src) {
+        if (this.options.debug) console.error(`Quality "${targetQuality}" not found`);
+        return;
     }
 
-    disableQualityDebug() {
-        this.debugQuality = false;
-        this.disableAutoHideDebug();
-        if (this.options.debug) console.log('Quality AND auto-hide debug disabled');
+    const currentTime = this.video.currentTime || 0;
+    const wasPlaying = !this.video.paused;
+
+    this.isChangingQuality = true;
+    this.selectedQuality = targetQuality;
+    this.video.pause();
+
+    // Show loading state during quality change
+    this.showLoading();
+    if (this.video.classList) {
+        this.video.classList.add('quality-changing');
     }
 
-    changeQuality(e) {
-        if (!e.target.classList.contains('quality-option')) return;
-        if (this.isChangingQuality) return;
+    const onLoadedData = () => {
+        if (this.options.debug) console.log(`Quality ${targetQuality} applied!`);
+        this.video.currentTime = currentTime;
 
-        // Handle adaptive streaming quality change
-        const adaptiveQuality = e.target.getAttribute('data-adaptive-quality');
-        if (adaptiveQuality !== null && this.isAdaptiveStream) {
-            const qualityIndex = adaptiveQuality === 'auto' ? -1 : parseInt(adaptiveQuality);
-            this.setAdaptiveQuality(qualityIndex);
-            this.updateAdaptiveQualityMenu();
-            return;
+        if (wasPlaying) {
+            this.video.play().catch(e => {
+                if (this.options.debug) console.log('Play error:', e);
+            });
         }
 
-        const quality = e.target.getAttribute('data-quality');
-        if (!quality || quality === this.selectedQuality) return;
-
-        if (this.options.debug) console.log(`Quality change requested: ${this.selectedQuality} → ${quality}`);
-
-        this.selectedQuality = quality;
-
-        if (quality === 'auto') {
-            this.enableAutoQuality();
-        } else {
-            this.setQuality(quality);
-        }
-
+        this.currentPlayingQuality = targetQuality;
         this.updateQualityDisplay();
-    }
-
-    setQuality(targetQuality) {
-        if (this.options.debug) console.log(`setQuality("${targetQuality}") called`);
-
-        if (!targetQuality) {
-            if (this.options.debug) console.error('targetQuality is empty!');
-            return;
-        }
-
-        if (!this.video || !this.qualities || this.qualities.length === 0) return;
-        if (this.isChangingQuality) return;
-
-        const newSource = this.qualities.find(q => q.quality === targetQuality);
-        if (!newSource || !newSource.src) {
-            if (this.options.debug) console.error(`Quality "${targetQuality}" not found`);
-            return;
-        }
-
-        const currentTime = this.video.currentTime || 0;
-        const wasPlaying = !this.video.paused;
-
-        this.isChangingQuality = true;
-        this.selectedQuality = targetQuality;
-        this.video.pause();
-
-        // Show loading state during quality change
-        this.showLoading();
-        if (this.video.classList) {
-            this.video.classList.add('quality-changing');
-        }
-
-        const onLoadedData = () => {
-            if (this.options.debug) console.log(`Quality ${targetQuality} applied!`);
-            this.video.currentTime = currentTime;
-
-            if (wasPlaying) {
-                this.video.play().catch(e => {
-                    if (this.options.debug) console.log('Play error:', e);
-                });
-            }
-
-            this.currentPlayingQuality = targetQuality;
-            this.updateQualityDisplay();
-            this.isChangingQuality = false;
-
-            // Restore resolution settings after quality change
-            this.restoreResolutionAfterQualityChange();
-            cleanup();
-        };
-
-        const onError = (error) => {
-            if (this.options.debug) console.error(`Loading error ${targetQuality}:`, error);
-            this.isChangingQuality = false;
-            cleanup();
-        };
-
-        const cleanup = () => {
-            this.video.removeEventListener('loadeddata', onLoadedData);
-            this.video.removeEventListener('error', onError);
-        };
-
-        this.video.addEventListener('loadeddata', onLoadedData, { once: true });
-        this.video.addEventListener('error', onError, { once: true });
-
-        this.video.src = newSource.src;
-        this.video.load();
-    }
-
-    finishQualityChange(success, wasPlaying, currentTime, currentVolume, wasMuted, targetQuality) {
-        if (this.options.debug) console.log(`Quality change completion: success=${success}, target=${targetQuality}`);
-
-        if (this.qualityChangeTimeout) {
-            clearTimeout(this.qualityChangeTimeout);
-            this.qualityChangeTimeout = null;
-        }
-
-        if (this.video) {
-            try {
-                if (success && currentTime > 0 && this.video.duration) {
-                    this.video.currentTime = Math.min(currentTime, this.video.duration);
-                }
-
-                this.video.volume = currentVolume;
-                this.video.muted = wasMuted;
-
-                if (success && wasPlaying) {
-                    this.video.play().catch(err => {
-                        if (this.options.debug) console.warn('Play after quality change failed:', err);
-                    });
-                }
-            } catch (error) {
-                if (this.options.debug) console.error('Errore ripristino stato:', error);
-            }
-
-            if (this.video.classList) {
-                this.video.classList.remove('quality-changing');
-            }
-        }
-
-        this.hideLoading();
         this.isChangingQuality = false;
 
-        if (success) {
-            if (this.options.debug) console.log('Quality change completed successfully');
-            setTimeout(() => {
-                this.currentPlayingQuality = targetQuality;
-                this.updateQualityDisplay();
-                if (this.options.debug) console.log(`🎯 Quality confirmed active: ${targetQuality}`);
-            }, 100);
-        } else {
-            if (this.options.debug) console.warn('Quality change failed or timeout');
+        // Restore resolution settings after quality change
+        this.restoreResolutionAfterQualityChange();
+        cleanup();
+    };
+
+    const onError = (error) => {
+        if (this.options.debug) console.error(`Loading error ${targetQuality}:`, error);
+        this.isChangingQuality = false;
+
+        // Trigger ended event for error handling
+        this.onVideoError(error);
+
+        cleanup();
+    };
+
+    const cleanup = () => {
+        this.video.removeEventListener('loadeddata', onLoadedData);
+        this.video.removeEventListener('error', onError);
+    };
+
+    this.video.addEventListener('loadeddata', onLoadedData, { once: true });
+    this.video.addEventListener('error', onError, { once: true });
+
+    this.video.src = newSource.src;
+    this.video.load();
+}
+
+finishQualityChange(success, wasPlaying, currentTime, currentVolume, wasMuted, targetQuality) {
+    if (this.options.debug) console.log(`Quality change completion: success=${success}, target=${targetQuality}`);
+
+    if (this.qualityChangeTimeout) {
+        clearTimeout(this.qualityChangeTimeout);
+        this.qualityChangeTimeout = null;
+    }
+
+    if (this.video) {
+        try {
+            if (success && currentTime > 0 && this.video.duration) {
+                this.video.currentTime = Math.min(currentTime, this.video.duration);
+            }
+
+            this.video.volume = currentVolume;
+            this.video.muted = wasMuted;
+
+            if (success && wasPlaying) {
+                this.video.play().catch(err => {
+                    if (this.options.debug) console.warn('Play after quality change failed:', err);
+                });
+            }
+        } catch (error) {
+            if (this.options.debug) console.error('Errore ripristino stato:', error);
         }
 
+        if (this.video.classList) {
+            this.video.classList.remove('quality-changing');
+        }
+    }
+
+    this.hideLoading();
+    this.isChangingQuality = false;
+
+    if (success) {
+        if (this.options.debug) console.log('Quality change completed successfully');
         setTimeout(() => {
-            this.updateCurrentPlayingQuality();
-        }, 2000);
-    }
-
-    cleanupQualityChange() {
-        if (this.qualityChangeTimeout) {
-            clearTimeout(this.qualityChangeTimeout);
-            this.qualityChangeTimeout = null;
-        }
-    }
-
-    enableAutoQuality() {
-        if (this.options.debug) console.log('🔄 enableAutoQuality - keeping selectedQuality as "auto"');
-
-        // IMPORTANT: Keep selectedQuality as 'auto' for proper UI display
-        this.selectedQuality = 'auto';
-
-        if (!this.qualities || this.qualities.length === 0) {
-            if (this.options.debug) console.warn('⚠️ No qualities available for auto selection');
+            this.currentPlayingQuality = targetQuality;
             this.updateQualityDisplay();
-            return;
-        }
-
-        // Smart connection-based quality selection
-        let autoSelectedQuality = this.getAutoQualityBasedOnConnection();
-
-        if (this.options.debug) {
-            console.log('🎯 Auto quality selected:', autoSelectedQuality);
-            console.log('📊 selectedQuality remains: "auto" (for UI)');
-        }
-
-        // Apply the auto-selected quality but keep UI showing "auto"
-        this.applyAutoQuality(autoSelectedQuality);
+            if (this.options.debug) console.log(`🎯 Quality confirmed active: ${targetQuality}`);
+        }, 100);
+    } else {
+        if (this.options.debug) console.warn('Quality change failed or timeout');
     }
+
+    setTimeout(() => {
+        this.updateCurrentPlayingQuality();
+    }, 2000);
+}
+
+cleanupQualityChange() {
+    if (this.qualityChangeTimeout) {
+        clearTimeout(this.qualityChangeTimeout);
+        this.qualityChangeTimeout = null;
+    }
+}
+
+enableAutoQuality() {
+    if (this.options.debug) console.log('🔄 enableAutoQuality - keeping selectedQuality as "auto"');
+
+    // IMPORTANT: Keep selectedQuality as 'auto' for proper UI display
+    this.selectedQuality = 'auto';
+
+    if (!this.qualities || this.qualities.length === 0) {
+        if (this.options.debug) console.warn('⚠️ No qualities available for auto selection');
+        this.updateQualityDisplay();
+        return;
+    }
+
+    // Smart connection-based quality selection
+    let autoSelectedQuality = this.getAutoQualityBasedOnConnection();
+
+    if (this.options.debug) {
+        console.log('🎯 Auto quality selected:', autoSelectedQuality);
+        console.log('📊 selectedQuality remains: "auto" (for UI)');
+    }
+
+    // Apply the auto-selected quality but keep UI showing "auto"
+    this.applyAutoQuality(autoSelectedQuality);
+}
 
 // ENHANCED CONNECTION DETECTION - Uses RTT + downlink heuristics
 // Handles both Ethernet and real mobile 4G intelligently
@@ -683,102 +687,120 @@ getAutoQualityBasedOnConnection() {
     return maxQuality.quality;
 }
 
-    applyAutoQuality(targetQuality) {
-        if (!targetQuality || !this.video || !this.qualities || this.qualities.length === 0) {
-            return;
+applyAutoQuality(targetQuality) {
+    if (!targetQuality || !this.video || !this.qualities || this.qualities.length === 0) {
+        return;
+    }
+
+    if (this.isChangingQuality) return;
+
+    const newSource = this.qualities.find(q => q.quality === targetQuality);
+    if (!newSource || !newSource.src) {
+        if (this.options.debug) console.error('Auto quality', targetQuality, 'not found');
+        return;
+    }
+
+    // Store current resolution to restore after quality change
+    const currentResolution = this.getCurrentResolution();
+
+    const currentTime = this.video.currentTime || 0;
+    const wasPlaying = !this.video.paused;
+
+    this.isChangingQuality = true;
+    this.video.pause();
+
+    // Show loading overlay
+    this.showLoading();
+    if (this.video.classList) {
+        this.video.classList.add('quality-changing');
+    }
+
+
+    const onLoadedData = () => {
+        if (this.options.debug) console.log('Auto quality', targetQuality, 'applied');
+        this.video.currentTime = currentTime;
+        if (wasPlaying) {
+            this.video.play().catch(e => {
+                if (this.options.debug) console.log('Autoplay prevented:', e);
+            });
+        }
+        this.currentPlayingQuality = targetQuality;
+        // Keep selectedQuality as 'auto' for UI display
+        this.updateQualityDisplay();
+
+        // Hide loading overlay
+        this.hideLoading();
+        if (this.video.classList) {
+            this.video.classList.remove('quality-changing');
         }
 
-        if (this.isChangingQuality) return;
+        this.isChangingQuality = false;
+        cleanup();
+    };
 
-        const newSource = this.qualities.find(q => q.quality === targetQuality);
-        if (!newSource || !newSource.src) {
-            if (this.options.debug) console.error('Auto quality', targetQuality, 'not found');
-            return;
-        }
+    const onError = (error) => {
+        if (this.options.debug) console.error('Auto quality loading error:', error);
+        this.isChangingQuality = false;
 
-        // Store current resolution to restore after quality change
-        const currentResolution = this.getCurrentResolution();
+        // Trigger ended event for error handling
+        this.onVideoError(error);
 
-        const currentTime = this.video.currentTime || 0;
-        const wasPlaying = !this.video.paused;
+        cleanup();
+    };
 
-        this.isChangingQuality = true;
-        this.video.pause();
+    const cleanup = () => {
+        this.video.removeEventListener('loadeddata', onLoadedData);
+        this.video.removeEventListener('error', onError);
+    };
 
-        const onLoadedData = () => {
-            if (this.options.debug) console.log('Auto quality', targetQuality, 'applied');
-            this.video.currentTime = currentTime;
-            if (wasPlaying) {
-                this.video.play().catch(e => {
-                    if (this.options.debug) console.log('Autoplay prevented:', e);
-                });
-            }
-            this.currentPlayingQuality = targetQuality;
-            // Keep selectedQuality as 'auto' for UI display
-            this.updateQualityDisplay();
-            this.isChangingQuality = false;
-            cleanup();
-        };
+    this.video.addEventListener('loadeddata', onLoadedData, { once: true });
+    this.video.addEventListener('error', onError, { once: true });
+    this.video.src = newSource.src;
+    this.video.load();
+}
 
-        const onError = (error) => {
-            if (this.options.debug) console.error('Auto quality loading error:', error);
-            this.isChangingQuality = false;
-            cleanup();
-        };
+setDefaultQuality(quality) {
+    if (this.options.debug) console.log(`🔧 Setting defaultQuality: "${quality}"`);
+    this.options.defaultQuality = quality;
+    this.selectedQuality = quality;
 
-        const cleanup = () => {
-            this.video.removeEventListener('loadeddata', onLoadedData);
-            this.video.removeEventListener('error', onError);
-        };
-
-        this.video.addEventListener('loadeddata', onLoadedData, { once: true });
-        this.video.addEventListener('error', onError, { once: true });
-        this.video.src = newSource.src;
-        this.video.load();
+    if (quality === 'auto') {
+        this.enableAutoQuality();
+    } else {
+        this.setQuality(quality);
     }
 
-    setDefaultQuality(quality) {
-        if (this.options.debug) console.log(`🔧 Setting defaultQuality: "${quality}"`);
-        this.options.defaultQuality = quality;
-        this.selectedQuality = quality;
+    return this;
+}
 
-        if (quality === 'auto') {
-            this.enableAutoQuality();
-        } else {
-            this.setQuality(quality);
-        }
+getDefaultQuality() {
+    return this.options.defaultQuality;
+}
 
-        return this;
-    }
+getQualityLabel(height, width) {
+    if (height >= 2160) return '4K';
+    if (height >= 1440) return '1440p';
+    if (height >= 1080) return '1080p';
+    if (height >= 720) return '720p';
+    if (height >= 480) return '480p';
+    if (height >= 360) return '360p';
+    if (height >= 240) return '240p';
+    return `${height}p`;
+}
 
-    getDefaultQuality() {
-        return this.options.defaultQuality;
-    }
+updateAdaptiveQualityMenu() {
+    const qualityMenu = this.controls?.querySelector('.quality-menu');
+    if (!qualityMenu || !this.isAdaptiveStream) return;
 
-    getQualityLabel(height, width) {
-        if (height >= 2160) return '4K';
-        if (height >= 1440) return '1440p';
-        if (height >= 1080) return '1080p';
-        if (height >= 720) return '720p';
-        if (height >= 480) return '480p';
-        if (height >= 360) return '360p';
-        if (height >= 240) return '240p';
-        return `${height}p`;
-    }
+    let menuHTML = `<div class="quality-option ${this.isAutoQuality() ? 'active' : ''}" data-adaptive-quality="auto">Auto</div>`;
 
-    updateAdaptiveQualityMenu() {
-        const qualityMenu = this.controls?.querySelector('.quality-menu');
-        if (!qualityMenu || !this.isAdaptiveStream) return;
+    this.adaptiveQualities.forEach(quality => {
+        const isActive = this.getCurrentAdaptiveQuality() === quality.index;
+        menuHTML += `<div class="quality-option ${isActive ? 'active' : ''}" data-adaptive-quality="${quality.index}">${quality.label}</div>`;
+    });
 
-        let menuHTML = `<div class="quality-option ${this.isAutoQuality() ? 'active' : ''}" data-adaptive-quality="auto">Auto</div>`;
-
-        this.adaptiveQualities.forEach(quality => {
-            const isActive = this.getCurrentAdaptiveQuality() === quality.index;
-            menuHTML += `<div class="quality-option ${isActive ? 'active' : ''}" data-adaptive-quality="${quality.index}">${quality.label}</div>`;
-        });
-
-        qualityMenu.innerHTML = menuHTML;
-    }
+    qualityMenu.innerHTML = menuHTML;
+}
 
 updateAdaptiveQualityDisplay() {
     if (!this.isAdaptiveStream) return;
@@ -804,60 +826,60 @@ updateAdaptiveQualityDisplay() {
     }
 }
 
-    setAdaptiveQuality(qualityIndex) {
-        if (!this.isAdaptiveStream) return;
+setAdaptiveQuality(qualityIndex) {
+    if (!this.isAdaptiveStream) return;
 
-        try {
-            if (qualityIndex === 'auto' || qualityIndex === -1) {
-                // Enable auto quality
-                if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
-                    this.dashPlayer.updateSettings({
-                        streaming: {
-                            abr: { autoSwitchBitrate: { video: true } }
-                        }
-                    });
-                } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
-                    this.hlsPlayer.currentLevel = -1; // Auto level selection
-                }
-                this.selectedQuality = 'auto';
-            } else {
-                // Set specific quality
-                if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
-                    this.dashPlayer.updateSettings({
-                        streaming: {
-                            abr: { autoSwitchBitrate: { video: false } }
-                        }
-                    });
-                    this.dashPlayer.setQualityFor('video', qualityIndex);
-                } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
-                    this.hlsPlayer.currentLevel = qualityIndex;
-                }
-                this.selectedQuality = this.adaptiveQualities[qualityIndex]?.label || 'Unknown';
-            }
-
-            this.updateAdaptiveQualityDisplay();
-            if (this.options.debug) console.log('📡 Adaptive quality set to:', qualityIndex);
-
-        } catch (error) {
-            if (this.options.debug) console.error('📡 Error setting adaptive quality:', error);
-        }
-    }
-
-    getCurrentAdaptiveQuality() {
-        if (!this.isAdaptiveStream) return null;
-
-        try {
+    try {
+        if (qualityIndex === 'auto' || qualityIndex === -1) {
+            // Enable auto quality
             if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
-                return this.dashPlayer.getQualityFor('video');
+                this.dashPlayer.updateSettings({
+                    streaming: {
+                        abr: { autoSwitchBitrate: { video: true } }
+                    }
+                });
             } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
-                return this.hlsPlayer.currentLevel;
+                this.hlsPlayer.currentLevel = -1; // Auto level selection
             }
-        } catch (error) {
-            if (this.options.debug) console.error('📡 Error getting current quality:', error);
+            this.selectedQuality = 'auto';
+        } else {
+            // Set specific quality
+            if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
+                this.dashPlayer.updateSettings({
+                    streaming: {
+                        abr: { autoSwitchBitrate: { video: false } }
+                    }
+                });
+                this.dashPlayer.setQualityFor('video', qualityIndex);
+            } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
+                this.hlsPlayer.currentLevel = qualityIndex;
+            }
+            this.selectedQuality = this.adaptiveQualities[qualityIndex]?.label || 'Unknown';
         }
 
-        return null;
+        this.updateAdaptiveQualityDisplay();
+        if (this.options.debug) console.log('📡 Adaptive quality set to:', qualityIndex);
+
+    } catch (error) {
+        if (this.options.debug) console.error('📡 Error setting adaptive quality:', error);
     }
+}
+
+getCurrentAdaptiveQuality() {
+    if (!this.isAdaptiveStream) return null;
+
+    try {
+        if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
+            return this.dashPlayer.getQualityFor('video');
+        } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
+            return this.hlsPlayer.currentLevel;
+        }
+    } catch (error) {
+        if (this.options.debug) console.error('📡 Error getting current quality:', error);
+    }
+
+    return null;
+}
 
 getCurrentAdaptiveQualityLabel() {
     const currentIndex = this.getCurrentAdaptiveQuality();
@@ -867,75 +889,75 @@ getCurrentAdaptiveQualityLabel() {
     return this.adaptiveQualities[currentIndex]?.label || this.tauto;
 }
 
-    isAutoQuality() {
-        if (this.isAdaptiveStream) {
-            const currentQuality = this.getCurrentAdaptiveQuality();
-            return currentQuality === null || currentQuality === -1 || this.selectedQuality === 'auto';
-        }
-        return this.selectedQuality === 'auto';
+isAutoQuality() {
+    if (this.isAdaptiveStream) {
+        const currentQuality = this.getCurrentAdaptiveQuality();
+        return currentQuality === null || currentQuality === -1 || this.selectedQuality === 'auto';
+    }
+    return this.selectedQuality === 'auto';
+}
+
+setResolution(resolution) {
+    if (!this.video || !this.container) {
+        if (this.options.debug) console.warn("Video or container not available for setResolution");
+        return;
     }
 
-    setResolution(resolution) {
-        if (!this.video || !this.container) {
-            if (this.options.debug) console.warn("Video or container not available for setResolution");
-            return;
-        }
+    // Supported values including new scale-to-fit mode
+    const supportedResolutions = ["normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"];
 
-        // Supported values including new scale-to-fit mode
-        const supportedResolutions = ["normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"];
+    if (!supportedResolutions.includes(resolution)) {
+        if (this.options.debug) console.warn(`Resolution "${resolution}" not supported. Supported values: ${supportedResolutions.join(", ")}`);
+        return;
+    }
 
-        if (!supportedResolutions.includes(resolution)) {
-            if (this.options.debug) console.warn(`Resolution "${resolution}" not supported. Supported values: ${supportedResolutions.join(", ")}`);
-            return;
-        }
+    // Remove all previous resolution classes
+    const allResolutionClasses = [
+        "resolution-normal", "resolution-4-3", "resolution-16-9",
+        "resolution-stretched", "resolution-fit-to-screen", "resolution-scale-to-fit"
+    ];
 
-        // Remove all previous resolution classes
-        const allResolutionClasses = [
-            "resolution-normal", "resolution-4-3", "resolution-16-9",
-            "resolution-stretched", "resolution-fit-to-screen", "resolution-scale-to-fit"
-        ];
+    this.video.classList.remove(...allResolutionClasses);
+    if (this.container) {
+        this.container.classList.remove(...allResolutionClasses);
+    }
 
-        this.video.classList.remove(...allResolutionClasses);
-        if (this.container) {
-            this.container.classList.remove(...allResolutionClasses);
-        }
+    // Apply new resolution class
+    const cssClass = `resolution-${resolution.replace(":", "-")}`;
+    this.video.classList.add(cssClass);
+    if (this.container) {
+        this.container.classList.add(cssClass);
+    }
 
-        // Apply new resolution class
-        const cssClass = `resolution-${resolution.replace(":", "-")}`;
-        this.video.classList.add(cssClass);
-        if (this.container) {
-            this.container.classList.add(cssClass);
-        }
+    // Update option
+    this.options.resolution = resolution;
 
-        // Update option
-        this.options.resolution = resolution;
+    if (this.options.debug) {
+        console.log(`Resolution applied: ${resolution} (CSS class: ${cssClass})`);
+    }
+}
 
+getCurrentResolution() {
+    return this.options.resolution || "normal";
+}
+
+initializeResolution() {
+    if (this.options.resolution && this.options.resolution !== "normal") {
+        this.setResolution(this.options.resolution);
+    }
+}
+
+restoreResolutionAfterQualityChange() {
+    if (this.options.resolution && this.options.resolution !== "normal") {
         if (this.options.debug) {
-            console.log(`Resolution applied: ${resolution} (CSS class: ${cssClass})`);
+            console.log(`Restoring resolution "${this.options.resolution}" after quality change`);
         }
-    }
-
-    getCurrentResolution() {
-        return this.options.resolution || "normal";
-    }
-
-    initializeResolution() {
-        if (this.options.resolution && this.options.resolution !== "normal") {
+        // Small delay to ensure video element is ready
+        setTimeout(() => {
             this.setResolution(this.options.resolution);
-        }
+        }, 150);
     }
-
-    restoreResolutionAfterQualityChange() {
-        if (this.options.resolution && this.options.resolution !== "normal") {
-            if (this.options.debug) {
-                console.log(`Restoring resolution "${this.options.resolution}" after quality change`);
-            }
-            // Small delay to ensure video element is ready
-            setTimeout(() => {
-                this.setResolution(this.options.resolution);
-            }, 150);
-        }
-    }
+}
 
 // Quality methods for main class
 // All original functionality preserved exactly

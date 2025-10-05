@@ -211,7 +211,7 @@ player.setChapters([...]);
 player.clearChapters();
 ```
 ### Plugins Controls
-[Plugins Help: https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md]([https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md])
+[Plugins Help: https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md](https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md)
 ### Screen Controls
 ```
 // Fullscreen and Picture-in-Picture

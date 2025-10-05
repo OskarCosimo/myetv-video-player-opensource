@@ -211,26 +211,7 @@ player.setChapters([...]);
 player.clearChapters();
 ```
 ### Plugins Controls
-```
-// Add plugins dynamically
-player.usePlugin('youtube', {
-    apiKey: 'your-api-key'
-});
-
-// Upload YouTube videos (based on the YouTube plugin example)
-player.loadYouTubeVideo('dQw4w9WgXcQ');
-
-// Check if a plugin is active
-if (player.hasPlugin('youtube')) {
-    console.log('YouTube plugin is active');
-}
-
-// Get plugin instance
-const youtubePlugin = player.getPlugin('youtube');
-
-// Remove plugins from the player
-player.removePlugin('youtube');
-```
+[Plugins Help]([#api-events](https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md))
 ### Screen Controls
 ```
 // Fullscreen and Picture-in-Picture
@@ -241,7 +222,7 @@ player.togglePictureInPicture();  // Toggle Picture-in-Picture
 ```
 ### Brand Logo Controls
 ```
-// Fullscreen and Picture-in-Picture
+// Brand Logo in controlbar
 player.setBrandLogo(enabled, url, linkUrl)    //change brand logo dynamically
 player.getBrandLogoSettings()    //get current brand logo settings
 ```

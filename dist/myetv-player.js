@@ -399,432 +399,432 @@ window.registerMYETVPlugin = registerPlugin;
 class MYETVvideoplayer {
 
 constructor(videoElement, options = {}) {
-        this.video = typeof videoElement === 'string'
-            ? document.getElementById(videoElement)
-            : videoElement;
+    this.video = typeof videoElement === 'string'
+        ? document.getElementById(videoElement)
+        : videoElement;
 
-        if (!this.video) {
-            throw new Error('Video element not found: ' + videoElement);
-        }
+    if (!this.video) {
+        throw new Error('Video element not found: ' + videoElement);
+    }
 
-        this.options = {
-            showQualitySelector: true,
-            showSpeedControl: true,
-            showFullscreen: true,
-            showPictureInPicture: true,
-            showSubtitles: true,
-            subtitlesEnabled: false,
-            autoHide: true,
-            autoHideDelay: 3000,
-            poster: null,                // URL of poster image
-            showPosterOnEnd: false,      // Show poster again when video ends
-            keyboardControls: true,
-            showSeekTooltip: true,
-            showTitleOverlay: false,
-            videoTitle: '',
-            persistentTitle: false,
-            debug: false,             // Enable/disable debug logging
-            autoplay: false,          // if video should autoplay at start
-            defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
-            language: null,           // language of the player (default english)
-            pauseClick: true,         // the player should be paused when click over the video area
-            doubleTapPause: true,     // first tap (or click) show the controlbar, second tap (or click) pause
-            brandLogoEnabled: false,  // Enable/disable brand logo
-            brandLogoUrl: '',         // URL for brand logo image
-            brandLogoLinkUrl: '',     // Optional URL to open when clicking the logo
-            playlistEnabled: true,    // Enable/disable playlist detection
-            playlistAutoPlay: true,   // Auto-play next video when current ends
-            playlistLoop: false,      // Loop playlist when reaching the end
-            loop: false,              // Loop video when it ends (restart from beginning)
-            volumeSlider: 'horizontal', //volume slider type: 'horizontal' or 'vertical'
-            // WATERMARK OVERLAY
-            watermarkUrl: '',           // URL of watermark image
-            watermarkLink: '',          // Optional URL to open when clicking watermark
-            watermarkPosition: 'bottomright', // Position: topleft, topright, bottomleft, bottomright
-            watermarkTitle: '',         // Optional tooltip title
-            hideWatermark: true,        // Hide watermark with controls (default: true)
-            // ADAPTIVE STREAMING SUPPORT
-            adaptiveStreaming: false, // Enable DASH/HLS adaptive streaming
-            dashLibUrl: 'https://cdn.dashjs.org/latest/dash.all.min.js', // Dash.js library URL
-            hlsLibUrl: 'https://cdn.jsdelivr.net/npm/hls.js@latest', // HLS.js library URL
-            adaptiveQualityControl: true, // Show quality control for adaptive streams
-            // AUDIO PLAYER
-            audiofile: false,
-            audiowave: false,
-            // RESOLUTION CONTROL
-            resolution: "normal", // "normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"
-            ...options
-        };
+    this.options = {
+        showQualitySelector: true,
+        showSpeedControl: true,
+        showFullscreen: true,
+        showPictureInPicture: true,
+        showSubtitles: true,
+        subtitlesEnabled: false,
+        autoHide: true,
+        autoHideDelay: 3000,
+        poster: null,                // URL of poster image
+        showPosterOnEnd: false,      // Show poster again when video ends
+        keyboardControls: true,
+        showSeekTooltip: true,
+        showTitleOverlay: false,
+        videoTitle: '',
+        persistentTitle: false,
+        debug: false,             // Enable/disable debug logging
+        autoplay: false,          // if video should autoplay at start
+        defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
+        language: null,           // language of the player (default english)
+        pauseClick: true,         // the player should be paused when click over the video area
+        doubleTapPause: true,     // first tap (or click) show the controlbar, second tap (or click) pause
+        brandLogoEnabled: false,  // Enable/disable brand logo
+        brandLogoUrl: '',         // URL for brand logo image
+        brandLogoLinkUrl: '',     // Optional URL to open when clicking the logo
+        playlistEnabled: true,    // Enable/disable playlist detection
+        playlistAutoPlay: true,   // Auto-play next video when current ends
+        playlistLoop: false,      // Loop playlist when reaching the end
+        loop: false,              // Loop video when it ends (restart from beginning)
+        volumeSlider: 'horizontal', //volume slider type: 'horizontal' or 'vertical'
+        // WATERMARK OVERLAY
+        watermarkUrl: '',           // URL of watermark image
+        watermarkLink: '',          // Optional URL to open when clicking watermark
+        watermarkPosition: 'bottomright', // Position: topleft, topright, bottomleft, bottomright
+        watermarkTitle: '',         // Optional tooltip title
+        hideWatermark: true,        // Hide watermark with controls (default: true)
+        // ADAPTIVE STREAMING SUPPORT
+        adaptiveStreaming: false, // Enable DASH/HLS adaptive streaming
+        dashLibUrl: 'https://cdn.dashjs.org/latest/dash.all.min.js', // Dash.js library URL
+        hlsLibUrl: 'https://cdn.jsdelivr.net/npm/hls.js@latest', // HLS.js library URL
+        adaptiveQualityControl: true, // Show quality control for adaptive streams
+        // AUDIO PLAYER
+        audiofile: false,
+        audiowave: false,
+        // RESOLUTION CONTROL
+        resolution: "normal", // "normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"
+        ...options
+    };
 
-        this.isUserSeeking = false;
-        this.controlsTimeout = null;
-        this.titleTimeout = null;
-        this.currentQualityIndex = 0;
-        this.qualities = [];
-        this.originalSources = [];
-        this.isPiPSupported = this.checkPiPSupport();
-        this.seekTooltip = null;
-        this.titleOverlay = null;
-        this.isPlayerReady = false;
+    this.isUserSeeking = false;
+    this.controlsTimeout = null;
+    this.titleTimeout = null;
+    this.currentQualityIndex = 0;
+    this.qualities = [];
+    this.originalSources = [];
+    this.isPiPSupported = this.checkPiPSupport();
+    this.seekTooltip = null;
+    this.titleOverlay = null;
+    this.isPlayerReady = false;
 
-        // Subtitle management
-        this.textTracks = [];
-        this.currentSubtitleTrack = null;
-        this.subtitlesEnabled = false;
-        this.customSubtitleRenderer = null;
+    // Subtitle management
+    this.textTracks = [];
+    this.currentSubtitleTrack = null;
+    this.subtitlesEnabled = false;
+    this.customSubtitleRenderer = null;
 
-        // Chapter management
-        this.chapters = [];
-        this.chapterMarkersContainer = null;
-        this.chapterTooltip = null;
+    // Chapter management
+    this.chapters = [];
+    this.chapterMarkersContainer = null;
+    this.chapterTooltip = null;
 
-        // Dual quality indicator management
-        this.selectedQuality = this.options.defaultQuality || 'auto';
-        this.currentPlayingQuality = null;
-        this.qualityMonitorInterval = null;
+    // Dual quality indicator management
+    this.selectedQuality = this.options.defaultQuality || 'auto';
+    this.currentPlayingQuality = null;
+    this.qualityMonitorInterval = null;
 
-        // Quality change management
-        this.qualityChangeTimeout = null;
-        this.isChangingQuality = false;
+    // Quality change management
+    this.qualityChangeTimeout = null;
+    this.isChangingQuality = false;
 
-        // Quality debug
-        this.debugQuality = false;
+    // Quality debug
+    this.debugQuality = false;
 
-        // Auto-hide system
-        this.autoHideTimer = null;
-        this.mouseOverControls = false;
-        this.autoHideDebug = false;
-        this.autoHideInitialized = false;
+    // Auto-hide system
+    this.autoHideTimer = null;
+    this.mouseOverControls = false;
+    this.autoHideDebug = false;
+    this.autoHideInitialized = false;
 
-        // Poster management
-        this.posterOverlay = null;
+    // Poster management
+    this.posterOverlay = null;
 
     // Watermark overlay
     this.watermarkElement = null;
 
-        // Custom event system
-        this.eventCallbacks = {
-            'played': [],
-            'paused': [],
-            'subtitlechange': [],
-            'chapterchange': [],
-            'pipchange': [],
-            'fullscreenchange': [],
-            'speedchange': [],
-            'timeupdate': [],
-            'volumechange': [],
-            'qualitychange': [],
-            'playlistchange': [],
-            'ended': []
-        };
+    // Custom event system
+    this.eventCallbacks = {
+        'played': [],
+        'paused': [],
+        'subtitlechange': [],
+        'chapterchange': [],
+        'pipchange': [],
+        'fullscreenchange': [],
+        'speedchange': [],
+        'timeupdate': [],
+        'volumechange': [],
+        'qualitychange': [],
+        'playlistchange': [],
+        'ended': []
+    };
 
-        // Playlist management
-        this.playlist = [];
-        this.currentPlaylistIndex = -1;
-        this.playlistId = null;
-        this.isPlaylistActive = false;
+    // Playlist management
+    this.playlist = [];
+    this.currentPlaylistIndex = -1;
+    this.playlistId = null;
+    this.isPlaylistActive = false;
 
-        // Adaptive streaming management
-        this.dashPlayer = null;
-        this.hlsPlayer = null;
-        this.adaptiveStreamingType = null; // 'dash', 'hls', or null
-        this.isAdaptiveStream = false;
-        this.adaptiveQualities = [];
-        this.librariesLoaded = {
-            dash: false,
-            hls: false
-        };
+    // Adaptive streaming management
+    this.dashPlayer = null;
+    this.hlsPlayer = null;
+    this.adaptiveStreamingType = null; // 'dash', 'hls', or null
+    this.isAdaptiveStream = false;
+    this.adaptiveQualities = [];
+    this.librariesLoaded = {
+        dash: false,
+        hls: false
+    };
 
-        this.lastTimeUpdate = 0; // For throttling timeupdate events
+    this.lastTimeUpdate = 0; // For throttling timeupdate events
 
-        if (this.options.language && this.isI18nAvailable()) {
-            VideoPlayerTranslations.setLanguage(this.options.language);
-        }
-	// Apply autoplay if enabled
-        if (options.autoplay) {
-            this.video.autoplay = true;
-        }
+    if (this.options.language && this.isI18nAvailable()) {
+        VideoPlayerTranslations.setLanguage(this.options.language);
+    }
+    // Apply autoplay if enabled
+    if (options.autoplay) {
+        this.video.autoplay = true;
+    }
 
-        try {
-            this.interceptAutoLoading();
-            this.createPlayerStructure();
-            this.initializeElements();
-            // audio player adaptation
-            this.adaptToAudioFile = function () {
-                if (this.options.audiofile) {
-                    // Nascondere video
-                    if (this.video) {
-                        this.video.style.display = 'none';
-                    }
-                    if (this.container) {
-                        this.container.classList.add('audio-player');
-                    }
-                    if (this.options.audiowave) {
-                        this.initAudioWave();
-                    }
+    try {
+        this.interceptAutoLoading();
+        this.createPlayerStructure();
+        this.initializeElements();
+        // audio player adaptation
+        this.adaptToAudioFile = function () {
+            if (this.options.audiofile) {
+                // Nascondere video
+                if (this.video) {
+                    this.video.style.display = 'none';
                 }
-            };
-            // Audio wave with Web Audio API
-            this.initAudioWave = function () {
-                if (!this.video) return;
+                if (this.container) {
+                    this.container.classList.add('audio-player');
+                }
+                if (this.options.audiowave) {
+                    this.initAudioWave();
+                }
+            }
+        };
+        // Audio wave with Web Audio API
+        this.initAudioWave = function () {
+            if (!this.video) return;
 
-                this.audioWaveCanvas = document.createElement('canvas');
-                this.audioWaveCanvas.className = 'audio-wave-canvas';
-                this.container.appendChild(this.audioWaveCanvas);
+            this.audioWaveCanvas = document.createElement('canvas');
+            this.audioWaveCanvas.className = 'audio-wave-canvas';
+            this.container.appendChild(this.audioWaveCanvas);
 
-                const canvasCtx = this.audioWaveCanvas.getContext('2d');
-                const WIDTH = this.audioWaveCanvas.width = this.container.clientWidth;
-                const HEIGHT = this.audioWaveCanvas.height = 60; // altezza onda audio
+            const canvasCtx = this.audioWaveCanvas.getContext('2d');
+            const WIDTH = this.audioWaveCanvas.width = this.container.clientWidth;
+            const HEIGHT = this.audioWaveCanvas.height = 60; // altezza onda audio
 
-                // Setup Web Audio API
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                this.audioCtx = new AudioContext();
-                this.analyser = this.audioCtx.createAnalyser();
-                this.source = this.audioCtx.createMediaElementSource(this.video);
-                this.source.connect(this.analyser);
-                this.analyser.connect(this.audioCtx.destination);
+            // Setup Web Audio API
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.audioCtx = new AudioContext();
+            this.analyser = this.audioCtx.createAnalyser();
+            this.source = this.audioCtx.createMediaElementSource(this.video);
+            this.source.connect(this.analyser);
+            this.analyser.connect(this.audioCtx.destination);
 
-                this.analyser.fftSize = 2048;
-                const bufferLength = this.analyser.fftSize;
-                const dataArray = new Uint8Array(bufferLength);
+            this.analyser.fftSize = 2048;
+            const bufferLength = this.analyser.fftSize;
+            const dataArray = new Uint8Array(bufferLength);
 
-                // canvas
-                const draw = () => {
-                    requestAnimationFrame(draw);
-                    this.analyser.getByteTimeDomainData(dataArray);
+            // canvas
+            const draw = () => {
+                requestAnimationFrame(draw);
+                this.analyser.getByteTimeDomainData(dataArray);
 
-                    canvasCtx.fillStyle = '#222';
-                    canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+                canvasCtx.fillStyle = '#222';
+                canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
 
-                    canvasCtx.lineWidth = 2;
-                    canvasCtx.strokeStyle = '#33ccff';
-                    canvasCtx.beginPath();
+                canvasCtx.lineWidth = 2;
+                canvasCtx.strokeStyle = '#33ccff';
+                canvasCtx.beginPath();
 
-                    const sliceWidth = WIDTH / bufferLength;
-                    let x = 0;
+                const sliceWidth = WIDTH / bufferLength;
+                let x = 0;
 
-                    for (let i = 0; i < bufferLength; i++) {
-                        const v = dataArray[i] / 128.0;
-                        const y = v * HEIGHT / 2;
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * HEIGHT / 2;
 
-                        if (i === 0) {
-                            canvasCtx.moveTo(x, y);
-                        } else {
-                            canvasCtx.lineTo(x, y);
-                        }
-
-                        x += sliceWidth;
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
                     }
-                    canvasCtx.lineTo(WIDTH, HEIGHT / 2);
-                    canvasCtx.stroke();
-                };
 
-                draw();
+                    x += sliceWidth;
+                }
+                canvasCtx.lineTo(WIDTH, HEIGHT / 2);
+                canvasCtx.stroke();
             };
-            this.adaptToAudioFile();
-            this.bindEvents();
 
-            if (this.options.keyboardControls) {
-                this.setupKeyboardControls();
-            }
+            draw();
+        };
+        this.adaptToAudioFile();
+        this.bindEvents();
 
-            this.updateVolumeSliderVisual();
-            this.initVolumeTooltip();
-            this.updateTooltips();
-            this.markPlayerReady();
-            this.initializePluginSystem();
-            this.restoreSourcesAsync();
+        if (this.options.keyboardControls) {
+            this.setupKeyboardControls();
+        }
 
-            this.initializeSubtitles();
-            this.initializeQualityMonitoring();
+        this.updateVolumeSliderVisual();
+        this.initVolumeTooltip();
+        this.updateTooltips();
+        this.markPlayerReady();
+        this.initializePluginSystem();
+        this.restoreSourcesAsync();
 
-            this.initializeResolution();
-            this.initializeChapters();
-            this.initializePoster();
-            this.initializeWatermark();
+        this.initializeSubtitles();
+        this.initializeQualityMonitoring();
 
+        this.initializeResolution();
+        this.initializeChapters();
+        this.initializePoster();
+        this.initializeWatermark();
+
+    } catch (error) {
+        if (this.options.debug) console.error('Video player initialization error:', error);
+    }
+}
+
+getPlayerState() {
+    return {
+        isPlaying: !this.isPaused(),
+        isPaused: this.isPaused(),
+        currentTime: this.getCurrentTime(),
+        duration: this.getDuration(),
+        volume: this.getVolume(),
+        isMuted: this.isMuted(),
+        playbackRate: this.getPlaybackRate(),
+        isFullscreen: this.isFullscreenActive(),
+        isPictureInPicture: this.isPictureInPictureActive(),
+        subtitlesEnabled: this.isSubtitlesEnabled(),
+        currentSubtitle: this.getCurrentSubtitleTrack(),
+        selectedQuality: this.getSelectedQuality(),
+        currentQuality: this.getCurrentPlayingQuality(),
+        isAutoQuality: this.isAutoQualityActive()
+    };
+}
+
+isI18nAvailable() {
+    return typeof VideoPlayerTranslations !== 'undefined' &&
+        VideoPlayerTranslations !== null &&
+        typeof VideoPlayerTranslations.t === 'function';
+}
+
+t(key) {
+    if (this.isI18nAvailable()) {
+        try {
+            return VideoPlayerTranslations.t(key);
         } catch (error) {
-            if (this.options.debug) console.error('Video player initialization error:', error);
+            if (this.options.debug) console.warn('Translation error:', error);
         }
     }
 
-    getPlayerState() {
-        return {
-            isPlaying: !this.isPaused(),
-            isPaused: this.isPaused(),
-            currentTime: this.getCurrentTime(),
-            duration: this.getDuration(),
-            volume: this.getVolume(),
-            isMuted: this.isMuted(),
-            playbackRate: this.getPlaybackRate(),
-            isFullscreen: this.isFullscreenActive(),
-            isPictureInPicture: this.isPictureInPictureActive(),
-            subtitlesEnabled: this.isSubtitlesEnabled(),
-            currentSubtitle: this.getCurrentSubtitleTrack(),
-            selectedQuality: this.getSelectedQuality(),
-            currentQuality: this.getCurrentPlayingQuality(),
-            isAutoQuality: this.isAutoQualityActive()
-        };
+    const fallback = {
+        'play_pause': 'Play/Pause (Space)',
+        'mute_unmute': 'Mute/Unmute (M)',
+        'volume': 'Volume',
+        'playback_speed': 'Playback speed',
+        'video_quality': 'Video quality',
+        'picture_in_picture': 'Picture-in-Picture (P)',
+        'fullscreen': 'Fullscreen (F)',
+        'subtitles': 'Subtitles (S)',
+        'subtitles_enable': 'Enable subtitles',
+        'subtitles_disable': 'Disable subtitles',
+        'subtitles_off': 'Off',
+        'auto': 'Auto',
+        'brand_logo': 'Brand logo',
+        'next_video': 'Next video (N)',
+        'prev_video': 'Previous video (P)',
+        'playlist_next': 'Next',
+        'playlist_prev': 'Previous'
+    };
+
+    return fallback[key] || key;
+}
+
+interceptAutoLoading() {
+    this.saveOriginalSources();
+    this.disableSources();
+
+    this.video.preload = 'none';
+    this.video.controls = false;
+    this.video.autoplay = false;
+
+    if (this.video.src && this.video.src !== window.location.href) {
+        this.originalSrc = this.video.src;
+        this.video.removeAttribute('src');
+        this.video.src = '';
     }
 
-    isI18nAvailable() {
-        return typeof VideoPlayerTranslations !== 'undefined' &&
-            VideoPlayerTranslations !== null &&
-            typeof VideoPlayerTranslations.t === 'function';
-    }
+    this.hideNativePlayer();
 
-    t(key) {
-        if (this.isI18nAvailable()) {
-            try {
-                return VideoPlayerTranslations.t(key);
-            } catch (error) {
-                if (this.options.debug) console.warn('Translation error:', error);
-            }
+    if (this.options.debug) console.log('📁 Sources temporarily disabled to prevent blocking');
+}
+
+saveOriginalSources() {
+    const sources = this.video.querySelectorAll('source');
+    this.originalSources = [];
+
+    sources.forEach((source, index) => {
+        if (source.src) {
+            this.originalSources.push({
+                element: source,
+                src: source.src,
+                type: source.type || 'video/mp4',
+                quality: source.getAttribute('data-quality') || `quality-${index}`,
+                index: index
+            });
         }
+    });
 
-        const fallback = {
-            'play_pause': 'Play/Pause (Space)',
-            'mute_unmute': 'Mute/Unmute (M)',
-            'volume': 'Volume',
-            'playback_speed': 'Playback speed',
-            'video_quality': 'Video quality',
-            'picture_in_picture': 'Picture-in-Picture (P)',
-            'fullscreen': 'Fullscreen (F)',
-            'subtitles': 'Subtitles (S)',
-            'subtitles_enable': 'Enable subtitles',
-            'subtitles_disable': 'Disable subtitles',
-            'subtitles_off': 'Off',
-            'auto': 'Auto',
-            'brand_logo': 'Brand logo',
-            'next_video': 'Next video (N)',
-            'prev_video': 'Previous video (P)',
-            'playlist_next': 'Next',
-            'playlist_prev': 'Previous'
-        };
+    if (this.options.debug) console.log(`📁 Saved ${this.originalSources.length} sources originali:`, this.originalSources);
+}
 
-        return fallback[key] || key;
-    }
-
-    interceptAutoLoading() {
-        this.saveOriginalSources();
-        this.disableSources();
-
-        this.video.preload = 'none';
-        this.video.controls = false;
-        this.video.autoplay = false;
-
-        if (this.video.src && this.video.src !== window.location.href) {
-            this.originalSrc = this.video.src;
-            this.video.removeAttribute('src');
-            this.video.src = '';
+disableSources() {
+    const sources = this.video.querySelectorAll('source');
+    sources.forEach(source => {
+        if (source.src) {
+            source.removeAttribute('src');
         }
+    });
+}
 
-        this.hideNativePlayer();
-
-        if (this.options.debug) console.log('📁 Sources temporarily disabled to prevent blocking');
-    }
-
-    saveOriginalSources() {
-        const sources = this.video.querySelectorAll('source');
-        this.originalSources = [];
-
-        sources.forEach((source, index) => {
-            if (source.src) {
-                this.originalSources.push({
-                    element: source,
-                    src: source.src,
-                    type: source.type || 'video/mp4',
-                    quality: source.getAttribute('data-quality') || `quality-${index}`,
-                    index: index
-                });
-            }
-        });
-
-        if (this.options.debug) console.log(`📁 Saved ${this.originalSources.length} sources originali:`, this.originalSources);
-    }
-
-    disableSources() {
-        const sources = this.video.querySelectorAll('source');
-        sources.forEach(source => {
-            if (source.src) {
-                source.removeAttribute('src');
-            }
-        });
-    }
-
-    restoreSourcesAsync() {
-        setTimeout(() => {
-            this.restoreSources();
-        }, 200);
-    }
+restoreSourcesAsync() {
+    setTimeout(() => {
+        this.restoreSources();
+    }, 200);
+}
 
     async restoreSources() {
-        try {
-            // Check for adaptive streaming first
-            let adaptiveSource = null;
+    try {
+        // Check for adaptive streaming first
+        let adaptiveSource = null;
 
-            if (this.originalSrc) {
-                adaptiveSource = this.originalSrc;
-            } else if (this.originalSources.length > 0) {
-                // Check if any source is adaptive
-                const firstSource = this.originalSources[0];
-                if (firstSource.src && this.detectStreamType(firstSource.src)) {
-                    adaptiveSource = firstSource.src;
-                }
+        if (this.originalSrc) {
+            adaptiveSource = this.originalSrc;
+        } else if (this.originalSources.length > 0) {
+            // Check if any source is adaptive
+            const firstSource = this.originalSources[0];
+            if (firstSource.src && this.detectStreamType(firstSource.src)) {
+                adaptiveSource = firstSource.src;
             }
-
-            // Initialize adaptive streaming if detected
-            if (adaptiveSource && this.options.adaptiveStreaming) {
-                const adaptiveInitialized = await this.initializeAdaptiveStreaming(adaptiveSource);
-                if (adaptiveInitialized) {
-                    if (this.options.debug) console.log('📡 Adaptive streaming initialized');
-                    return;
-                }
-            }
-
-            // Fallback to traditional sources
-            if (this.originalSrc) {
-                this.video.src = this.originalSrc;
-            }
-
-            this.originalSources.forEach(sourceData => {
-                if (sourceData.element && sourceData.src) {
-                    sourceData.element.src = sourceData.src;
-                }
-            });
-
-            this.qualities = this.originalSources.map(s => ({
-                src: s.src,
-                quality: s.quality,
-                type: s.type
-            }));
-
-            if (this.originalSrc && this.qualities.length === 0) {
-                this.qualities.push({
-                    src: this.originalSrc,
-                    quality: 'default',
-                    type: 'video/mp4'
-                });
-            }
-
-            if (this.qualities.length > 0) {
-                this.video.load();
-
-                // CRITICAL: Re-initialize subtitles AFTER video.load() completes
-                this.video.addEventListener('loadedmetadata', () => {
-                    setTimeout(() => {
-                        this.reinitializeSubtitles();
-                        if (this.options.debug) console.log('🔄 Subtitles re-initialized after video load');
-                    }, 300);
-                }, { once: true });
-            }
-
-            if (this.options.debug) console.log('✅ Sources ripristinate:', this.qualities);
-
-        } catch (error) {
-            if (this.options.debug) console.error('❌ Errore ripristino sources:', error);
         }
+
+        // Initialize adaptive streaming if detected
+        if (adaptiveSource && this.options.adaptiveStreaming) {
+            const adaptiveInitialized = await this.initializeAdaptiveStreaming(adaptiveSource);
+            if (adaptiveInitialized) {
+                if (this.options.debug) console.log('📡 Adaptive streaming initialized');
+                return;
+            }
+        }
+
+        // Fallback to traditional sources
+        if (this.originalSrc) {
+            this.video.src = this.originalSrc;
+        }
+
+        this.originalSources.forEach(sourceData => {
+            if (sourceData.element && sourceData.src) {
+                sourceData.element.src = sourceData.src;
+            }
+        });
+
+        this.qualities = this.originalSources.map(s => ({
+            src: s.src,
+            quality: s.quality,
+            type: s.type
+        }));
+
+        if (this.originalSrc && this.qualities.length === 0) {
+            this.qualities.push({
+                src: this.originalSrc,
+                quality: 'default',
+                type: 'video/mp4'
+            });
+        }
+
+        if (this.qualities.length > 0) {
+            this.video.load();
+
+            // CRITICAL: Re-initialize subtitles AFTER video.load() completes
+            this.video.addEventListener('loadedmetadata', () => {
+                setTimeout(() => {
+                    this.reinitializeSubtitles();
+                    if (this.options.debug) console.log('🔄 Subtitles re-initialized after video load');
+                }, 300);
+            }, { once: true });
+        }
+
+        if (this.options.debug) console.log('✅ Sources ripristinate:', this.qualities);
+
+    } catch (error) {
+        if (this.options.debug) console.error('❌ Errore ripristino sources:', error);
     }
+}
 
 reinitializeSubtitles() {
     if (this.options.debug) console.log('🔄 Re-initializing subtitles...');
@@ -870,384 +870,384 @@ getDefaultSubtitleTrack() {
     return -1;
 }
 
-    markPlayerReady() {
+markPlayerReady() {
+    setTimeout(() => {
+        this.isPlayerReady = true;
+        if (this.container) {
+            this.container.classList.add('player-initialized');
+        }
+
+        if (this.video) {
+            this.video.style.visibility = '';
+            this.video.style.opacity = '';
+            this.video.style.pointerEvents = '';
+        }
+
+        // INITIALIZE AUTO-HIDE AFTER EVERYTHING IS READY
         setTimeout(() => {
-            this.isPlayerReady = true;
-            if (this.container) {
-                this.container.classList.add('player-initialized');
+            if (this.options.autoHide && !this.autoHideInitialized) {
+                this.initAutoHide();
             }
 
-            if (this.video) {
-                this.video.style.visibility = '';
-                this.video.style.opacity = '';
-                this.video.style.pointerEvents = '';
-            }
+            // Fix: Apply default quality (auto or specific)
+            if (this.selectedQuality && this.qualities && this.qualities.length > 0) {
+                if (this.options.debug) console.log(`🎯 Applying defaultQuality: "${this.selectedQuality}"`);
 
-            // INITIALIZE AUTO-HIDE AFTER EVERYTHING IS READY
-            setTimeout(() => {
-                if (this.options.autoHide && !this.autoHideInitialized) {
-                    this.initAutoHide();
-                }
-
-                // Fix: Apply default quality (auto or specific)
-                if (this.selectedQuality && this.qualities && this.qualities.length > 0) {
-                    if (this.options.debug) console.log(`🎯 Applying defaultQuality: "${this.selectedQuality}"`);
-
-                    if (this.selectedQuality === 'auto') {
-                        this.enableAutoQuality();
+                if (this.selectedQuality === 'auto') {
+                    this.enableAutoQuality();
+                } else {
+                    // Check if requested quality is available
+                    const requestedQuality = this.qualities.find(q => q.quality === this.selectedQuality);
+                    if (requestedQuality) {
+                        if (this.options.debug) console.log(`✅ Quality "${this.selectedQuality}" available`);
+                        this.setQuality(this.selectedQuality);
                     } else {
-                        // Check if requested quality is available
-                        const requestedQuality = this.qualities.find(q => q.quality === this.selectedQuality);
-                        if (requestedQuality) {
-                            if (this.options.debug) console.log(`✅ Quality "${this.selectedQuality}" available`);
-                            this.setQuality(this.selectedQuality);
-                        } else {
-                            if (this.options.debug) console.warn(`⚠️ Quality "${this.selectedQuality}" not available - fallback to auto`);
-                            if (this.options.debug) console.log('📋 Available qualities:', this.qualities.map(q => q.quality));
-                            this.enableAutoQuality();
-                        }
+                        if (this.options.debug) console.warn(`⚠️ Quality "${this.selectedQuality}" not available - fallback to auto`);
+                        if (this.options.debug) console.log('📋 Available qualities:', this.qualities.map(q => q.quality));
+                        this.enableAutoQuality();
                     }
                 }
+            }
 
-                // Autoplay
-                if (this.options.autoplay) {
-                    if (this.options.debug) console.log('🎬 Autoplay enabled');
-                    setTimeout(() => {
-                        this.video.play().catch(error => {
-                            if (this.options.debug) console.warn('⚠️ Autoplay blocked:', error);
-                        });
-                    }, 100);
-                }
-            }, 200);
+            // Autoplay
+            if (this.options.autoplay) {
+                if (this.options.debug) console.log('🎬 Autoplay enabled');
+                setTimeout(() => {
+                    this.video.play().catch(error => {
+                        if (this.options.debug) console.warn('⚠️ Autoplay blocked:', error);
+                    });
+                }, 100);
+            }
+        }, 200);
 
-        }, 100);
+    }, 100);
+}
+
+createPlayerStructure() {
+    let wrapper = this.video.closest('.video-wrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'video-wrapper';
+        this.video.parentNode.insertBefore(wrapper, this.video);
+        wrapper.appendChild(this.video);
     }
 
-    createPlayerStructure() {
-        let wrapper = this.video.closest('.video-wrapper');
-        if (!wrapper) {
-            wrapper = document.createElement('div');
-            wrapper.className = 'video-wrapper';
-            this.video.parentNode.insertBefore(wrapper, this.video);
-            wrapper.appendChild(this.video);
-        }
+    this.container = wrapper;
 
-        this.container = wrapper;
+    this.createInitialLoading();
+    this.createLoadingOverlay();
+    this.collectVideoQualities();
+    this.createControls();
+    this.createBrandLogo();
+    this.detectPlaylist();
 
-        this.createInitialLoading();
-        this.createLoadingOverlay();
-        this.collectVideoQualities();
-        this.createControls();
-        this.createBrandLogo();
-        this.detectPlaylist();
-
-        if (this.options.showTitleOverlay) {
-            this.createTitleOverlay();
-        }
+    if (this.options.showTitleOverlay) {
+        this.createTitleOverlay();
     }
+}
 
-    createInitialLoading() {
-        const initialLoader = document.createElement('div');
-        initialLoader.className = 'initial-loading';
-        initialLoader.innerHTML = '<div class="loading-spinner"></div>';
-        this.container.appendChild(initialLoader);
-        this.initialLoading = initialLoader;
-    }
+createInitialLoading() {
+    const initialLoader = document.createElement('div');
+    initialLoader.className = 'initial-loading';
+    initialLoader.innerHTML = '<div class="loading-spinner"></div>';
+    this.container.appendChild(initialLoader);
+    this.initialLoading = initialLoader;
+}
 
-    collectVideoQualities() {
-        if (this.options.debug) console.log('📁 Video qualities will be loaded with restored sources');
-    }
+collectVideoQualities() {
+    if (this.options.debug) console.log('📁 Video qualities will be loaded with restored sources');
+}
 
-    createLoadingOverlay() {
-        const overlay = document.createElement('div');
-        overlay.className = 'loading-overlay';
-        overlay.id = 'loadingOverlay-' + this.getUniqueId();
-        overlay.innerHTML = '<div class="loading-spinner"></div>';
+createLoadingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.id = 'loadingOverlay-' + this.getUniqueId();
+    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    this.container.appendChild(overlay);
+    this.loadingOverlay = overlay;
+}
+
+createTitleOverlay() {
+    const overlay = document.createElement('div');
+    overlay.className = 'title-overlay';
+    overlay.id = 'titleOverlay-' + this.getUniqueId();
+
+    const titleText = document.createElement('h2');
+    titleText.className = 'title-text';
+    titleText.textContent = this.options.videoTitle || '';
+
+    overlay.appendChild(titleText);
+
+    if (this.controls) {
+        this.container.insertBefore(overlay, this.controls);
+    } else {
         this.container.appendChild(overlay);
-        this.loadingOverlay = overlay;
     }
 
-    createTitleOverlay() {
-        const overlay = document.createElement('div');
-        overlay.className = 'title-overlay';
-        overlay.id = 'titleOverlay-' + this.getUniqueId();
+    this.titleOverlay = overlay;
 
-        const titleText = document.createElement('h2');
-        titleText.className = 'title-text';
-        titleText.textContent = this.options.videoTitle || '';
-
-        overlay.appendChild(titleText);
-
-        if (this.controls) {
-            this.container.insertBefore(overlay, this.controls);
-        } else {
-            this.container.appendChild(overlay);
-        }
-
-        this.titleOverlay = overlay;
-
-        if (this.options.persistentTitle && this.options.videoTitle) {
-            this.showTitleOverlay();
-        }
+    if (this.options.persistentTitle && this.options.videoTitle) {
+        this.showTitleOverlay();
     }
+}
 
-    updateTooltips() {
-        if (!this.controls) return;
+updateTooltips() {
+    if (!this.controls) return;
 
+    try {
+        this.controls.querySelectorAll('[data-tooltip]').forEach(element => {
+            const key = element.getAttribute('data-tooltip');
+            element.title = this.t(key);
+        });
+
+        const autoOption = this.controls.querySelector('.quality-option[data-quality="auto"]');
+        if (autoOption) {
+            autoOption.textContent = this.t('auto');
+        }
+    } catch (error) {
+        if (this.options.debug) console.warn('Errore aggiornamento tooltip:', error);
+    }
+}
+
+setLanguage(lang) {
+    if (this.isI18nAvailable()) {
         try {
-            this.controls.querySelectorAll('[data-tooltip]').forEach(element => {
-                const key = element.getAttribute('data-tooltip');
-                element.title = this.t(key);
-            });
-
-            const autoOption = this.controls.querySelector('.quality-option[data-quality="auto"]');
-            if (autoOption) {
-                autoOption.textContent = this.t('auto');
+            if (VideoPlayerTranslations.setLanguage(lang)) {
+                this.updateTooltips();
+                return true;
             }
         } catch (error) {
-            if (this.options.debug) console.warn('Errore aggiornamento tooltip:', error);
+            if (this.options.debug) console.warn('Errore cambio lingua:', error);
         }
     }
+    return false;
+}
 
-    setLanguage(lang) {
-        if (this.isI18nAvailable()) {
-            try {
-                if (VideoPlayerTranslations.setLanguage(lang)) {
-                    this.updateTooltips();
-                    return true;
-                }
-            } catch (error) {
-                if (this.options.debug) console.warn('Errore cambio lingua:', error);
-            }
-        }
-        return false;
-    }
+setVideoTitle(title) {
+    this.options.videoTitle = title || '';
 
-    setVideoTitle(title) {
-        this.options.videoTitle = title || '';
-
-        if (this.titleOverlay) {
-            const titleElement = this.titleOverlay.querySelector('.title-text');
-            if (titleElement) {
-                titleElement.textContent = this.options.videoTitle;
-            }
-
-            if (title) {
-                this.showTitleOverlay();
-
-                if (!this.options.persistentTitle) {
-                    this.clearTitleTimeout();
-                    this.titleTimeout = setTimeout(() => {
-                        this.hideTitleOverlay();
-                    }, 3000);
-                }
-            }
+    if (this.titleOverlay) {
+        const titleElement = this.titleOverlay.querySelector('.title-text');
+        if (titleElement) {
+            titleElement.textContent = this.options.videoTitle;
         }
 
-        return this;
-    }
+        if (title) {
+            this.showTitleOverlay();
 
-    getVideoTitle() {
-        return this.options.videoTitle;
-    }
-
-    setPersistentTitle(persistent) {
-        this.options.persistentTitle = persistent;
-
-        if (this.titleOverlay && this.options.videoTitle) {
-            if (persistent) {
-                this.showTitleOverlay();
+            if (!this.options.persistentTitle) {
                 this.clearTitleTimeout();
-            } else {
-                this.titleOverlay.classList.remove('persistent');
-                if (this.titleOverlay.classList.contains('show')) {
-                    this.clearTitleTimeout();
-                    this.titleTimeout = setTimeout(() => {
-                        this.hideTitleOverlay();
-                    }, 3000);
-                }
+                this.titleTimeout = setTimeout(() => {
+                    this.hideTitleOverlay();
+                }, 3000);
             }
         }
-
-        return this;
     }
 
-    enableTitleOverlay() {
-        if (!this.titleOverlay && !this.options.showTitleOverlay) {
-            this.options.showTitleOverlay = true;
-            this.createTitleOverlay();
-        }
-        return this;
-    }
+    return this;
+}
 
-    disableTitleOverlay() {
-        if (this.titleOverlay) {
-            this.titleOverlay.remove();
-            this.titleOverlay = null;
-        }
-        this.options.showTitleOverlay = false;
-        return this;
-    }
+getVideoTitle() {
+    return this.options.videoTitle;
+}
 
-    getUniqueId() {
-        return Math.random().toString(36).substr(2, 9);
-    }
+setPersistentTitle(persistent) {
+    this.options.persistentTitle = persistent;
 
-    initializeElements() {
-        this.progressContainer = this.controls?.querySelector('.progress-container');
-        this.progressFilled = this.controls?.querySelector('.progress-filled');
-        this.progressBuffer = this.controls?.querySelector('.progress-buffer');
-        this.progressHandle = this.controls?.querySelector('.progress-handle');
-        this.seekTooltip = this.controls?.querySelector('.seek-tooltip');
-
-        this.playPauseBtn = this.controls?.querySelector('.play-pause-btn');
-        this.muteBtn = this.controls?.querySelector('.mute-btn');
-        this.fullscreenBtn = this.controls?.querySelector('.fullscreen-btn');
-        this.speedBtn = this.controls?.querySelector('.speed-btn');
-        this.qualityBtn = this.controls?.querySelector('.quality-btn');
-        this.pipBtn = this.controls?.querySelector('.pip-btn');
-        this.subtitlesBtn = this.controls?.querySelector('.subtitles-btn');
-        this.playlistPrevBtn = this.controls?.querySelector('.playlist-prev-btn');
-        this.playlistNextBtn = this.controls?.querySelector('.playlist-next-btn');
-
-        this.playIcon = this.controls?.querySelector('.play-icon');
-        this.pauseIcon = this.controls?.querySelector('.pause-icon');
-        this.volumeIcon = this.controls?.querySelector('.volume-icon');
-        this.muteIcon = this.controls?.querySelector('.mute-icon');
-        this.fullscreenIcon = this.controls?.querySelector('.fullscreen-icon');
-        this.exitFullscreenIcon = this.controls?.querySelector('.exit-fullscreen-icon');
-        this.pipIcon = this.controls?.querySelector('.pip-icon');
-        this.pipExitIcon = this.controls?.querySelector('.pip-exit-icon');
-
-        this.volumeSlider = this.controls?.querySelector('.volume-slider');
-        this.currentTimeEl = this.controls?.querySelector('.current-time');
-        this.durationEl = this.controls?.querySelector('.duration');
-        this.speedMenu = this.controls?.querySelector('.speed-menu');
-        this.qualityMenu = this.controls?.querySelector('.quality-menu');
-        this.subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
-    }
-
-    updateVolumeSliderVisual() {
-        if (!this.video || !this.container) return;
-
-        const volume = this.video.muted ? 0 : this.video.volume;
-        const percentage = Math.round(volume * 100);
-
-        this.container.style.setProperty('--player-volume-fill', percentage + '%');
-
-        if (this.volumeSlider) {
-            this.volumeSlider.value = percentage;
-        }
-    }
-
-    createVolumeTooltip() {
-        const volumeContainer = this.controls?.querySelector('.volume-container');
-        if (!volumeContainer || volumeContainer.querySelector('.volume-tooltip')) {
-            return; // Tooltip already present
-        }
-
-        const tooltip = document.createElement('div');
-        tooltip.className = 'volume-tooltip';
-        tooltip.textContent = '50%';
-        volumeContainer.appendChild(tooltip);
-
-        this.volumeTooltip = tooltip;
-
-        if (this.options.debug) {
-            console.log('Dynamic volume tooltip created');
-        }
-    }
-
-    updateVolumeTooltip() {
-        if (!this.volumeTooltip || !this.video) return;
-
-        const volume = Math.round(this.video.volume * 100);
-        this.volumeTooltip.textContent = volume + '%';
-
-        // Aggiorna la posizione del tooltip
-        this.updateVolumeTooltipPosition(this.video.volume);
-
-        if (this.options.debug) {
-            console.log('Volume tooltip updated:', volume + '%');
-        }
-    }
-
-    updateVolumeTooltipPosition(volumeValue = null) {
-        if (!this.volumeTooltip || !this.video) return;
-
-        const volumeSlider = this.controls?.querySelector('.volume-slider');
-        if (!volumeSlider) return;
-
-        // If no volume provided, use current volume
-        if (volumeValue === null) {
-            volumeValue = this.video.volume;
-        }
-
-        // Calcola la posizione esatta del thumb
-        const sliderRect = volumeSlider.getBoundingClientRect();
-        const sliderWidth = sliderRect.width;
-
-        // Thumb size is typically 14px (as defined in CSS)
-        const thumbSize = 14; // var(--player-volume-handle-size)
-
-        // Calcola la posizione del centro del thumb
-        // Il thumb si muove da thumbSize/2 a (sliderWidth - thumbSize/2)
-        const availableWidth = sliderWidth - thumbSize;
-        const thumbCenterPosition = (thumbSize / 2) + (availableWidth * volumeValue);
-
-        // Converti in percentuale relativa al container dello slider
-        const percentage = (thumbCenterPosition / sliderWidth) * 100;
-
-        // Posiziona il tooltip
-        this.volumeTooltip.style.left = percentage + '%';
-
-        if (this.options.debug) {
-            console.log('Volume tooltip position updated:', {
-                volumeValue: volumeValue,
-                percentage: percentage + '%',
-                thumbCenter: thumbCenterPosition,
-                sliderWidth: sliderWidth
-            });
-        }
-    }
-
-    initVolumeTooltip() {
-        this.createVolumeTooltip();
-        this.setupVolumeTooltipEvents();
-
-        // Set initial position immediately
-        setTimeout(() => {
-            if (this.volumeTooltip && this.video) {
-                this.updateVolumeTooltipPosition(this.video.volume);
-                this.updateVolumeTooltip();
+    if (this.titleOverlay && this.options.videoTitle) {
+        if (persistent) {
+            this.showTitleOverlay();
+            this.clearTitleTimeout();
+        } else {
+            this.titleOverlay.classList.remove('persistent');
+            if (this.titleOverlay.classList.contains('show')) {
+                this.clearTitleTimeout();
+                this.titleTimeout = setTimeout(() => {
+                    this.hideTitleOverlay();
+                }, 3000);
             }
-        }, 50); // Shorter delay for faster initialization
-    }
-
-    updateVolumeSliderVisualWithTooltip() {
-        const volumeSlider = this.controls?.querySelector('.volume-slider');
-        if (!volumeSlider || !this.video) return;
-
-        const volume = this.video.volume || 0;
-        const percentage = Math.round(volume * 100);
-
-        volumeSlider.value = volume;
-
-        // Update CSS custom property per il riempimento visuale
-        const volumeFillPercentage = percentage + '%';
-        volumeSlider.style.setProperty('--player-volume-fill', volumeFillPercentage);
-
-        // Aggiorna anche il tooltip se presente (testo e posizione)
-        this.updateVolumeTooltip();
-
-        if (this.options.debug) {
-            console.log('Volume slider aggiornato:', {
-                volume: volume,
-                percentage: percentage,
-                fillPercentage: volumeFillPercentage
-            });
         }
     }
+
+    return this;
+}
+
+enableTitleOverlay() {
+    if (!this.titleOverlay && !this.options.showTitleOverlay) {
+        this.options.showTitleOverlay = true;
+        this.createTitleOverlay();
+    }
+    return this;
+}
+
+disableTitleOverlay() {
+    if (this.titleOverlay) {
+        this.titleOverlay.remove();
+        this.titleOverlay = null;
+    }
+    this.options.showTitleOverlay = false;
+    return this;
+}
+
+getUniqueId() {
+    return Math.random().toString(36).substr(2, 9);
+}
+
+initializeElements() {
+    this.progressContainer = this.controls?.querySelector('.progress-container');
+    this.progressFilled = this.controls?.querySelector('.progress-filled');
+    this.progressBuffer = this.controls?.querySelector('.progress-buffer');
+    this.progressHandle = this.controls?.querySelector('.progress-handle');
+    this.seekTooltip = this.controls?.querySelector('.seek-tooltip');
+
+    this.playPauseBtn = this.controls?.querySelector('.play-pause-btn');
+    this.muteBtn = this.controls?.querySelector('.mute-btn');
+    this.fullscreenBtn = this.controls?.querySelector('.fullscreen-btn');
+    this.speedBtn = this.controls?.querySelector('.speed-btn');
+    this.qualityBtn = this.controls?.querySelector('.quality-btn');
+    this.pipBtn = this.controls?.querySelector('.pip-btn');
+    this.subtitlesBtn = this.controls?.querySelector('.subtitles-btn');
+    this.playlistPrevBtn = this.controls?.querySelector('.playlist-prev-btn');
+    this.playlistNextBtn = this.controls?.querySelector('.playlist-next-btn');
+
+    this.playIcon = this.controls?.querySelector('.play-icon');
+    this.pauseIcon = this.controls?.querySelector('.pause-icon');
+    this.volumeIcon = this.controls?.querySelector('.volume-icon');
+    this.muteIcon = this.controls?.querySelector('.mute-icon');
+    this.fullscreenIcon = this.controls?.querySelector('.fullscreen-icon');
+    this.exitFullscreenIcon = this.controls?.querySelector('.exit-fullscreen-icon');
+    this.pipIcon = this.controls?.querySelector('.pip-icon');
+    this.pipExitIcon = this.controls?.querySelector('.pip-exit-icon');
+
+    this.volumeSlider = this.controls?.querySelector('.volume-slider');
+    this.currentTimeEl = this.controls?.querySelector('.current-time');
+    this.durationEl = this.controls?.querySelector('.duration');
+    this.speedMenu = this.controls?.querySelector('.speed-menu');
+    this.qualityMenu = this.controls?.querySelector('.quality-menu');
+    this.subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
+}
+
+updateVolumeSliderVisual() {
+    if (!this.video || !this.container) return;
+
+    const volume = this.video.muted ? 0 : this.video.volume;
+    const percentage = Math.round(volume * 100);
+
+    this.container.style.setProperty('--player-volume-fill', percentage + '%');
+
+    if (this.volumeSlider) {
+        this.volumeSlider.value = percentage;
+    }
+}
+
+createVolumeTooltip() {
+    const volumeContainer = this.controls?.querySelector('.volume-container');
+    if (!volumeContainer || volumeContainer.querySelector('.volume-tooltip')) {
+        return; // Tooltip already present
+    }
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'volume-tooltip';
+    tooltip.textContent = '50%';
+    volumeContainer.appendChild(tooltip);
+
+    this.volumeTooltip = tooltip;
+
+    if (this.options.debug) {
+        console.log('Dynamic volume tooltip created');
+    }
+}
+
+updateVolumeTooltip() {
+    if (!this.volumeTooltip || !this.video) return;
+
+    const volume = Math.round(this.video.volume * 100);
+    this.volumeTooltip.textContent = volume + '%';
+
+    // Aggiorna la posizione del tooltip
+    this.updateVolumeTooltipPosition(this.video.volume);
+
+    if (this.options.debug) {
+        console.log('Volume tooltip updated:', volume + '%');
+    }
+}
+
+updateVolumeTooltipPosition(volumeValue = null) {
+    if (!this.volumeTooltip || !this.video) return;
+
+    const volumeSlider = this.controls?.querySelector('.volume-slider');
+    if (!volumeSlider) return;
+
+    // If no volume provided, use current volume
+    if (volumeValue === null) {
+        volumeValue = this.video.volume;
+    }
+
+    // Calcola la posizione esatta del thumb
+    const sliderRect = volumeSlider.getBoundingClientRect();
+    const sliderWidth = sliderRect.width;
+
+    // Thumb size is typically 14px (as defined in CSS)
+    const thumbSize = 14; // var(--player-volume-handle-size)
+
+    // Calcola la posizione del centro del thumb
+    // Il thumb si muove da thumbSize/2 a (sliderWidth - thumbSize/2)
+    const availableWidth = sliderWidth - thumbSize;
+    const thumbCenterPosition = (thumbSize / 2) + (availableWidth * volumeValue);
+
+    // Converti in percentuale relativa al container dello slider
+    const percentage = (thumbCenterPosition / sliderWidth) * 100;
+
+    // Posiziona il tooltip
+    this.volumeTooltip.style.left = percentage + '%';
+
+    if (this.options.debug) {
+        console.log('Volume tooltip position updated:', {
+            volumeValue: volumeValue,
+            percentage: percentage + '%',
+            thumbCenter: thumbCenterPosition,
+            sliderWidth: sliderWidth
+        });
+    }
+}
+
+initVolumeTooltip() {
+    this.createVolumeTooltip();
+    this.setupVolumeTooltipEvents();
+
+    // Set initial position immediately
+    setTimeout(() => {
+        if (this.volumeTooltip && this.video) {
+            this.updateVolumeTooltipPosition(this.video.volume);
+            this.updateVolumeTooltip();
+        }
+    }, 50); // Shorter delay for faster initialization
+}
+
+updateVolumeSliderVisualWithTooltip() {
+    const volumeSlider = this.controls?.querySelector('.volume-slider');
+    if (!volumeSlider || !this.video) return;
+
+    const volume = this.video.volume || 0;
+    const percentage = Math.round(volume * 100);
+
+    volumeSlider.value = volume;
+
+    // Update CSS custom property per il riempimento visuale
+    const volumeFillPercentage = percentage + '%';
+    volumeSlider.style.setProperty('--player-volume-fill', volumeFillPercentage);
+
+    // Aggiorna anche il tooltip se presente (testo e posizione)
+    this.updateVolumeTooltip();
+
+    if (this.options.debug) {
+        console.log('Volume slider aggiornato:', {
+            volume: volume,
+            percentage: percentage,
+            fillPercentage: volumeFillPercentage
+        });
+    }
+}
 
 // Volume slider type: 'horizontal' or 'vertical'
 setVolumeSliderOrientation(orientation) {
@@ -1271,229 +1271,229 @@ getVolumeSliderOrientation() {
 }
 
 
-    initVolumeTooltip() {
+initVolumeTooltip() {
 
-        this.createVolumeTooltip();
+    this.createVolumeTooltip();
 
-        // Setup events
-        this.setupVolumeTooltipEvents();
+    // Setup events
+    this.setupVolumeTooltipEvents();
 
-        setTimeout(() => {
-            this.updateVolumeTooltip();
-        }, 200);
+    setTimeout(() => {
+        this.updateVolumeTooltip();
+    }, 200);
 
-        if (this.options.debug) {
-            console.log('Dynamic volume tooltip inizializzato');
+    if (this.options.debug) {
+        console.log('Dynamic volume tooltip inizializzato');
+    }
+}
+
+setupSeekTooltip() {
+    if (!this.options.showSeekTooltip || !this.progressContainer || !this.seekTooltip) return;
+
+    this.progressContainer.addEventListener('mouseenter', () => {
+        if (this.seekTooltip) {
+            this.seekTooltip.classList.add('visible');
         }
+    });
+
+    this.progressContainer.addEventListener('mouseleave', () => {
+        if (this.seekTooltip) {
+            this.seekTooltip.classList.remove('visible');
+        }
+    });
+
+    this.progressContainer.addEventListener('mousemove', (e) => {
+        this.updateSeekTooltip(e);
+    });
+}
+
+updateSeekTooltip(e) {
+    if (!this.seekTooltip || !this.progressContainer || !this.video || !this.video.duration) return;
+
+    const rect = this.progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const targetTime = percentage * this.video.duration;
+
+    this.seekTooltip.textContent = this.formatTime(targetTime);
+
+    const tooltipRect = this.seekTooltip.getBoundingClientRect();
+    let leftPosition = clickX;
+
+    const tooltipWidth = tooltipRect.width || 50;
+    const containerWidth = rect.width;
+
+    leftPosition = Math.max(tooltipWidth / 2, Math.min(containerWidth - tooltipWidth / 2, clickX));
+
+    this.seekTooltip.style.left = leftPosition + 'px';
+}
+
+play() {
+    if (!this.video || this.isChangingQuality) return;
+
+    this.video.play().catch(err => {
+        if (this.options.debug) console.log('Play failed:', err);
+    });
+
+    if (this.playIcon) this.playIcon.classList.add('hidden');
+    if (this.pauseIcon) this.pauseIcon.classList.remove('hidden');
+
+    // Trigger event played
+    this.triggerEvent('played', {
+        currentTime: this.getCurrentTime(),
+        duration: this.getDuration()
+    });
+}
+
+pause() {
+    if (!this.video) return;
+
+    this.video.pause();
+    if (this.playIcon) this.playIcon.classList.remove('hidden');
+    if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
+
+    // Trigger paused event
+    this.triggerEvent('paused', {
+        currentTime: this.getCurrentTime(),
+        duration: this.getDuration()
+    });
+}
+
+updateVolume(value) {
+    if (!this.video) return;
+
+    const previousVolume = this.video.volume;
+    const previousMuted = this.video.muted;
+
+    this.video.volume = Math.max(0, Math.min(1, value / 100));
+    if (this.volumeSlider) this.volumeSlider.value = value;
+    this.updateMuteButton();
+    this.updateVolumeSliderVisual();
+    this.initVolumeTooltip();
+
+    // Triggers volumechange event if there is a significant change
+    if (Math.abs(previousVolume - this.video.volume) > 0.01 || previousMuted !== this.video.muted) {
+        this.triggerEvent('volumechange', {
+            volume: this.getVolume(),
+            muted: this.isMuted(),
+            previousVolume: previousVolume,
+            previousMuted: previousMuted
+        });
+    }
+}
+
+changeVolume(delta) {
+    if (!this.video) return;
+
+    const newVolume = Math.max(0, Math.min(1, this.video.volume + delta));
+    this.updateVolume(newVolume * 100);
+    this.updateVolumeSliderVisual();
+    this.initVolumeTooltip();
+}
+
+updateProgress() {
+    if (!this.video || !this.progressFilled || !this.progressHandle || this.isUserSeeking) return;
+
+    if (this.video.duration && !isNaN(this.video.duration)) {
+        const progress = (this.video.currentTime / this.video.duration) * 100;
+        this.progressFilled.style.width = progress + '%';
+        this.progressHandle.style.left = progress + '%';
     }
 
-    setupSeekTooltip() {
-        if (!this.options.showSeekTooltip || !this.progressContainer || !this.seekTooltip) return;
+    this.updateTimeDisplay();
 
-        this.progressContainer.addEventListener('mouseenter', () => {
-            if (this.seekTooltip) {
-                this.seekTooltip.classList.add('visible');
-            }
-        });
-
-        this.progressContainer.addEventListener('mouseleave', () => {
-            if (this.seekTooltip) {
-                this.seekTooltip.classList.remove('visible');
-            }
-        });
-
-        this.progressContainer.addEventListener('mousemove', (e) => {
-            this.updateSeekTooltip(e);
-        });
-    }
-
-    updateSeekTooltip(e) {
-        if (!this.seekTooltip || !this.progressContainer || !this.video || !this.video.duration) return;
-
-        const rect = this.progressContainer.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-        const targetTime = percentage * this.video.duration;
-
-        this.seekTooltip.textContent = this.formatTime(targetTime);
-
-        const tooltipRect = this.seekTooltip.getBoundingClientRect();
-        let leftPosition = clickX;
-
-        const tooltipWidth = tooltipRect.width || 50;
-        const containerWidth = rect.width;
-
-        leftPosition = Math.max(tooltipWidth / 2, Math.min(containerWidth - tooltipWidth / 2, clickX));
-
-        this.seekTooltip.style.left = leftPosition + 'px';
-    }
-
-    play() {
-        if (!this.video || this.isChangingQuality) return;
-
-        this.video.play().catch(err => {
-            if (this.options.debug) console.log('Play failed:', err);
-        });
-
-        if (this.playIcon) this.playIcon.classList.add('hidden');
-        if (this.pauseIcon) this.pauseIcon.classList.remove('hidden');
-
-        // Trigger event played
-        this.triggerEvent('played', {
+    // Trigger timeupdate event (with throttling to avoid too many events)
+    if (!this.lastTimeUpdate || Date.now() - this.lastTimeUpdate > 250) {
+        this.triggerEvent('timeupdate', {
             currentTime: this.getCurrentTime(),
-            duration: this.getDuration()
+            duration: this.getDuration(),
+            progress: (this.getCurrentTime() / this.getDuration()) * 100 || 0
         });
+        this.lastTimeUpdate = Date.now();
     }
+}
 
-    pause() {
-        if (!this.video) return;
+updateBuffer() {
+    if (!this.video || !this.progressBuffer) return;
 
-        this.video.pause();
-        if (this.playIcon) this.playIcon.classList.remove('hidden');
-        if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
-
-        // Trigger paused event
-        this.triggerEvent('paused', {
-            currentTime: this.getCurrentTime(),
-            duration: this.getDuration()
-        });
-    }
-
-    updateVolume(value) {
-        if (!this.video) return;
-
-        const previousVolume = this.video.volume;
-        const previousMuted = this.video.muted;
-
-        this.video.volume = Math.max(0, Math.min(1, value / 100));
-        if (this.volumeSlider) this.volumeSlider.value = value;
-        this.updateMuteButton();
-        this.updateVolumeSliderVisual();
-        this.initVolumeTooltip();
-
-        // Triggers volumechange event if there is a significant change
-        if (Math.abs(previousVolume - this.video.volume) > 0.01 || previousMuted !== this.video.muted) {
-            this.triggerEvent('volumechange', {
-                volume: this.getVolume(),
-                muted: this.isMuted(),
-                previousVolume: previousVolume,
-                previousMuted: previousMuted
-            });
+    try {
+        if (this.video.buffered && this.video.buffered.length > 0 && this.video.duration) {
+            const buffered = (this.video.buffered.end(0) / this.video.duration) * 100;
+            this.progressBuffer.style.width = buffered + '%';
         }
+    } catch (error) {
+        if (this.options.debug) console.log('Buffer update error (non-critical):', error);
     }
+}
 
-    changeVolume(delta) {
-        if (!this.video) return;
+startSeeking(e) {
+    if (this.isChangingQuality) return;
 
-        const newVolume = Math.max(0, Math.min(1, this.video.volume + delta));
-        this.updateVolume(newVolume * 100);
-        this.updateVolumeSliderVisual();
-        this.initVolumeTooltip();
+    this.isUserSeeking = true;
+    this.seek(e);
+    e.preventDefault();
+
+    // Show controls during seeking
+    if (this.options.autoHide && this.autoHideInitialized) {
+        this.showControlsNow();
+        this.resetAutoHideTimer();
     }
+}
 
-    updateProgress() {
-        if (!this.video || !this.progressFilled || !this.progressHandle || this.isUserSeeking) return;
-
-        if (this.video.duration && !isNaN(this.video.duration)) {
-            const progress = (this.video.currentTime / this.video.duration) * 100;
-            this.progressFilled.style.width = progress + '%';
-            this.progressHandle.style.left = progress + '%';
-        }
-
-        this.updateTimeDisplay();
-
-        // Trigger timeupdate event (with throttling to avoid too many events)
-        if (!this.lastTimeUpdate || Date.now() - this.lastTimeUpdate > 250) {
-            this.triggerEvent('timeupdate', {
-                currentTime: this.getCurrentTime(),
-                duration: this.getDuration(),
-                progress: (this.getCurrentTime() / this.getDuration()) * 100 || 0
-            });
-            this.lastTimeUpdate = Date.now();
-        }
-    }
-
-    updateBuffer() {
-        if (!this.video || !this.progressBuffer) return;
-
-        try {
-            if (this.video.buffered && this.video.buffered.length > 0 && this.video.duration) {
-                const buffered = (this.video.buffered.end(0) / this.video.duration) * 100;
-                this.progressBuffer.style.width = buffered + '%';
-            }
-        } catch (error) {
-            if (this.options.debug) console.log('Buffer update error (non-critical):', error);
-        }
-    }
-
-    startSeeking(e) {
-        if (this.isChangingQuality) return;
-
-        this.isUserSeeking = true;
+continueSeeking(e) {
+    if (this.isUserSeeking && !this.isChangingQuality) {
         this.seek(e);
-        e.preventDefault();
-
-        // Show controls during seeking
-        if (this.options.autoHide && this.autoHideInitialized) {
-            this.showControlsNow();
-            this.resetAutoHideTimer();
-        }
     }
+}
 
-    continueSeeking(e) {
-        if (this.isUserSeeking && !this.isChangingQuality) {
-            this.seek(e);
-        }
+endSeeking() {
+    this.isUserSeeking = false;
+}
+
+seek(e) {
+    if (!this.video || !this.progressContainer || !this.progressFilled || !this.progressHandle || this.isChangingQuality) return;
+
+    const rect = this.progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+
+    if (this.video.duration && !isNaN(this.video.duration)) {
+        this.video.currentTime = percentage * this.video.duration;
+        const progress = percentage * 100;
+        this.progressFilled.style.width = progress + '%';
+        this.progressHandle.style.left = progress + '%';
     }
+}
 
-    endSeeking() {
-        this.isUserSeeking = false;
+updateDuration() {
+    if (this.durationEl && this.video && this.video.duration && !isNaN(this.video.duration)) {
+        this.durationEl.textContent = this.formatTime(this.video.duration);
     }
+}
 
-    seek(e) {
-        if (!this.video || !this.progressContainer || !this.progressFilled || !this.progressHandle || this.isChangingQuality) return;
+changeSpeed(e) {
+    if (!this.video || !e.target.classList.contains('speed-option') || this.isChangingQuality) return;
 
-        const rect = this.progressContainer.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const speed = parseFloat(e.target.getAttribute('data-speed'));
+    if (speed && speed > 0) {
+        this.video.playbackRate = speed;
+        if (this.speedBtn) this.speedBtn.textContent = speed + 'x';
 
-        if (this.video.duration && !isNaN(this.video.duration)) {
-            this.video.currentTime = percentage * this.video.duration;
-            const progress = percentage * 100;
-            this.progressFilled.style.width = progress + '%';
-            this.progressHandle.style.left = progress + '%';
-        }
-    }
-
-    updateDuration() {
-        if (this.durationEl && this.video && this.video.duration && !isNaN(this.video.duration)) {
-            this.durationEl.textContent = this.formatTime(this.video.duration);
-        }
-    }
-
-    changeSpeed(e) {
-        if (!this.video || !e.target.classList.contains('speed-option') || this.isChangingQuality) return;
-
-        const speed = parseFloat(e.target.getAttribute('data-speed'));
-        if (speed && speed > 0) {
-            this.video.playbackRate = speed;
-            if (this.speedBtn) this.speedBtn.textContent = speed + 'x';
-
-            if (this.speedMenu) {
-                this.speedMenu.querySelectorAll('.speed-option').forEach(option => {
-                    option.classList.remove('active');
-                });
-                e.target.classList.add('active');
-            }
-
-            // Trigger speedchange event
-            const previousSpeed = this.video.playbackRate;
-            this.triggerEvent('speedchange', {
-                speed: speed,
-                previousSpeed: previousSpeed
+        if (this.speedMenu) {
+            this.speedMenu.querySelectorAll('.speed-option').forEach(option => {
+                option.classList.remove('active');
             });
+            e.target.classList.add('active');
         }
+
+        // Trigger speedchange event
+        const previousSpeed = this.video.playbackRate;
+        this.triggerEvent('speedchange', {
+            speed: speed,
+            previousSpeed: previousSpeed
+        });
     }
+}
 
 onVideoEnded() {
     if (this.playIcon) this.playIcon.classList.remove('hidden');
@@ -1519,216 +1519,269 @@ onVideoEnded() {
     });
 }
 
-    getCurrentTime() { return this.video ? this.video.currentTime || 0 : 0; }
-
-    setCurrentTime(time) { if (this.video && typeof time === 'number' && time >= 0 && !this.isChangingQuality) { this.video.currentTime = time; } }
-
-    getDuration() { return this.video && this.video.duration ? this.video.duration : 0; }
-
-    getVolume() { return this.video ? this.video.volume || 0 : 0; }
-
-    setVolume(volume) {
-        if (typeof volume === 'number' && volume >= 0 && volume <= 1) {
-            this.updateVolume(volume * 100);
-        }
+/**
+ * Handle video loading errors (404, 503, network errors, etc.)
+ * Triggers 'ended' event to allow proper cleanup and playlist continuation
+ */
+onVideoError(error) {
+    if (this.options.debug) {
+        console.error('Video loading error detected:', {
+            error: error,
+            code: this.video?.error?.code,
+            message: this.video?.error?.message,
+            src: this.video?.currentSrc || this.video?.src
+        });
     }
 
-    isPaused() { return this.video ? this.video.paused : true; }
-
-    isMuted() { return this.video ? this.video.muted : false; }
-
-    setMuted(muted) {
-        if (this.video && typeof muted === 'boolean') {
-            this.video.muted = muted;
-            this.updateMuteButton();
-            this.updateVolumeSliderVisual();
-            this.initVolumeTooltip();
-        }
+    // Hide loading overlay
+    this.hideLoading();
+    if (this.initialLoading) {
+        this.initialLoading.style.display = 'none';
     }
 
-    getPlaybackRate() { return this.video ? this.video.playbackRate || 1 : 1; }
-
-    setPlaybackRate(rate) { if (this.video && typeof rate === 'number' && rate > 0 && !this.isChangingQuality) { this.video.playbackRate = rate; if (this.speedBtn) this.speedBtn.textContent = rate + 'x'; } }
-
-    isPictureInPictureActive() { return document.pictureInPictureElement === this.video; }
-
-    getCurrentLanguage() {
-        return this.isI18nAvailable() ?
-            VideoPlayerTranslations.getCurrentLanguage() : 'en';
+    // Remove quality-changing class if present
+    if (this.video?.classList) {
+        this.video.classList.remove('quality-changing');
     }
 
-    getSupportedLanguages() {
-        return this.isI18nAvailable() ?
-            VideoPlayerTranslations.getSupportedLanguages() : ['en'];
+    // Reset changing quality flag
+    this.isChangingQuality = false;
+
+    // Show controls to allow user interaction
+    this.showControlsNow();
+
+    // Optional: Show poster if available
+    if (this.options.showPosterOnEnd && this.posterOverlay) {
+        this.showPoster();
     }
 
-    createBrandLogo() {
-        if (!this.options.brandLogoEnabled || !this.options.brandLogoUrl) return;
+    // Trigger 'ended' event to allow proper cleanup
+    // This allows playlist to continue or other error handling
+    this.triggerEvent('ended', {
+        currentTime: this.getCurrentTime(),
+        duration: this.getDuration(),
+        error: true,
+        errorCode: this.video?.error?.code,
+        errorMessage: this.video?.error?.message,
+        playlistInfo: this.getPlaylistInfo()
+    });
 
-        const controlsRight = this.controls?.querySelector('.controls-right');
-        if (!controlsRight) return;
+    if (this.options.debug) {
+        console.log('Video error handled - triggered ended event');
+    }
+}
 
-        // Create brand logo image
-        const logo = document.createElement('img');
-        logo.className = 'brand-logo';
-        logo.src = this.options.brandLogoUrl;
-        logo.alt = this.t('brand_logo');
 
-        // Handle loading error
-        logo.onerror = () => {
-            if (this.options.debug) console.warn('Brand logo failed to load:', this.options.brandLogoUrl);
-            logo.style.display = 'none';
-        };
+getCurrentTime() { return this.video ? this.video.currentTime || 0 : 0; }
 
-        logo.onload = () => {
-            if (this.options.debug) console.log('Brand logo loaded successfully');
-        };
+setCurrentTime(time) { if (this.video && typeof time === 'number' && time >= 0 && !this.isChangingQuality) { this.video.currentTime = time; } }
 
-        // Add click functionality if link URL is provided
+getDuration() { return this.video && this.video.duration ? this.video.duration : 0; }
+
+getVolume() { return this.video ? this.video.volume || 0 : 0; }
+
+setVolume(volume) {
+    if (typeof volume === 'number' && volume >= 0 && volume <= 1) {
+        this.updateVolume(volume * 100);
+    }
+}
+
+isPaused() { return this.video ? this.video.paused : true; }
+
+isMuted() { return this.video ? this.video.muted : false; }
+
+setMuted(muted) {
+    if (this.video && typeof muted === 'boolean') {
+        this.video.muted = muted;
+        this.updateMuteButton();
+        this.updateVolumeSliderVisual();
+        this.initVolumeTooltip();
+    }
+}
+
+getPlaybackRate() { return this.video ? this.video.playbackRate || 1 : 1; }
+
+setPlaybackRate(rate) { if (this.video && typeof rate === 'number' && rate > 0 && !this.isChangingQuality) { this.video.playbackRate = rate; if (this.speedBtn) this.speedBtn.textContent = rate + 'x'; } }
+
+isPictureInPictureActive() { return document.pictureInPictureElement === this.video; }
+
+getCurrentLanguage() {
+    return this.isI18nAvailable() ?
+        VideoPlayerTranslations.getCurrentLanguage() : 'en';
+}
+
+getSupportedLanguages() {
+    return this.isI18nAvailable() ?
+        VideoPlayerTranslations.getSupportedLanguages() : ['en'];
+}
+
+createBrandLogo() {
+    if (!this.options.brandLogoEnabled || !this.options.brandLogoUrl) return;
+
+    const controlsRight = this.controls?.querySelector('.controls-right');
+    if (!controlsRight) return;
+
+    // Create brand logo image
+    const logo = document.createElement('img');
+    logo.className = 'brand-logo';
+    logo.src = this.options.brandLogoUrl;
+    logo.alt = this.t('brand_logo');
+
+    // Handle loading error
+    logo.onerror = () => {
+        if (this.options.debug) console.warn('Brand logo failed to load:', this.options.brandLogoUrl);
+        logo.style.display = 'none';
+    };
+
+    logo.onload = () => {
+        if (this.options.debug) console.log('Brand logo loaded successfully');
+    };
+
+    // Add click functionality if link URL is provided
+    if (this.options.brandLogoLinkUrl) {
+        logo.style.cursor = 'pointer';
+        logo.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent video controls interference
+            window.open(this.options.brandLogoLinkUrl, '_blank', 'noopener,noreferrer');
+            if (this.options.debug) console.log('Brand logo clicked, opening:', this.options.brandLogoLinkUrl);
+        });
+    } else {
+        logo.style.cursor = 'default';
+    }
+
+    // Position the brand logo at the right of the controlbar (at the left of the buttons)
+    controlsRight.insertBefore(logo, controlsRight.firstChild);
+
+    if (this.options.debug) {
         if (this.options.brandLogoLinkUrl) {
-            logo.style.cursor = 'pointer';
-            logo.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent video controls interference
-                window.open(this.options.brandLogoLinkUrl, '_blank', 'noopener,noreferrer');
-                if (this.options.debug) console.log('Brand logo clicked, opening:', this.options.brandLogoLinkUrl);
-            });
+            console.log('Brand logo with click handler created for:', this.options.brandLogoLinkUrl);
         } else {
-            logo.style.cursor = 'default';
-        }
-
-        // Position the brand logo at the right of the controlbar (at the left of the buttons)
-        controlsRight.insertBefore(logo, controlsRight.firstChild);
-
-        if (this.options.debug) {
-            if (this.options.brandLogoLinkUrl) {
-                console.log('Brand logo with click handler created for:', this.options.brandLogoLinkUrl);
-            } else {
-                console.log('Brand logo created (no link)');
-            }
+            console.log('Brand logo created (no link)');
         }
     }
+}
 
-    setBrandLogo(enabled, url = '', linkUrl = '') {
-        this.options.brandLogoEnabled = enabled;
-        if (url) {
-            this.options.brandLogoUrl = url;
-        }
-        if (linkUrl !== '') {
-            this.options.brandLogoLinkUrl = linkUrl;
-        }
-
-        // Remove existing brand logo
-        const existingLogo = this.controls?.querySelector('.brand-logo');
-        if (existingLogo) {
-            existingLogo.remove();
-        }
-
-        // Recreate the logo if enabled
-        if (enabled && this.options.brandLogoUrl) {
-            this.createBrandLogo();
-        }
-
-        return this;
+setBrandLogo(enabled, url = '', linkUrl = '') {
+    this.options.brandLogoEnabled = enabled;
+    if (url) {
+        this.options.brandLogoUrl = url;
+    }
+    if (linkUrl !== '') {
+        this.options.brandLogoLinkUrl = linkUrl;
     }
 
-    getBrandLogoSettings() {
-        return {
-            enabled: this.options.brandLogoEnabled,
-            url: this.options.brandLogoUrl,
-            linkUrl: this.options.brandLogoLinkUrl
-        };
+    // Remove existing brand logo
+    const existingLogo = this.controls?.querySelector('.brand-logo');
+    if (existingLogo) {
+        existingLogo.remove();
     }
 
-    switchToVideo(newVideoElement, shouldPlay = false) {
-        if (!newVideoElement) {
-            if (this.options.debug) console.error('🎵 New video element not found');
-            return false;
-        }
+    // Recreate the logo if enabled
+    if (enabled && this.options.brandLogoUrl) {
+        this.createBrandLogo();
+    }
 
-        // Pause current video
-        this.video.pause();
+    return this;
+}
 
-        // Get new video sources and qualities
-        const newSources = Array.from(newVideoElement.querySelectorAll('source')).map(source => ({
-            src: source.src,
-            quality: source.getAttribute('data-quality') || 'auto',
-            type: source.type || 'video/mp4'
-        }));
+getBrandLogoSettings() {
+    return {
+        enabled: this.options.brandLogoEnabled,
+        url: this.options.brandLogoUrl,
+        linkUrl: this.options.brandLogoLinkUrl
+    };
+}
 
-        if (newSources.length === 0) {
-            if (this.options.debug) console.error('🎵 New video has no sources');
-            return false;
-        }
+switchToVideo(newVideoElement, shouldPlay = false) {
+    if (!newVideoElement) {
+        if (this.options.debug) console.error('🎵 New video element not found');
+        return false;
+    }
 
-        // Check if new video is adaptive stream
-        if (this.options.adaptiveStreaming && newSources.length > 0) {
-            const firstSource = newSources[0];
-            if (this.detectStreamType(firstSource.src)) {
-                // Initialize adaptive streaming for new video
-                this.initializeAdaptiveStreaming(firstSource.src).then((initialized) => {
-                    if (initialized && shouldPlay) {
-                        const playPromise = this.video.play();
-                        if (playPromise) {
-                            playPromise.catch(error => {
-                                if (this.options.debug) console.log('Autoplay prevented:', error);
-                            });
-                        }
+    // Pause current video
+    this.video.pause();
+
+    // Get new video sources and qualities
+    const newSources = Array.from(newVideoElement.querySelectorAll('source')).map(source => ({
+        src: source.src,
+        quality: source.getAttribute('data-quality') || 'auto',
+        type: source.type || 'video/mp4'
+    }));
+
+    if (newSources.length === 0) {
+        if (this.options.debug) console.error('🎵 New video has no sources');
+        return false;
+    }
+
+    // Check if new video is adaptive stream
+    if (this.options.adaptiveStreaming && newSources.length > 0) {
+        const firstSource = newSources[0];
+        if (this.detectStreamType(firstSource.src)) {
+            // Initialize adaptive streaming for new video
+            this.initializeAdaptiveStreaming(firstSource.src).then((initialized) => {
+                if (initialized && shouldPlay) {
+                    const playPromise = this.video.play();
+                    if (playPromise) {
+                        playPromise.catch(error => {
+                            if (this.options.debug) console.log('Autoplay prevented:', error);
+                        });
                     }
-                });
-                return true;
-            }
+                }
+            });
+            return true;
         }
-
-        // Update traditional video sources
-        this.video.innerHTML = '';
-        newSources.forEach(source => {
-            const sourceEl = document.createElement('source');
-            sourceEl.src = source.src;
-            sourceEl.type = source.type;
-            sourceEl.setAttribute('data-quality', source.quality);
-            this.video.appendChild(sourceEl);
-        });
-
-        // Update subtitles if present
-        const newTracks = Array.from(newVideoElement.querySelectorAll('track'));
-        newTracks.forEach(track => {
-            const trackEl = document.createElement('track');
-            trackEl.kind = track.kind;
-            trackEl.src = track.src;
-            trackEl.srclang = track.srclang;
-            trackEl.label = track.label;
-            if (track.default) trackEl.default = true;
-            this.video.appendChild(trackEl);
-        });
-
-        // Update video title
-        const newTitle = newVideoElement.getAttribute('data-video-title');
-        if (newTitle && this.options.showTitleOverlay) {
-            this.options.videoTitle = newTitle;
-            if (this.titleText) {
-                this.titleText.textContent = newTitle;
-            }
-        }
-
-        // Reload video
-        this.video.load();
-
-        // Update qualities and quality selector
-        this.collectVideoQualities();
-        this.updateQualityMenu();
-
-        // Play if needed
-        if (shouldPlay) {
-            const playPromise = this.video.play();
-            if (playPromise) {
-                playPromise.catch(error => {
-                    if (this.options.debug) console.log('🎵 Autoplay prevented:', error);
-                });
-            }
-        }
-
-        return true;
     }
+
+    // Update traditional video sources
+    this.video.innerHTML = '';
+    newSources.forEach(source => {
+        const sourceEl = document.createElement('source');
+        sourceEl.src = source.src;
+        sourceEl.type = source.type;
+        sourceEl.setAttribute('data-quality', source.quality);
+        this.video.appendChild(sourceEl);
+    });
+
+    // Update subtitles if present
+    const newTracks = Array.from(newVideoElement.querySelectorAll('track'));
+    newTracks.forEach(track => {
+        const trackEl = document.createElement('track');
+        trackEl.kind = track.kind;
+        trackEl.src = track.src;
+        trackEl.srclang = track.srclang;
+        trackEl.label = track.label;
+        if (track.default) trackEl.default = true;
+        this.video.appendChild(trackEl);
+    });
+
+    // Update video title
+    const newTitle = newVideoElement.getAttribute('data-video-title');
+    if (newTitle && this.options.showTitleOverlay) {
+        this.options.videoTitle = newTitle;
+        if (this.titleText) {
+            this.titleText.textContent = newTitle;
+        }
+    }
+
+    // Reload video
+    this.video.load();
+
+    // Update qualities and quality selector
+    this.collectVideoQualities();
+    this.updateQualityMenu();
+
+    // Play if needed
+    if (shouldPlay) {
+        const playPromise = this.video.play();
+        if (playPromise) {
+            playPromise.catch(error => {
+                if (this.options.debug) console.log('🎵 Autoplay prevented:', error);
+            });
+        }
+    }
+
+    return true;
+}
 
 /**
 * POSTER IMAGE MANAGEMENT
@@ -1946,59 +1999,59 @@ isPosterVisible() {
 }
 
 
-    loadScript(src) {
-        return new Promise((resolve, reject) => {
-            if (document.querySelector(`script[src="${src}"]`)) {
-                resolve();
-                return;
-            }
+loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) {
+            resolve();
+            return;
+        }
 
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+dispose() {
+    if (this.qualityMonitorInterval) {
+        clearInterval(this.qualityMonitorInterval);
+        this.qualityMonitorInterval = null;
     }
 
-    dispose() {
-        if (this.qualityMonitorInterval) {
-            clearInterval(this.qualityMonitorInterval);
-            this.qualityMonitorInterval = null;
-        }
+    if (this.autoHideTimer) {
+        clearTimeout(this.autoHideTimer);
+        this.autoHideTimer = null;
+    }
 
-        if (this.autoHideTimer) {
-            clearTimeout(this.autoHideTimer);
-            this.autoHideTimer = null;
-        }
+    this.cleanupQualityChange();
+    this.clearControlsTimeout();
+    this.clearTitleTimeout();
 
-        this.cleanupQualityChange();
-        this.clearControlsTimeout();
-        this.clearTitleTimeout();
+    // Destroy adaptive streaming players
+    this.destroyAdaptivePlayer();
 
-        // Destroy adaptive streaming players
-        this.destroyAdaptivePlayer();
+    if (this.controls) {
+        this.controls.remove();
+    }
+    if (this.loadingOverlay) {
+        this.loadingOverlay.remove();
+    }
+    if (this.titleOverlay) {
+        this.titleOverlay.remove();
+    }
+    if (this.initialLoading) {
+        this.initialLoading.remove();
+    }
 
-        if (this.controls) {
-            this.controls.remove();
-        }
-        if (this.loadingOverlay) {
-            this.loadingOverlay.remove();
-        }
-        if (this.titleOverlay) {
-            this.titleOverlay.remove();
-        }
-        if (this.initialLoading) {
-            this.initialLoading.remove();
-        }
-
-        if (this.video) {
-            this.video.classList.remove('video-player');
-            this.video.controls = true;
-            this.video.style.visibility = '';
-            this.video.style.opacity = '';
-            this.video.style.pointerEvents = '';
-        }
+    if (this.video) {
+        this.video.classList.remove('video-player');
+        this.video.controls = true;
+        this.video.style.visibility = '';
+        this.video.style.opacity = '';
+        this.video.style.pointerEvents = '';
+    }
     if (this.chapterMarkersContainer) {
         this.chapterMarkersContainer.remove();
     }
@@ -2010,37 +2063,37 @@ isPosterVisible() {
     }
     this.disposeAllPlugins();
 
-    }
+}
 
-    /**
+/**
 
-     * Apply specified resolution mode to video
+ * Apply specified resolution mode to video
 
-     * @param {string} resolution - The resolution mode to apply
+ * @param {string} resolution - The resolution mode to apply
 
-     */
+ */
 
-    /**
+/**
 
-     * Get currently set resolution
+ * Get currently set resolution
 
-     * @returns {string} Current resolution
+ * @returns {string} Current resolution
 
-     */
+ */
 
-    /**
+/**
 
-     * Initialize resolution from options value
+ * Initialize resolution from options value
 
-     */
+ */
 
-    /**
+/**
 
-     * Restore resolution after quality change - internal method
+ * Restore resolution after quality change - internal method
 
-     * @private
+ * @private
 
-     */
+ */
 
 addEventListener(eventType, callback) {
         if (typeof callback !== 'function') {
@@ -3372,112 +3425,112 @@ optimizeButtonsForSmallHeight() {
 /* Controls methods for main class - All original functionality preserved exactly */
 
 initializeQualityMonitoring() {
-        this.qualityMonitorInterval = setInterval(() => {
-            if (!this.isChangingQuality) {
-                this.updateCurrentPlayingQuality();
-            }
-        }, 3000);
+    this.qualityMonitorInterval = setInterval(() => {
+        if (!this.isChangingQuality) {
+            this.updateCurrentPlayingQuality();
+        }
+    }, 3000);
 
-        if (this.video) {
-            this.video.addEventListener('loadedmetadata', () => {
-                setTimeout(() => {
-                    if (!this.isChangingQuality) {
-                        this.updateCurrentPlayingQuality();
-                    }
-                }, 100);
-            });
-
-            this.video.addEventListener('resize', () => {
+    if (this.video) {
+        this.video.addEventListener('loadedmetadata', () => {
+            setTimeout(() => {
                 if (!this.isChangingQuality) {
                     this.updateCurrentPlayingQuality();
                 }
-            });
+            }, 100);
+        });
 
-            this.video.addEventListener('loadeddata', () => {
-                setTimeout(() => {
-                    if (!this.isChangingQuality) {
-                        this.updateCurrentPlayingQuality();
-                    }
-                }, 1000);
-            });
-        }
-    }
-
-    getCurrentPlayingQuality() {
-        if (!this.video) return null;
-
-        if (this.video.currentSrc && this.qualities && this.qualities.length > 0) {
-            const currentSource = this.qualities.find(q => {
-                const currentUrl = this.video.currentSrc.toLowerCase();
-                const qualityUrl = q.src.toLowerCase();
-
-                if (this.debugQuality) {
-                    if (this.options.debug) console.log('Quality comparison:', {
-                        current: currentUrl,
-                        quality: qualityUrl,
-                        qualityName: q.quality,
-                        match: currentUrl === qualityUrl || currentUrl.includes(qualityUrl) || qualityUrl.includes(currentUrl)
-                    });
-                }
-
-                return currentUrl === qualityUrl ||
-                    currentUrl.includes(qualityUrl) ||
-                    qualityUrl.includes(currentUrl);
-            });
-
-            if (currentSource) {
-                if (this.debugQuality) {
-                    if (this.options.debug) console.log('Quality found from source:', currentSource.quality);
-                }
-                return currentSource.quality;
+        this.video.addEventListener('resize', () => {
+            if (!this.isChangingQuality) {
+                this.updateCurrentPlayingQuality();
             }
-        }
+        });
 
-        if (this.video.videoHeight && this.video.videoWidth) {
-            const height = this.video.videoHeight;
-            const width = this.video.videoWidth;
+        this.video.addEventListener('loadeddata', () => {
+            setTimeout(() => {
+                if (!this.isChangingQuality) {
+                    this.updateCurrentPlayingQuality();
+                }
+            }, 1000);
+        });
+    }
+}
+
+getCurrentPlayingQuality() {
+    if (!this.video) return null;
+
+    if (this.video.currentSrc && this.qualities && this.qualities.length > 0) {
+        const currentSource = this.qualities.find(q => {
+            const currentUrl = this.video.currentSrc.toLowerCase();
+            const qualityUrl = q.src.toLowerCase();
 
             if (this.debugQuality) {
-                if (this.options.debug) console.log('Risoluzione video:', { height, width });
+                if (this.options.debug) console.log('Quality comparison:', {
+                    current: currentUrl,
+                    quality: qualityUrl,
+                    qualityName: q.quality,
+                    match: currentUrl === qualityUrl || currentUrl.includes(qualityUrl) || qualityUrl.includes(currentUrl)
+                });
             }
 
-            if (height >= 2160) return '4K';
-            if (height >= 1440) return '1440p';
-            if (height >= 1080) return '1080p';
-            if (height >= 720) return '720p';
-            if (height >= 480) return '480p';
-            if (height >= 360) return '360p';
-            if (height >= 240) return '240p';
+            return currentUrl === qualityUrl ||
+                currentUrl.includes(qualityUrl) ||
+                qualityUrl.includes(currentUrl);
+        });
 
-            return `${height}p`;
+        if (currentSource) {
+            if (this.debugQuality) {
+                if (this.options.debug) console.log('Quality found from source:', currentSource.quality);
+            }
+            return currentSource.quality;
         }
+    }
+
+    if (this.video.videoHeight && this.video.videoWidth) {
+        const height = this.video.videoHeight;
+        const width = this.video.videoWidth;
 
         if (this.debugQuality) {
-            if (this.options.debug) console.log('No quality detected:', {
-                currentSrc: this.video.currentSrc,
-                videoHeight: this.video.videoHeight,
-                videoWidth: this.video.videoWidth,
-                qualities: this.qualities
-            });
+            if (this.options.debug) console.log('Risoluzione video:', { height, width });
         }
 
-        return null;
+        if (height >= 2160) return '4K';
+        if (height >= 1440) return '1440p';
+        if (height >= 1080) return '1080p';
+        if (height >= 720) return '720p';
+        if (height >= 480) return '480p';
+        if (height >= 360) return '360p';
+        if (height >= 240) return '240p';
+
+        return `${height}p`;
     }
 
-    updateCurrentPlayingQuality() {
-        const newPlayingQuality = this.getCurrentPlayingQuality();
-
-        if (newPlayingQuality && newPlayingQuality !== this.currentPlayingQuality) {
-            if (this.options.debug) console.log(`Quality changed: ${this.currentPlayingQuality} → ${newPlayingQuality}`);
-            this.currentPlayingQuality = newPlayingQuality;
-            this.updateQualityDisplay();
-        }
+    if (this.debugQuality) {
+        if (this.options.debug) console.log('No quality detected:', {
+            currentSrc: this.video.currentSrc,
+            videoHeight: this.video.videoHeight,
+            videoWidth: this.video.videoWidth,
+            qualities: this.qualities
+        });
     }
 
-    updateQualityDisplay() {
-        this.updateQualityButton();
-        this.updateQualityMenu();
+    return null;
+}
+
+updateCurrentPlayingQuality() {
+    const newPlayingQuality = this.getCurrentPlayingQuality();
+
+    if (newPlayingQuality && newPlayingQuality !== this.currentPlayingQuality) {
+        if (this.options.debug) console.log(`Quality changed: ${this.currentPlayingQuality} → ${newPlayingQuality}`);
+        this.currentPlayingQuality = newPlayingQuality;
+        this.updateQualityDisplay();
     }
+}
+
+updateQualityDisplay() {
+    this.updateQualityButton();
+    this.updateQualityMenu();
+}
 
 updateQualityButton() {
     const qualityBtn = this.controls?.querySelector('.quality-btn');
@@ -3579,212 +3632,216 @@ updateQualityMenu() {
     qualityMenu.innerHTML = menuHTML;
 }
 
-    getQualityStatus() {
-        return {
-            selected: this.selectedQuality,
-            playing: this.currentPlayingQuality,
-            isAuto: this.selectedQuality === 'auto',
-            isChanging: this.isChangingQuality
-        };
+getQualityStatus() {
+    return {
+        selected: this.selectedQuality,
+        playing: this.currentPlayingQuality,
+        isAuto: this.selectedQuality === 'auto',
+        isChanging: this.isChangingQuality
+    };
+}
+
+getSelectedQuality() {
+    return this.selectedQuality;
+}
+
+isAutoQualityActive() {
+    return this.selectedQuality === 'auto';
+}
+
+enableQualityDebug() {
+    this.debugQuality = true;
+    this.enableAutoHideDebug(); // Abilita anche debug auto-hide
+    if (this.options.debug) console.log('Quality AND auto-hide debug enabled');
+    this.updateCurrentPlayingQuality();
+}
+
+disableQualityDebug() {
+    this.debugQuality = false;
+    this.disableAutoHideDebug();
+    if (this.options.debug) console.log('Quality AND auto-hide debug disabled');
+}
+
+changeQuality(e) {
+    if (!e.target.classList.contains('quality-option')) return;
+    if (this.isChangingQuality) return;
+
+    // Handle adaptive streaming quality change
+    const adaptiveQuality = e.target.getAttribute('data-adaptive-quality');
+    if (adaptiveQuality !== null && this.isAdaptiveStream) {
+        const qualityIndex = adaptiveQuality === 'auto' ? -1 : parseInt(adaptiveQuality);
+        this.setAdaptiveQuality(qualityIndex);
+        this.updateAdaptiveQualityMenu();
+        return;
     }
 
-    getSelectedQuality() {
-        return this.selectedQuality;
+    const quality = e.target.getAttribute('data-quality');
+    if (!quality || quality === this.selectedQuality) return;
+
+    if (this.options.debug) console.log(`Quality change requested: ${this.selectedQuality} → ${quality}`);
+
+    this.selectedQuality = quality;
+
+    if (quality === 'auto') {
+        this.enableAutoQuality();
+    } else {
+        this.setQuality(quality);
     }
 
-    isAutoQualityActive() {
-        return this.selectedQuality === 'auto';
+    this.updateQualityDisplay();
+}
+
+setQuality(targetQuality) {
+    if (this.options.debug) console.log(`setQuality("${targetQuality}") called`);
+
+    if (!targetQuality) {
+        if (this.options.debug) console.error('targetQuality is empty!');
+        return;
     }
 
-    enableQualityDebug() {
-        this.debugQuality = true;
-        this.enableAutoHideDebug(); // Abilita anche debug auto-hide
-        if (this.options.debug) console.log('Quality AND auto-hide debug enabled');
-        this.updateCurrentPlayingQuality();
+    if (!this.video || !this.qualities || this.qualities.length === 0) return;
+    if (this.isChangingQuality) return;
+
+    const newSource = this.qualities.find(q => q.quality === targetQuality);
+    if (!newSource || !newSource.src) {
+        if (this.options.debug) console.error(`Quality "${targetQuality}" not found`);
+        return;
     }
 
-    disableQualityDebug() {
-        this.debugQuality = false;
-        this.disableAutoHideDebug();
-        if (this.options.debug) console.log('Quality AND auto-hide debug disabled');
+    const currentTime = this.video.currentTime || 0;
+    const wasPlaying = !this.video.paused;
+
+    this.isChangingQuality = true;
+    this.selectedQuality = targetQuality;
+    this.video.pause();
+
+    // Show loading state during quality change
+    this.showLoading();
+    if (this.video.classList) {
+        this.video.classList.add('quality-changing');
     }
 
-    changeQuality(e) {
-        if (!e.target.classList.contains('quality-option')) return;
-        if (this.isChangingQuality) return;
+    const onLoadedData = () => {
+        if (this.options.debug) console.log(`Quality ${targetQuality} applied!`);
+        this.video.currentTime = currentTime;
 
-        // Handle adaptive streaming quality change
-        const adaptiveQuality = e.target.getAttribute('data-adaptive-quality');
-        if (adaptiveQuality !== null && this.isAdaptiveStream) {
-            const qualityIndex = adaptiveQuality === 'auto' ? -1 : parseInt(adaptiveQuality);
-            this.setAdaptiveQuality(qualityIndex);
-            this.updateAdaptiveQualityMenu();
-            return;
+        if (wasPlaying) {
+            this.video.play().catch(e => {
+                if (this.options.debug) console.log('Play error:', e);
+            });
         }
 
-        const quality = e.target.getAttribute('data-quality');
-        if (!quality || quality === this.selectedQuality) return;
-
-        if (this.options.debug) console.log(`Quality change requested: ${this.selectedQuality} → ${quality}`);
-
-        this.selectedQuality = quality;
-
-        if (quality === 'auto') {
-            this.enableAutoQuality();
-        } else {
-            this.setQuality(quality);
-        }
-
+        this.currentPlayingQuality = targetQuality;
         this.updateQualityDisplay();
-    }
-
-    setQuality(targetQuality) {
-        if (this.options.debug) console.log(`setQuality("${targetQuality}") called`);
-
-        if (!targetQuality) {
-            if (this.options.debug) console.error('targetQuality is empty!');
-            return;
-        }
-
-        if (!this.video || !this.qualities || this.qualities.length === 0) return;
-        if (this.isChangingQuality) return;
-
-        const newSource = this.qualities.find(q => q.quality === targetQuality);
-        if (!newSource || !newSource.src) {
-            if (this.options.debug) console.error(`Quality "${targetQuality}" not found`);
-            return;
-        }
-
-        const currentTime = this.video.currentTime || 0;
-        const wasPlaying = !this.video.paused;
-
-        this.isChangingQuality = true;
-        this.selectedQuality = targetQuality;
-        this.video.pause();
-
-        // Show loading state during quality change
-        this.showLoading();
-        if (this.video.classList) {
-            this.video.classList.add('quality-changing');
-        }
-
-        const onLoadedData = () => {
-            if (this.options.debug) console.log(`Quality ${targetQuality} applied!`);
-            this.video.currentTime = currentTime;
-
-            if (wasPlaying) {
-                this.video.play().catch(e => {
-                    if (this.options.debug) console.log('Play error:', e);
-                });
-            }
-
-            this.currentPlayingQuality = targetQuality;
-            this.updateQualityDisplay();
-            this.isChangingQuality = false;
-
-            // Restore resolution settings after quality change
-            this.restoreResolutionAfterQualityChange();
-            cleanup();
-        };
-
-        const onError = (error) => {
-            if (this.options.debug) console.error(`Loading error ${targetQuality}:`, error);
-            this.isChangingQuality = false;
-            cleanup();
-        };
-
-        const cleanup = () => {
-            this.video.removeEventListener('loadeddata', onLoadedData);
-            this.video.removeEventListener('error', onError);
-        };
-
-        this.video.addEventListener('loadeddata', onLoadedData, { once: true });
-        this.video.addEventListener('error', onError, { once: true });
-
-        this.video.src = newSource.src;
-        this.video.load();
-    }
-
-    finishQualityChange(success, wasPlaying, currentTime, currentVolume, wasMuted, targetQuality) {
-        if (this.options.debug) console.log(`Quality change completion: success=${success}, target=${targetQuality}`);
-
-        if (this.qualityChangeTimeout) {
-            clearTimeout(this.qualityChangeTimeout);
-            this.qualityChangeTimeout = null;
-        }
-
-        if (this.video) {
-            try {
-                if (success && currentTime > 0 && this.video.duration) {
-                    this.video.currentTime = Math.min(currentTime, this.video.duration);
-                }
-
-                this.video.volume = currentVolume;
-                this.video.muted = wasMuted;
-
-                if (success && wasPlaying) {
-                    this.video.play().catch(err => {
-                        if (this.options.debug) console.warn('Play after quality change failed:', err);
-                    });
-                }
-            } catch (error) {
-                if (this.options.debug) console.error('Errore ripristino stato:', error);
-            }
-
-            if (this.video.classList) {
-                this.video.classList.remove('quality-changing');
-            }
-        }
-
-        this.hideLoading();
         this.isChangingQuality = false;
 
-        if (success) {
-            if (this.options.debug) console.log('Quality change completed successfully');
-            setTimeout(() => {
-                this.currentPlayingQuality = targetQuality;
-                this.updateQualityDisplay();
-                if (this.options.debug) console.log(`🎯 Quality confirmed active: ${targetQuality}`);
-            }, 100);
-        } else {
-            if (this.options.debug) console.warn('Quality change failed or timeout');
+        // Restore resolution settings after quality change
+        this.restoreResolutionAfterQualityChange();
+        cleanup();
+    };
+
+    const onError = (error) => {
+        if (this.options.debug) console.error(`Loading error ${targetQuality}:`, error);
+        this.isChangingQuality = false;
+
+        // Trigger ended event for error handling
+        this.onVideoError(error);
+
+        cleanup();
+    };
+
+    const cleanup = () => {
+        this.video.removeEventListener('loadeddata', onLoadedData);
+        this.video.removeEventListener('error', onError);
+    };
+
+    this.video.addEventListener('loadeddata', onLoadedData, { once: true });
+    this.video.addEventListener('error', onError, { once: true });
+
+    this.video.src = newSource.src;
+    this.video.load();
+}
+
+finishQualityChange(success, wasPlaying, currentTime, currentVolume, wasMuted, targetQuality) {
+    if (this.options.debug) console.log(`Quality change completion: success=${success}, target=${targetQuality}`);
+
+    if (this.qualityChangeTimeout) {
+        clearTimeout(this.qualityChangeTimeout);
+        this.qualityChangeTimeout = null;
+    }
+
+    if (this.video) {
+        try {
+            if (success && currentTime > 0 && this.video.duration) {
+                this.video.currentTime = Math.min(currentTime, this.video.duration);
+            }
+
+            this.video.volume = currentVolume;
+            this.video.muted = wasMuted;
+
+            if (success && wasPlaying) {
+                this.video.play().catch(err => {
+                    if (this.options.debug) console.warn('Play after quality change failed:', err);
+                });
+            }
+        } catch (error) {
+            if (this.options.debug) console.error('Errore ripristino stato:', error);
         }
 
+        if (this.video.classList) {
+            this.video.classList.remove('quality-changing');
+        }
+    }
+
+    this.hideLoading();
+    this.isChangingQuality = false;
+
+    if (success) {
+        if (this.options.debug) console.log('Quality change completed successfully');
         setTimeout(() => {
-            this.updateCurrentPlayingQuality();
-        }, 2000);
-    }
-
-    cleanupQualityChange() {
-        if (this.qualityChangeTimeout) {
-            clearTimeout(this.qualityChangeTimeout);
-            this.qualityChangeTimeout = null;
-        }
-    }
-
-    enableAutoQuality() {
-        if (this.options.debug) console.log('🔄 enableAutoQuality - keeping selectedQuality as "auto"');
-
-        // IMPORTANT: Keep selectedQuality as 'auto' for proper UI display
-        this.selectedQuality = 'auto';
-
-        if (!this.qualities || this.qualities.length === 0) {
-            if (this.options.debug) console.warn('⚠️ No qualities available for auto selection');
+            this.currentPlayingQuality = targetQuality;
             this.updateQualityDisplay();
-            return;
-        }
-
-        // Smart connection-based quality selection
-        let autoSelectedQuality = this.getAutoQualityBasedOnConnection();
-
-        if (this.options.debug) {
-            console.log('🎯 Auto quality selected:', autoSelectedQuality);
-            console.log('📊 selectedQuality remains: "auto" (for UI)');
-        }
-
-        // Apply the auto-selected quality but keep UI showing "auto"
-        this.applyAutoQuality(autoSelectedQuality);
+            if (this.options.debug) console.log(`🎯 Quality confirmed active: ${targetQuality}`);
+        }, 100);
+    } else {
+        if (this.options.debug) console.warn('Quality change failed or timeout');
     }
+
+    setTimeout(() => {
+        this.updateCurrentPlayingQuality();
+    }, 2000);
+}
+
+cleanupQualityChange() {
+    if (this.qualityChangeTimeout) {
+        clearTimeout(this.qualityChangeTimeout);
+        this.qualityChangeTimeout = null;
+    }
+}
+
+enableAutoQuality() {
+    if (this.options.debug) console.log('🔄 enableAutoQuality - keeping selectedQuality as "auto"');
+
+    // IMPORTANT: Keep selectedQuality as 'auto' for proper UI display
+    this.selectedQuality = 'auto';
+
+    if (!this.qualities || this.qualities.length === 0) {
+        if (this.options.debug) console.warn('⚠️ No qualities available for auto selection');
+        this.updateQualityDisplay();
+        return;
+    }
+
+    // Smart connection-based quality selection
+    let autoSelectedQuality = this.getAutoQualityBasedOnConnection();
+
+    if (this.options.debug) {
+        console.log('🎯 Auto quality selected:', autoSelectedQuality);
+        console.log('📊 selectedQuality remains: "auto" (for UI)');
+    }
+
+    // Apply the auto-selected quality but keep UI showing "auto"
+    this.applyAutoQuality(autoSelectedQuality);
+}
 
 // ENHANCED CONNECTION DETECTION - Uses RTT + downlink heuristics
 // Handles both Ethernet and real mobile 4G intelligently
@@ -4052,102 +4109,120 @@ getAutoQualityBasedOnConnection() {
     return maxQuality.quality;
 }
 
-    applyAutoQuality(targetQuality) {
-        if (!targetQuality || !this.video || !this.qualities || this.qualities.length === 0) {
-            return;
+applyAutoQuality(targetQuality) {
+    if (!targetQuality || !this.video || !this.qualities || this.qualities.length === 0) {
+        return;
+    }
+
+    if (this.isChangingQuality) return;
+
+    const newSource = this.qualities.find(q => q.quality === targetQuality);
+    if (!newSource || !newSource.src) {
+        if (this.options.debug) console.error('Auto quality', targetQuality, 'not found');
+        return;
+    }
+
+    // Store current resolution to restore after quality change
+    const currentResolution = this.getCurrentResolution();
+
+    const currentTime = this.video.currentTime || 0;
+    const wasPlaying = !this.video.paused;
+
+    this.isChangingQuality = true;
+    this.video.pause();
+
+    // Show loading overlay
+    this.showLoading();
+    if (this.video.classList) {
+        this.video.classList.add('quality-changing');
+    }
+
+
+    const onLoadedData = () => {
+        if (this.options.debug) console.log('Auto quality', targetQuality, 'applied');
+        this.video.currentTime = currentTime;
+        if (wasPlaying) {
+            this.video.play().catch(e => {
+                if (this.options.debug) console.log('Autoplay prevented:', e);
+            });
+        }
+        this.currentPlayingQuality = targetQuality;
+        // Keep selectedQuality as 'auto' for UI display
+        this.updateQualityDisplay();
+
+        // Hide loading overlay
+        this.hideLoading();
+        if (this.video.classList) {
+            this.video.classList.remove('quality-changing');
         }
 
-        if (this.isChangingQuality) return;
+        this.isChangingQuality = false;
+        cleanup();
+    };
 
-        const newSource = this.qualities.find(q => q.quality === targetQuality);
-        if (!newSource || !newSource.src) {
-            if (this.options.debug) console.error('Auto quality', targetQuality, 'not found');
-            return;
-        }
+    const onError = (error) => {
+        if (this.options.debug) console.error('Auto quality loading error:', error);
+        this.isChangingQuality = false;
 
-        // Store current resolution to restore after quality change
-        const currentResolution = this.getCurrentResolution();
+        // Trigger ended event for error handling
+        this.onVideoError(error);
 
-        const currentTime = this.video.currentTime || 0;
-        const wasPlaying = !this.video.paused;
+        cleanup();
+    };
 
-        this.isChangingQuality = true;
-        this.video.pause();
+    const cleanup = () => {
+        this.video.removeEventListener('loadeddata', onLoadedData);
+        this.video.removeEventListener('error', onError);
+    };
 
-        const onLoadedData = () => {
-            if (this.options.debug) console.log('Auto quality', targetQuality, 'applied');
-            this.video.currentTime = currentTime;
-            if (wasPlaying) {
-                this.video.play().catch(e => {
-                    if (this.options.debug) console.log('Autoplay prevented:', e);
-                });
-            }
-            this.currentPlayingQuality = targetQuality;
-            // Keep selectedQuality as 'auto' for UI display
-            this.updateQualityDisplay();
-            this.isChangingQuality = false;
-            cleanup();
-        };
+    this.video.addEventListener('loadeddata', onLoadedData, { once: true });
+    this.video.addEventListener('error', onError, { once: true });
+    this.video.src = newSource.src;
+    this.video.load();
+}
 
-        const onError = (error) => {
-            if (this.options.debug) console.error('Auto quality loading error:', error);
-            this.isChangingQuality = false;
-            cleanup();
-        };
+setDefaultQuality(quality) {
+    if (this.options.debug) console.log(`🔧 Setting defaultQuality: "${quality}"`);
+    this.options.defaultQuality = quality;
+    this.selectedQuality = quality;
 
-        const cleanup = () => {
-            this.video.removeEventListener('loadeddata', onLoadedData);
-            this.video.removeEventListener('error', onError);
-        };
-
-        this.video.addEventListener('loadeddata', onLoadedData, { once: true });
-        this.video.addEventListener('error', onError, { once: true });
-        this.video.src = newSource.src;
-        this.video.load();
+    if (quality === 'auto') {
+        this.enableAutoQuality();
+    } else {
+        this.setQuality(quality);
     }
 
-    setDefaultQuality(quality) {
-        if (this.options.debug) console.log(`🔧 Setting defaultQuality: "${quality}"`);
-        this.options.defaultQuality = quality;
-        this.selectedQuality = quality;
+    return this;
+}
 
-        if (quality === 'auto') {
-            this.enableAutoQuality();
-        } else {
-            this.setQuality(quality);
-        }
+getDefaultQuality() {
+    return this.options.defaultQuality;
+}
 
-        return this;
-    }
+getQualityLabel(height, width) {
+    if (height >= 2160) return '4K';
+    if (height >= 1440) return '1440p';
+    if (height >= 1080) return '1080p';
+    if (height >= 720) return '720p';
+    if (height >= 480) return '480p';
+    if (height >= 360) return '360p';
+    if (height >= 240) return '240p';
+    return `${height}p`;
+}
 
-    getDefaultQuality() {
-        return this.options.defaultQuality;
-    }
+updateAdaptiveQualityMenu() {
+    const qualityMenu = this.controls?.querySelector('.quality-menu');
+    if (!qualityMenu || !this.isAdaptiveStream) return;
 
-    getQualityLabel(height, width) {
-        if (height >= 2160) return '4K';
-        if (height >= 1440) return '1440p';
-        if (height >= 1080) return '1080p';
-        if (height >= 720) return '720p';
-        if (height >= 480) return '480p';
-        if (height >= 360) return '360p';
-        if (height >= 240) return '240p';
-        return `${height}p`;
-    }
+    let menuHTML = `<div class="quality-option ${this.isAutoQuality() ? 'active' : ''}" data-adaptive-quality="auto">Auto</div>`;
 
-    updateAdaptiveQualityMenu() {
-        const qualityMenu = this.controls?.querySelector('.quality-menu');
-        if (!qualityMenu || !this.isAdaptiveStream) return;
+    this.adaptiveQualities.forEach(quality => {
+        const isActive = this.getCurrentAdaptiveQuality() === quality.index;
+        menuHTML += `<div class="quality-option ${isActive ? 'active' : ''}" data-adaptive-quality="${quality.index}">${quality.label}</div>`;
+    });
 
-        let menuHTML = `<div class="quality-option ${this.isAutoQuality() ? 'active' : ''}" data-adaptive-quality="auto">Auto</div>`;
-
-        this.adaptiveQualities.forEach(quality => {
-            const isActive = this.getCurrentAdaptiveQuality() === quality.index;
-            menuHTML += `<div class="quality-option ${isActive ? 'active' : ''}" data-adaptive-quality="${quality.index}">${quality.label}</div>`;
-        });
-
-        qualityMenu.innerHTML = menuHTML;
-    }
+    qualityMenu.innerHTML = menuHTML;
+}
 
 updateAdaptiveQualityDisplay() {
     if (!this.isAdaptiveStream) return;
@@ -4173,60 +4248,60 @@ updateAdaptiveQualityDisplay() {
     }
 }
 
-    setAdaptiveQuality(qualityIndex) {
-        if (!this.isAdaptiveStream) return;
+setAdaptiveQuality(qualityIndex) {
+    if (!this.isAdaptiveStream) return;
 
-        try {
-            if (qualityIndex === 'auto' || qualityIndex === -1) {
-                // Enable auto quality
-                if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
-                    this.dashPlayer.updateSettings({
-                        streaming: {
-                            abr: { autoSwitchBitrate: { video: true } }
-                        }
-                    });
-                } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
-                    this.hlsPlayer.currentLevel = -1; // Auto level selection
-                }
-                this.selectedQuality = 'auto';
-            } else {
-                // Set specific quality
-                if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
-                    this.dashPlayer.updateSettings({
-                        streaming: {
-                            abr: { autoSwitchBitrate: { video: false } }
-                        }
-                    });
-                    this.dashPlayer.setQualityFor('video', qualityIndex);
-                } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
-                    this.hlsPlayer.currentLevel = qualityIndex;
-                }
-                this.selectedQuality = this.adaptiveQualities[qualityIndex]?.label || 'Unknown';
-            }
-
-            this.updateAdaptiveQualityDisplay();
-            if (this.options.debug) console.log('📡 Adaptive quality set to:', qualityIndex);
-
-        } catch (error) {
-            if (this.options.debug) console.error('📡 Error setting adaptive quality:', error);
-        }
-    }
-
-    getCurrentAdaptiveQuality() {
-        if (!this.isAdaptiveStream) return null;
-
-        try {
+    try {
+        if (qualityIndex === 'auto' || qualityIndex === -1) {
+            // Enable auto quality
             if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
-                return this.dashPlayer.getQualityFor('video');
+                this.dashPlayer.updateSettings({
+                    streaming: {
+                        abr: { autoSwitchBitrate: { video: true } }
+                    }
+                });
             } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
-                return this.hlsPlayer.currentLevel;
+                this.hlsPlayer.currentLevel = -1; // Auto level selection
             }
-        } catch (error) {
-            if (this.options.debug) console.error('📡 Error getting current quality:', error);
+            this.selectedQuality = 'auto';
+        } else {
+            // Set specific quality
+            if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
+                this.dashPlayer.updateSettings({
+                    streaming: {
+                        abr: { autoSwitchBitrate: { video: false } }
+                    }
+                });
+                this.dashPlayer.setQualityFor('video', qualityIndex);
+            } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
+                this.hlsPlayer.currentLevel = qualityIndex;
+            }
+            this.selectedQuality = this.adaptiveQualities[qualityIndex]?.label || 'Unknown';
         }
 
-        return null;
+        this.updateAdaptiveQualityDisplay();
+        if (this.options.debug) console.log('📡 Adaptive quality set to:', qualityIndex);
+
+    } catch (error) {
+        if (this.options.debug) console.error('📡 Error setting adaptive quality:', error);
     }
+}
+
+getCurrentAdaptiveQuality() {
+    if (!this.isAdaptiveStream) return null;
+
+    try {
+        if (this.adaptiveStreamingType === 'dash' && this.dashPlayer) {
+            return this.dashPlayer.getQualityFor('video');
+        } else if (this.adaptiveStreamingType === 'hls' && this.hlsPlayer) {
+            return this.hlsPlayer.currentLevel;
+        }
+    } catch (error) {
+        if (this.options.debug) console.error('📡 Error getting current quality:', error);
+    }
+
+    return null;
+}
 
 getCurrentAdaptiveQualityLabel() {
     const currentIndex = this.getCurrentAdaptiveQuality();
@@ -4236,75 +4311,75 @@ getCurrentAdaptiveQualityLabel() {
     return this.adaptiveQualities[currentIndex]?.label || this.tauto;
 }
 
-    isAutoQuality() {
-        if (this.isAdaptiveStream) {
-            const currentQuality = this.getCurrentAdaptiveQuality();
-            return currentQuality === null || currentQuality === -1 || this.selectedQuality === 'auto';
-        }
-        return this.selectedQuality === 'auto';
+isAutoQuality() {
+    if (this.isAdaptiveStream) {
+        const currentQuality = this.getCurrentAdaptiveQuality();
+        return currentQuality === null || currentQuality === -1 || this.selectedQuality === 'auto';
+    }
+    return this.selectedQuality === 'auto';
+}
+
+setResolution(resolution) {
+    if (!this.video || !this.container) {
+        if (this.options.debug) console.warn("Video or container not available for setResolution");
+        return;
     }
 
-    setResolution(resolution) {
-        if (!this.video || !this.container) {
-            if (this.options.debug) console.warn("Video or container not available for setResolution");
-            return;
-        }
+    // Supported values including new scale-to-fit mode
+    const supportedResolutions = ["normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"];
 
-        // Supported values including new scale-to-fit mode
-        const supportedResolutions = ["normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"];
+    if (!supportedResolutions.includes(resolution)) {
+        if (this.options.debug) console.warn(`Resolution "${resolution}" not supported. Supported values: ${supportedResolutions.join(", ")}`);
+        return;
+    }
 
-        if (!supportedResolutions.includes(resolution)) {
-            if (this.options.debug) console.warn(`Resolution "${resolution}" not supported. Supported values: ${supportedResolutions.join(", ")}`);
-            return;
-        }
+    // Remove all previous resolution classes
+    const allResolutionClasses = [
+        "resolution-normal", "resolution-4-3", "resolution-16-9",
+        "resolution-stretched", "resolution-fit-to-screen", "resolution-scale-to-fit"
+    ];
 
-        // Remove all previous resolution classes
-        const allResolutionClasses = [
-            "resolution-normal", "resolution-4-3", "resolution-16-9",
-            "resolution-stretched", "resolution-fit-to-screen", "resolution-scale-to-fit"
-        ];
+    this.video.classList.remove(...allResolutionClasses);
+    if (this.container) {
+        this.container.classList.remove(...allResolutionClasses);
+    }
 
-        this.video.classList.remove(...allResolutionClasses);
-        if (this.container) {
-            this.container.classList.remove(...allResolutionClasses);
-        }
+    // Apply new resolution class
+    const cssClass = `resolution-${resolution.replace(":", "-")}`;
+    this.video.classList.add(cssClass);
+    if (this.container) {
+        this.container.classList.add(cssClass);
+    }
 
-        // Apply new resolution class
-        const cssClass = `resolution-${resolution.replace(":", "-")}`;
-        this.video.classList.add(cssClass);
-        if (this.container) {
-            this.container.classList.add(cssClass);
-        }
+    // Update option
+    this.options.resolution = resolution;
 
-        // Update option
-        this.options.resolution = resolution;
+    if (this.options.debug) {
+        console.log(`Resolution applied: ${resolution} (CSS class: ${cssClass})`);
+    }
+}
 
+getCurrentResolution() {
+    return this.options.resolution || "normal";
+}
+
+initializeResolution() {
+    if (this.options.resolution && this.options.resolution !== "normal") {
+        this.setResolution(this.options.resolution);
+    }
+}
+
+restoreResolutionAfterQualityChange() {
+    if (this.options.resolution && this.options.resolution !== "normal") {
         if (this.options.debug) {
-            console.log(`Resolution applied: ${resolution} (CSS class: ${cssClass})`);
+            console.log(`Restoring resolution "${this.options.resolution}" after quality change`);
         }
-    }
-
-    getCurrentResolution() {
-        return this.options.resolution || "normal";
-    }
-
-    initializeResolution() {
-        if (this.options.resolution && this.options.resolution !== "normal") {
+        // Small delay to ensure video element is ready
+        setTimeout(() => {
             this.setResolution(this.options.resolution);
-        }
+        }, 150);
     }
-
-    restoreResolutionAfterQualityChange() {
-        if (this.options.resolution && this.options.resolution !== "normal") {
-            if (this.options.debug) {
-                console.log(`Restoring resolution "${this.options.resolution}" after quality change`);
-            }
-            // Small delay to ensure video element is ready
-            setTimeout(() => {
-                this.setResolution(this.options.resolution);
-            }, 150);
-        }
-    }
+}
 
 /* Subtitles Module for MYETV Video Player 
  * Conservative modularization - original code preserved exactly

@@ -735,6 +735,7 @@ Hardware-accelerated transitions for smooth playback
 
 ## Plugins feature
 The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
+
 [Plugins and Feature Help: https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins](https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins)
 
 ## Chapters feature

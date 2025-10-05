@@ -832,5 +832,9 @@ Push to the branch (git push origin feature/feature-name)
 
 Create a Pull Request
 
+Contact MYETV here: [https://support.myetv.tv](https://support.myetv.tv)
+Donate to the project here: [https://blog.myetv.tv/donate-to-developers/](https://blog.myetv.tv/donate-to-developers/)
+Watch MYETV here: [https://www.myetv.tv](https://www.myetv.tv)
+
 ## Bug Reports
 To report bugs or request features, open an issue in the repository.

@@ -734,41 +734,7 @@ Hardware-accelerated transitions for smooth playback
 
 ## Plugins feature
 The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
-### Add a plguin to the player
-```
-<!-- Google Analytics 4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX');
-</script>
-<!-- Player bundle -->
-<script src="dist/myetv-player.min.js"></script>
-<!-- Plugin bundle -->
-<script src="plugins/youtube/myetv-player-youtube-plugin.js"></script>
-<script src="plugins/google-analytics/myetv-player-g-analytics-plugin.js"></script>
-```
-### Initialization exmples with plugins
-```
-const player = new MYETVPlayer('my-video', {
-    debug: true,
-    plugins: {
-        youtube: {
-            videoId: 'dQw4w9WgXcQ',  // Video ID of YouTube (example)
-            apiKey: 'your-api-key',
-            autoplay: false
-        },
-        analytics: {
-                platform: 'ga4',
-                videoTitle: 'My Awesome Video',
-                videoCategory: 'Tutorial',
-                videoId: 'video-001'
-            }
-    }
-});
-```
+[Plugins and Feature Help: https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins](https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins)
 
 ## Chapters feature
 Supports flexible time formats (HH:MM:SS, MM:SS, or seconds) and images url (optional)

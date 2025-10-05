@@ -22,6 +22,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - [Adaptive Streaming (HLS/DASH)](#adaptive-streaming-hlsdash)
 - [Supported Browsers](#supported-browsers)
 - [License](#license)
+- [Contributing](#contributing)
 
 ---
 

@@ -100,7 +100,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `chapters` | string | json | Enable/Disable chapters: chapter can be in json format or string format (see below) |
 | `plugins` | string | json | Add a customized plugin to the player to extend its functionality (see below) |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
-| `volumeSlider` | string | `horizontal` | Volume slider 'horizontal' or 'vertical': the horizontal slider is always visible and have the automatic fallback to vertical under 550px of width; the vertical slider is only vertical at any width and automatically disapper if mouse is not hover the volume button |
+| `volumeSlider` | string | `show` | Volume slider 'show' or 'hide': with "show" the volume slider is always visible and have the automatic fallback to "hide" under 550px of width; with "hide" the volume slider is visible only at mouse over |
 | `autoplay` | boolean | `false` | Start video automatically |
 | `loop` | boolean | `false` | Optional if the video should loop
 | `resolution` | string | `normal` | resolution type: "normal" same resolution of the native video; "4:3"; "16:9"; "stretched" the video will be stretched in all the container; "fit-to-screen" the video will fit the screen but can be cutted; "scale-to-fit" fit the screen but preserve aspect ration and not cut |

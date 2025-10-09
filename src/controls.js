@@ -59,6 +59,16 @@ initAutoHide() {
     this.controls.addEventListener('mouseleave', (e) => {
         if (this.autoHideDebug) {
             if (this.options.debug) console.log('Mouse EXITS controls - restart timer');
+
+            // Touch events for mobile devices
+            this.container.addEventListener('touchstart', () => {
+                this.showControlsNow();
+                this.resetAutoHideTimer();
+            });
+
+            this.container.addEventListener('touchend', () => {
+                this.resetAutoHideTimer();
+            });
         }
         this.onMouseLeaveControls(e);
     });
@@ -102,7 +112,8 @@ resetAutoHideTimer() {
         this.autoHideTimer = null;
     }
 
-    if (this.mouseOverControls) {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (this.mouseOverControls && !isTouchDevice) {
         if (this.autoHideDebug) {
             if (this.options.debug) console.log('Not starting timer - mouse on controls');
         }
@@ -147,8 +158,9 @@ showControlsNow() {
 }
 
 hideControlsNow() {
-    // Don't hide if mouse is still over controls
-    if (this.mouseOverControls) {
+    // Don't hide if mouse is still over controls (allow hiding on touch devices)
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (this.mouseOverControls && !isTouchDevice) {
         if (this.autoHideDebug && this.options.debug) console.log('⏸️ Not hiding - mouse still over controls');
         return;
     }

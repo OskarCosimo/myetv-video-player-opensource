@@ -40,7 +40,7 @@ constructor(videoElement, options = {}) {
         playlistAutoPlay: true,   // Auto-play next video when current ends
         playlistLoop: false,      // Loop playlist when reaching the end
         loop: false,              // Loop video when it ends (restart from beginning)
-        volumeSlider: 'horizontal', //volume slider type: 'horizontal' or 'vertical'
+        volumeSlider: 'show',     // Mobile volume slider: 'show' (horizontal popup) or 'hide' (no slider on mobile)
         // WATERMARK OVERLAY
         watermarkUrl: '',           // URL of watermark image
         watermarkLink: '',          // Optional URL to open when clicking watermark
@@ -66,6 +66,7 @@ constructor(videoElement, options = {}) {
     this.currentQualityIndex = 0;
     this.qualities = [];
     this.originalSources = [];
+        this.setupMenuToggles(); // Initialize menu toggle system
     this.isPiPSupported = this.checkPiPSupport();
     this.seekTooltip = null;
     this.titleOverlay = null;
@@ -731,6 +732,74 @@ initializeElements() {
     this.subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
 }
 
+// Generic method to close all active menus (works with plugins too)
+closeAllMenus() {
+    // Find all elements with class ending in '-menu' that have 'active' class
+    const allMenus = this.controls?.querySelectorAll('[class*="-menu"].active');
+    allMenus?.forEach(menu => {
+        menu.classList.remove('active');
+    });
+
+    // Remove active state from all control buttons
+    const allButtons = this.controls?.querySelectorAll('.control-btn.active');
+    allButtons?.forEach(btn => {
+        btn.classList.remove('active');
+    });
+}
+
+// Generic menu toggle setup (works with core menus and plugin menus)
+setupMenuToggles() {
+    // Delegate click events to control bar for any button with associated menu
+    if (this.controls) {
+        this.controls.addEventListener('click', (e) => {
+            // Find if clicked element is a control button or inside one
+            const button = e.target.closest('.control-btn');
+
+            if (!button) return;
+
+            // Get button classes to find associated menu
+            const buttonClasses = button.className.split(' ');
+            let menuClass = null;
+
+            // Find if this button has an associated menu (e.g., speed-btn -> speed-menu)
+            for (const cls of buttonClasses) {
+                if (cls.endsWith('-btn')) {
+                    const menuName = cls.replace('-btn', '-menu');
+                    const menu = this.controls.querySelector('.' + menuName);
+                    if (menu) {
+                        menuClass = menuName;
+                        break;
+                    }
+                }
+            }
+
+            if (!menuClass) return;
+
+            e.stopPropagation();
+
+            // Get the menu element
+            const menu = this.controls.querySelector('.' + menuClass);
+            const isOpen = menu.classList.contains('active');
+
+            // Close all menus first
+            this.closeAllMenus();
+
+            // If menu was closed, open it
+            if (!isOpen) {
+                menu.classList.add('active');
+                button.classList.add('active');
+            }
+        });
+    }
+
+    // Close menus when clicking outside controls
+    document.addEventListener('click', (e) => {
+        if (!this.controls?.contains(e.target)) {
+            this.closeAllMenus();
+        }
+    });
+}
+
 updateVolumeSliderVisual() {
     if (!this.video || !this.container) return;
 
@@ -853,27 +922,34 @@ updateVolumeSliderVisualWithTooltip() {
     }
 }
 
-// Volume slider type: 'horizontal' or 'vertical'
-setVolumeSliderOrientation(orientation) {
-    if (!['horizontal', 'vertical'].includes(orientation)) {
-        if (this.options.debug) console.warn('Invalid volume slider orientation:', orientation);
+/**
+ * Set mobile volume slider visibility
+ * @param {String} mode - 'show' (horizontal popup) or 'hide' (no slider on mobile)
+ * @returns {Object} this
+ */
+setMobileVolumeSlider(mode) {
+    if (!['show', 'hide'].includes(mode)) {
+        if (this.options.debug) console.warn('Invalid mobile volume slider mode:', mode);
         return this;
     }
 
-    this.options.volumeSlider = orientation;
+    this.options.mobileVolumeSlider = mode;
     const volumeContainer = this.controls?.querySelector('.volume-container');
     if (volumeContainer) {
-        volumeContainer.setAttribute('data-orientation', orientation);
+        // Set data attribute for CSS to use
+        volumeContainer.setAttribute('data-mobile-slider', mode);
+        if (this.options.debug) console.log('Mobile volume slider set to:', mode);
     }
-
-    if (this.options.debug) console.log('Volume slider orientation set to:', orientation);
     return this;
 }
 
-getVolumeSliderOrientation() {
-    return this.options.volumeSlider;
+/**
+ * Get mobile volume slider mode
+ * @returns {String} Current mobile volume slider mode
+ */
+getMobileVolumeSlider() {
+    return this.options.mobileVolumeSlider;
 }
-
 
 initVolumeTooltip() {
 

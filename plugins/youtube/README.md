@@ -118,6 +118,12 @@ const player = new MYETVPlayer('myVideo', {
 
             // Enable quality control in player UI
             enableQualityControl: true
+
+            // enable channel information retrieval (NEED THE APIKEY TO WORK)
+            enableChannelWatermark: false
+
+            // Set the default language for auto subtitles
+            autoCaptionLanguage: 'en'
         }
     }
 });

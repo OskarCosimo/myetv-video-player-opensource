@@ -1333,9 +1333,10 @@ video::-webkit-media-text-track-display {
     }
 
     /* Show slider on hover */
+    .controls-left:hover .volume-container[data-mobile-slider="show"] .volume-slider,
     .mute-btn:hover ~ .volume-container[data-mobile-slider="show"] .volume-slider,
     .volume-container[data-mobile-slider="show"]:hover .volume-slider,
-    .mute-btn:hover + .volume-container[data-mobile-slider="show"] .volume-slider {
+    .volume-slider:hover {
         position: absolute;
         opacity: 1;
         visibility: visible;
@@ -1356,15 +1357,15 @@ video::-webkit-media-text-track-display {
         transition: opacity 0.2s ease, visibility 0s ease, width 0.2s ease;
     }
 
-    /* stay open on mouse hover */
-    .volume-container[data-mobile-slider="show"]:hover {
+    /* Keep slider open when hovering controls-left */
+    .controls-left:has(.volume-container[data-mobile-slider="show"]):hover {
         pointer-events: auto !important;
     }
 
     /* Track styling */
+    .controls-left:hover .volume-slider::-webkit-slider-runnable-track,
     .volume-container[data-mobile-slider="show"]:hover .volume-slider::-webkit-slider-runnable-track,
-    .mute-btn:hover + .volume-container[data-mobile-slider="show"] .volume-slider::-webkit-slider-runnable-track,
-    .mute-btn:hover ~ .volume-container[data-mobile-slider="show"] .volume-slider::-webkit-slider-runnable-track {
+    .volume-slider:hover::-webkit-slider-runnable-track {
         width: 60px;
         height: 4px !important;
         background: linear-gradient(to right, var(--player-primary-color) 0%, var(--player-primary-color) var(--player-volume-fill, 50%), rgba(255, 255, 255, 0.4) var(--player-volume-fill, 50%), rgba(255, 255, 255, 0.4) 100%) !important;
@@ -1372,9 +1373,9 @@ video::-webkit-media-text-track-display {
     }
 
     /* Thumb styling */
+    .controls-left:hover .volume-slider::-webkit-slider-thumb,
     .volume-container[data-mobile-slider="show"]:hover .volume-slider::-webkit-slider-thumb,
-    .mute-btn:hover + .volume-container[data-mobile-slider="show"] .volume-slider::-webkit-slider-thumb,
-    .mute-btn:hover ~ .volume-container[data-mobile-slider="show"] .volume-slider::-webkit-slider-thumb {
+    .volume-slider:hover::-webkit-slider-thumb {
         opacity: 1 !important;
         visibility: visible !important;
         -webkit-appearance: none;

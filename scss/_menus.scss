@@ -18,6 +18,21 @@
     overflow: visible; /* Allow menus to appear above controls */
 }
 
+/* Override YouTube plugin's inline styles for subtitle menu */
+.yt-subtitles-submenu {
+    min-width: 150px !important;
+    max-width: 180px !important;
+    font-size: 13px !important;
+}
+
+.yt-subtitles-submenu .quality-option {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
 /* QUALITY BUTTON WITH DUAL DISPLAY */
 .quality-btn {
     min-height: 36px;
@@ -565,6 +580,17 @@
         text-overflow: ellipsis;
     }
 
+    /* YouTube plugin subtitle menu - tablet/mobile */
+    .yt-subtitles-submenu {
+        max-width: 150px !important;
+        font-size: 12px !important;
+    }
+
+    .yt-subtitles-submenu .quality-option {
+        padding: 7px 10px !important;
+        font-size: 12px !important;
+    }
+
     /* If submenu would overflow left, flip to right side */
     .settings-menu .settings-option:first-child .settings-submenu,
     .settings-menu .settings-option:nth-child(2) .settings-submenu {
@@ -733,6 +759,18 @@
         text-overflow: ellipsis;
     }
 
+    /* YouTube plugin subtitle menu - ultra small screens */
+    .yt-subtitles-submenu {
+        max-width: 110px !important;
+        min-width: 100px !important;
+        font-size: 10px !important;
+    }
+
+    .yt-subtitles-submenu .quality-option {
+        padding: 5px 6px !important;
+        font-size: 10px !important;
+    }
+
     .settings-option .icon,
     .settings-suboption .icon {
         width: 14px;
@@ -771,6 +809,18 @@
     .subtitle-option {
         padding: 5px 6px;
         font-size: 9px;
+    }
+
+    /* YouTube plugin subtitle menu - extreme small screens */
+    .yt-subtitles-submenu {
+        max-width: 95px !important;
+        min-width: 90px !important;
+        font-size: 9px !important;
+    }
+
+    .yt-subtitles-submenu .quality-option {
+        padding: 4px 5px !important;
+        font-size: 9px !important;
     }
 
     .controls-left,
@@ -2814,6 +2864,18 @@ video::-webkit-media-text-track-display {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    /* YouTube plugin subtitle menu - small screens */
+    .yt-subtitles-submenu {
+        max-width: 130px !important;
+        min-width: 120px !important;
+        font-size: 11px !important;
+    }
+
+    .yt-subtitles-submenu .quality-option {
+        padding: 6px 8px !important;
+        font-size: 11px !important;
     }
 
 

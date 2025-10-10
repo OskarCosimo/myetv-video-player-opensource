@@ -117,10 +117,10 @@ const player = new MYETVPlayer('myVideo', {
             quality: 'default',
 
             // Enable quality control in player UI
-            enableQualityControl: true
+            enableQualityControl: true,
 
             // enable channel information retrieval (NEED THE APIKEY TO WORK)
-            enableChannelWatermark: false
+            enableChannelWatermark: false,
 
             // Set the default language for auto subtitles
             autoCaptionLanguage: 'en'

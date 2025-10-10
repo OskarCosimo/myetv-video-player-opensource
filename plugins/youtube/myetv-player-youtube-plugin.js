@@ -45,20 +45,20 @@
         }
 
         // Top 10 most spoken languages for auto-translation
-getTopTranslationLanguages() {
-    return [
-        { code: 'en', name: 'English' },
-        { code: 'es', name: 'Spanish' },
-        { code: 'hi', name: 'Hindi' },
-        { code: 'ar', name: 'Arabic' },
-        { code: 'pt', name: 'Portuguese' },
-        { code: 'ru', name: 'Russian' },
-        { code: 'ja', name: 'Japanese' },
-        { code: 'de', name: 'German' },
-        { code: 'fr', name: 'French' },
-        { code: 'it', name: 'Italian' }
-    ];
-}
+        getTopTranslationLanguages() {
+            return [
+                { code: 'en', name: 'English' },
+                { code: 'es', name: 'Spanish' },
+                { code: 'hi', name: 'Hindi' },
+                { code: 'ar', name: 'Arabic' },
+                { code: 'pt', name: 'Portuguese' },
+                { code: 'ru', name: 'Russian' },
+                { code: 'ja', name: 'Japanese' },
+                { code: 'de', name: 'German' },
+                { code: 'fr', name: 'French' },
+                { code: 'it', name: 'Italian' }
+            ];
+        }
 
         setup() {
             if (this.api.player.options.debug) console.log('[YT Plugin] Setup started');
@@ -132,10 +132,13 @@ getTopTranslationLanguages() {
                     border: 1px solid rgba(255,255,255,0.1);
                     border-radius: 4px;
                     padding: 8px 0;
-                    min-width: 150px;
                     z-index: 999999;
                     color: white;
-                `;
+width: fit-content;
+                    max-width: 180px;
+                    max-height: 250px;
+                    overflow-y: auto;
+                    overflow-x: hidden;`;
 
                         // Hover state tracking
                         let isHoveringTrigger = false;
@@ -333,23 +336,23 @@ getTopTranslationLanguages() {
         }
 
         waitForAPIThenLoad() {
-    if (this.api.player.options.debug) console.log('[YT Plugin] Waiting for API...');
-    
-    const checkAndLoad = () => {
-        if (window.YT && window.YT.Player && typeof window.YT.Player === 'function') {
-            // API is ready
-            this.isYouTubeReady = true;
-            if (this.api.player.options.debug) console.log('[YT Plugin] API confirmed ready, loading video');
-            this.loadVideo(this.videoId);
-        } else {
-            // API not ready yet, check again
-            if (this.api.player.options.debug) console.log('[YT Plugin] API not ready, retrying in 100ms...');
-            setTimeout(checkAndLoad, 100);
+            if (this.api.player.options.debug) console.log('[YT Plugin] Waiting for API...');
+
+            const checkAndLoad = () => {
+                if (window.YT && window.YT.Player && typeof window.YT.Player === 'function') {
+                    // API is ready
+                    this.isYouTubeReady = true;
+                    if (this.api.player.options.debug) console.log('[YT Plugin] API confirmed ready, loading video');
+                    this.loadVideo(this.videoId);
+                } else {
+                    // API not ready yet, check again
+                    if (this.api.player.options.debug) console.log('[YT Plugin] API not ready, retrying in 100ms...');
+                    setTimeout(checkAndLoad, 100);
+                }
+            };
+
+            checkAndLoad();
         }
-    };
-    
-    checkAndLoad();
-}
 
         loadYouTubeAPI() {
             if (window.YT && window.YT.Player) {
@@ -417,7 +420,7 @@ getTopTranslationLanguages() {
             this.captionCheckAttempts = 0;
             this.subtitlesMenuCreated = false;
 
-this.api.video.style.pointerEvents = 'none';
+            this.api.video.style.pointerEvents = 'none';
 
             this.hidePosterOverlay();
             this.hideInitialLoading();
@@ -429,16 +432,16 @@ this.api.video.style.pointerEvents = 'none';
                 this.ytPlayerContainer.className = 'yt-player-container';
                 this.ytPlayerContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;';
                 // Ensure controls are above YouTube player
-if (this.api.controls) {
-    this.api.controls.style.zIndex = '10';
-    this.api.controls.style.pointerEvents = 'auto';
-}
+                if (this.api.controls) {
+                    this.api.controls.style.zIndex = '10';
+                    this.api.controls.style.pointerEvents = 'auto';
+                }
 
-// Ensure YouTube iframe is visible
-const ytIframe = this.ytPlayerContainer.querySelector('iframe');
-if (ytIframe) {
-    ytIframe.style.pointerEvents = 'auto';
-}
+                // Ensure YouTube iframe is visible
+                const ytIframe = this.ytPlayerContainer.querySelector('iframe');
+                if (ytIframe) {
+                    ytIframe.style.pointerEvents = 'auto';
+                }
 
                 this.api.container.insertBefore(this.ytPlayerContainer, this.api.controls);
             } else {
@@ -478,13 +481,13 @@ if (ytIframe) {
             });
 
             // Force iframe to fill container properly
-setTimeout(() => {
-    const iframe = this.ytPlayerContainer.querySelector('iframe');
-    if (iframe) {
-        iframe.style.cssText = 'position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;';
-        if (this.api.player.options.debug) console.log('[YT Plugin] Iframe forced to absolute positioning');
-    }
-}, 500);
+            setTimeout(() => {
+                const iframe = this.ytPlayerContainer.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.cssText = 'position:absolute!important;top:0!important;left:0!important;width:100%!important;height:100%!important;';
+                    if (this.api.player.options.debug) console.log('[YT Plugin] Iframe forced to absolute positioning');
+                }
+            }, 500);
 
 
             if (this.api.player.options.debug) console.log('[YT Plugin] YouTube player created');
@@ -610,15 +613,15 @@ setTimeout(() => {
             if (this.api.player.options.debug) console.log('[YT Plugin] Player ready event fired');
             // Force visibility
             this.api.video.style.removeProperty('display');
-this.ytPlayerContainer.style.display = 'block';
-this.ytPlayerContainer.style.visibility = 'visible';
-this.ytPlayerContainer.style.opacity = '1';
-this.ytPlayerContainer.style.zIndex = '2';
-if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Forced container visibility');
-// Force visibility with !important via CSS injection
-const forceVisibilityCSS = document.createElement('style');
-forceVisibilityCSS.id = 'yt-force-visibility-' + this.player.video.id;
-forceVisibilityCSS.textContent = `
+            this.ytPlayerContainer.style.display = 'block';
+            this.ytPlayerContainer.style.visibility = 'visible';
+            this.ytPlayerContainer.style.opacity = '1';
+            this.ytPlayerContainer.style.zIndex = '2';
+            if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Forced container visibility');
+            // Force visibility with !important via CSS injection
+            const forceVisibilityCSS = document.createElement('style');
+            forceVisibilityCSS.id = 'yt-force-visibility-' + this.player.video.id;
+            forceVisibilityCSS.textContent = `
     #yt-player-container-${this.player.video.id} {
         display: block !important;
         visibility: visible !important;
@@ -626,8 +629,8 @@ forceVisibilityCSS.textContent = `
         z-index: 2 !important;
     }
 `;
-document.head.appendChild(forceVisibilityCSS);
-if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visibility injected');
+            document.head.appendChild(forceVisibilityCSS);
+            if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visibility injected');
 
             this.hideLoadingOverlay();
             this.hideInitialLoading();
@@ -1093,9 +1096,9 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
                 onItem.textContent = 'On (Auto)';
                 onItem.dataset.track = 'auto';
                 onItem.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.enableAutoCaptions();
-            });
+                    e.stopPropagation();
+                    this.enableAutoCaptions();
+                });
                 subtitlesMenu.appendChild(onItem);
             }
         }
@@ -1208,76 +1211,76 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
         }
 
         setTranslatedCaptions(translationLanguageCode) {
-    if (!this.ytPlayer) return false;
+            if (!this.ytPlayer) return false;
 
-    try {
-        // First, disable current captions if any
-        if (this.captionsEnabled) {
-            this.ytPlayer.unloadModule('captions');
-        }
+            try {
+                // First, disable current captions if any
+                if (this.captionsEnabled) {
+                    this.ytPlayer.unloadModule('captions');
+                }
 
-        // If no caption tracks exist, try to enable auto-generated captions
-        if (this.availableCaptions.length === 0) {
-            if (this.api.player.options.debug) {
-                console.log('[YT Plugin] Enabling auto-generated captions with translation to:', translationLanguageCode);
+                // If no caption tracks exist, try to enable auto-generated captions
+                if (this.availableCaptions.length === 0) {
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] Enabling auto-generated captions with translation to:', translationLanguageCode);
+                    }
+
+                    // Enable auto-generated captions with translation
+                    this.ytPlayer.setOption('captions', 'track', {
+                        translationLanguage: translationLanguageCode
+                    });
+                    this.ytPlayer.loadModule('captions');
+                    this.currentCaption = null;
+                } else {
+                    // Use the first available caption track as base for translation
+                    const baseCaption = this.availableCaptions[0];
+
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] Translating from', baseCaption.languageCode, 'to', translationLanguageCode);
+                    }
+
+                    // Set caption with translation
+                    this.ytPlayer.setOption('captions', 'track', {
+                        languageCode: baseCaption.languageCode,
+                        translationLanguage: translationLanguageCode
+                    });
+                    this.ytPlayer.loadModule('captions');
+                    this.currentCaption = baseCaption.index;
+                }
+
+                // Update state
+                this.captionsEnabled = true;
+                this.currentTranslation = translationLanguageCode;
+
+                // Update UI
+                const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
+                if (subtitlesBtn) subtitlesBtn.classList.add('active');
+
+                // Update menu state
+                this.updateSubtitlesMenuActiveState();
+
+                // Close the menu
+                const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
+                if (subtitlesMenu) {
+                    subtitlesMenu.classList.remove('show');
+                }
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] ✅ Auto-translation enabled:', translationLanguageCode);
+                }
+
+                this.api.triggerEvent('youtubeplugin:captionchanged', {
+                    translationLanguage: translationLanguageCode
+                });
+
+                return true;
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error setting translated captions:', error);
+                }
+                return false;
             }
-            
-            // Enable auto-generated captions with translation
-            this.ytPlayer.setOption('captions', 'track', {
-                translationLanguage: translationLanguageCode
-            });
-            this.ytPlayer.loadModule('captions');
-            this.currentCaption = null;
-        } else {
-            // Use the first available caption track as base for translation
-            const baseCaption = this.availableCaptions[0];
-            
-            if (this.api.player.options.debug) {
-                console.log('[YT Plugin] Translating from', baseCaption.languageCode, 'to', translationLanguageCode);
-            }
-            
-            // Set caption with translation
-            this.ytPlayer.setOption('captions', 'track', {
-                languageCode: baseCaption.languageCode,
-                translationLanguage: translationLanguageCode
-            });
-            this.ytPlayer.loadModule('captions');
-            this.currentCaption = baseCaption.index;
         }
-
-        // Update state
-        this.captionsEnabled = true;
-        this.currentTranslation = translationLanguageCode;
-
-        // Update UI
-        const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
-        if (subtitlesBtn) subtitlesBtn.classList.add('active');
-
-        // Update menu state
-        this.updateSubtitlesMenuActiveState();
-
-        // Close the menu
-        const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
-        if (subtitlesMenu) {
-            subtitlesMenu.classList.remove('show');
-        }
-
-        if (this.api.player.options.debug) {
-            console.log('[YT Plugin] ✅ Auto-translation enabled:', translationLanguageCode);
-        }
-
-        this.api.triggerEvent('youtubeplugin:captionchanged', {
-            translationLanguage: translationLanguageCode
-        });
-
-        return true;
-    } catch (error) {
-        if (this.api.player.options.debug) {
-            console.error('[YT Plugin] Error setting translated captions:', error);
-        }
-        return false;
-    }
-}
 
         /**
          * Enable automatic captions (when no tracklist available)
@@ -1306,24 +1309,24 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
          * Disable captions
          */
         disableCaptions() {
-    if (!this.ytPlayer) return false;
-    
-    try {
-        this.ytPlayer.unloadModule('captions');
-        this.captionsEnabled = false;
-        this.currentCaption = null;
-        
-        const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
-        if (subtitlesBtn) subtitlesBtn.classList.remove('active');
-        
-        this.updateSubtitlesMenuActiveState();
-        
-        return true;
-    } catch (error) {
-        if (this.options.debug) console.error('[YT Plugin] Error:', error);
-        return false;
-    }
-}
+            if (!this.ytPlayer) return false;
+
+            try {
+                this.ytPlayer.unloadModule('captions');
+                this.captionsEnabled = false;
+                this.currentCaption = null;
+
+                const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
+                if (subtitlesBtn) subtitlesBtn.classList.remove('active');
+
+                this.updateSubtitlesMenuActiveState();
+
+                return true;
+            } catch (error) {
+                if (this.options.debug) console.error('[YT Plugin] Error:', error);
+                return false;
+            }
+        }
 
         /**
          * Toggle captions on/off
@@ -1433,52 +1436,52 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
             if (this.api.player.options.debug) console.log('[YT Plugin] Syncing controls');
 
             // Override play method
-const originalPlay = this.player.play;
-this.player.play = () => {
-    if (this.ytPlayer && this.ytPlayer.playVideo) {
-        this.ytPlayer.playVideo();
-    } else {
-        originalPlay.call(this.player);
-    }
-};
+            const originalPlay = this.player.play;
+            this.player.play = () => {
+                if (this.ytPlayer && this.ytPlayer.playVideo) {
+                    this.ytPlayer.playVideo();
+                } else {
+                    originalPlay.call(this.player);
+                }
+            };
 
-// Override pause method  
-const originalPause = this.player.pause;
-this.player.pause = () => {
-    if (this.ytPlayer && this.ytPlayer.pauseVideo) {
-        this.ytPlayer.pauseVideo();
-    } else {
-        originalPause.call(this.player);
-    }
-};
+            // Override pause method  
+            const originalPause = this.player.pause;
+            this.player.pause = () => {
+                if (this.ytPlayer && this.ytPlayer.pauseVideo) {
+                    this.ytPlayer.pauseVideo();
+                } else {
+                    originalPause.call(this.player);
+                }
+            };
 
-// Override seek method
-const originalSetCurrentTime = this.player.setCurrentTime;
-this.player.seek = (time) => {
-    if (this.ytPlayer && this.ytPlayer.seekTo) {
-        this.ytPlayer.seekTo(time, true);
-    } else if (originalSetCurrentTime) {
-        originalSetCurrentTime.call(this.player, time);
-    }
-};
+            // Override seek method
+            const originalSetCurrentTime = this.player.setCurrentTime;
+            this.player.seek = (time) => {
+                if (this.ytPlayer && this.ytPlayer.seekTo) {
+                    this.ytPlayer.seekTo(time, true);
+                } else if (originalSetCurrentTime) {
+                    originalSetCurrentTime.call(this.player, time);
+                }
+            };
 
-const originalSeek = this.player.seek;
-this.player.seek = (time) => {
-    if (this.ytPlayer && this.ytPlayer.seekTo) {
-        this.ytPlayer.seekTo(time, true);
-    } else if (originalSeek) {
-        originalSeek.call(this.player, time);
-    }
-};
+            const originalSeek = this.player.seek;
+            this.player.seek = (time) => {
+                if (this.ytPlayer && this.ytPlayer.seekTo) {
+                    this.ytPlayer.seekTo(time, true);
+                } else if (originalSeek) {
+                    originalSeek.call(this.player, time);
+                }
+            };
 
-// Ensure setCurrentTime also works
-this.player.setCurrentTime = (time) => {
-    if (this.ytPlayer && this.ytPlayer.seekTo) {
-        this.ytPlayer.seekTo(time, true);
-    } else if (originalSetCurrentTime) {
-        originalSetCurrentTime.call(this.player, time);
-    }
-};
+            // Ensure setCurrentTime also works
+            this.player.setCurrentTime = (time) => {
+                if (this.ytPlayer && this.ytPlayer.seekTo) {
+                    this.ytPlayer.seekTo(time, true);
+                } else if (originalSetCurrentTime) {
+                    originalSetCurrentTime.call(this.player, time);
+                }
+            };
 
             // Override volume control
             const originalUpdateVolume = this.player.updateVolume;

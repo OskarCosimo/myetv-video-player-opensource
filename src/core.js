@@ -886,7 +886,6 @@ updateVolumeTooltipPosition(volumeValue = null) {
 
 initVolumeTooltip() {
     this.createVolumeTooltip();
-    this.setupVolumeTooltipEvents();
 
     // Set initial position immediately
     setTimeout(() => {
@@ -955,15 +954,12 @@ initVolumeTooltip() {
 
     this.createVolumeTooltip();
 
-    // Setup events
-    this.setupVolumeTooltipEvents();
-
     setTimeout(() => {
         this.updateVolumeTooltip();
     }, 200);
 
     if (this.options.debug) {
-        console.log('Dynamic volume tooltip inizializzato');
+        console.log('Dynamic volume tooltip inizializzation');
     }
 }
 
@@ -1046,6 +1042,11 @@ updateVolume(value) {
     const previousMuted = this.video.muted;
 
     this.video.volume = Math.max(0, Math.min(1, value / 100));
+
+    if (this.video.volume > 0 && this.video.muted) {
+        this.video.muted = false;
+    }
+
     if (this.volumeSlider) this.volumeSlider.value = value;
     this.updateMuteButton();
     this.updateVolumeSliderVisual();

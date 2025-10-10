@@ -371,7 +371,7 @@ createControls() {
     <span class="icon mute-icon hidden">🔇</span>
                     </button>
 
-                    <div class="volume-container" data-orientation="${this.options.volumeSlider}">
+                    <div class="volume-container" data-mobile-slider="${this.options.volumeSlider}">
     <input type="range" class="volume-slider" min="0" max="100" value="100" data-tooltip="volume">
                     </div>
 

@@ -4591,7 +4591,128 @@ video::-webkit-media-text-track-display {
   cursor: pointer !important;
 }
 
-/* CONTROLS - IMPROVED RESPONSIVE DESIGN */
+.progress-container {
+  position: relative;
+  overflow: visible !important;
+  padding: 0;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.progress-bar {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: visible !important;
+  cursor: pointer;
+}
+
+.progress-buffer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.progress-filled {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--player-accent, #ff0000);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.progress-handle {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: var(--player-accent, #ff0000);
+  cursor: grab;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+  pointer-events: auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-handle:active {
+  cursor: grabbing;
+}
+
+.progress-handle-circle {
+  border-radius: 50%;
+}
+
+.progress-handle-square {
+  border-radius: 3px;
+}
+
+.progress-handle-diamond {
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.progress-handle-arrow {
+  background: transparent;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 14px solid var(--player-accent, #ff0000);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.progress-handle-triangle {
+  background: transparent;
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid var(--player-accent, #ff0000);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.progress-handle-heart {
+  width: 16px !important;
+  height: 16px !important;
+  clip-path: polygon(50% 15%, 65% 0%, 80% 0%, 95% 15%, 95% 30%, 50% 85%, 5% 30%, 5% 15%, 20% 0%, 35% 0%);
+}
+
+.progress-handle-star {
+  width: 16px !important;
+  height: 16px !important;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.progress-handle-none {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.progress-handle {
+  opacity: 1 !important;
+}
+
+.progress-container .progress-handle {
+  opacity: 1 !important;
+}
+
+/* Main controls container */
 .controls {
   position: absolute;
   bottom: 0;
@@ -4607,6 +4728,7 @@ video::-webkit-media-text-track-display {
   box-sizing: border-box;
 }
 
+/* Controls visible state */
 .controls.show {
   opacity: 1;
   transform: translateY(0);
@@ -7900,9 +8022,10 @@ video::-webkit-media-text-track-display {
     transition: opacity 0s ease, visibility 0s ease 2s, width 0s ease 2s;
   }
   /* Show slider on hover */
+  .controls-left:hover .volume-container[data-mobile-slider=show] .volume-slider,
   .mute-btn:hover ~ .volume-container[data-mobile-slider=show] .volume-slider,
   .volume-container[data-mobile-slider=show]:hover .volume-slider,
-  .mute-btn:hover + .volume-container[data-mobile-slider=show] .volume-slider {
+  .volume-slider:hover {
     position: absolute;
     opacity: 1;
     visibility: visible;
@@ -7922,23 +8045,23 @@ video::-webkit-media-text-track-display {
     backdrop-filter: blur(10px);
     transition: opacity 0.2s ease, visibility 0s ease, width 0.2s ease;
   }
-  /* stay open on mouse hover */
-  .volume-container[data-mobile-slider=show]:hover {
+  /* Keep slider open when hovering controls-left */
+  .controls-left:has(.volume-container[data-mobile-slider=show]):hover {
     pointer-events: auto !important;
   }
   /* Track styling */
+  .controls-left:hover .volume-slider::-webkit-slider-runnable-track,
   .volume-container[data-mobile-slider=show]:hover .volume-slider::-webkit-slider-runnable-track,
-  .mute-btn:hover + .volume-container[data-mobile-slider=show] .volume-slider::-webkit-slider-runnable-track,
-  .mute-btn:hover ~ .volume-container[data-mobile-slider=show] .volume-slider::-webkit-slider-runnable-track {
+  .volume-slider:hover::-webkit-slider-runnable-track {
     width: 60px;
     height: 4px !important;
     background: linear-gradient(to right, var(--player-primary-color) 0%, var(--player-primary-color) var(--player-volume-fill, 50%), rgba(255, 255, 255, 0.4) var(--player-volume-fill, 50%), rgba(255, 255, 255, 0.4) 100%) !important;
     border-radius: 2px;
   }
   /* Thumb styling */
+  .controls-left:hover .volume-slider::-webkit-slider-thumb,
   .volume-container[data-mobile-slider=show]:hover .volume-slider::-webkit-slider-thumb,
-  .mute-btn:hover + .volume-container[data-mobile-slider=show] .volume-slider::-webkit-slider-thumb,
-  .mute-btn:hover ~ .volume-container[data-mobile-slider=show] .volume-slider::-webkit-slider-thumb {
+  .volume-slider:hover::-webkit-slider-thumb {
     opacity: 1 !important;
     visibility: visible !important;
     -webkit-appearance: none;
@@ -8463,6 +8586,163 @@ video::-webkit-media-text-track-display {
   cursor: pointer !important;
 }
 
+/* ===================================
+   ALL SUBMENUS - ULTRA-COMPACT FIX
+   =================================== */
+/* Apply to ALL submenus */
+.settings-submenu,
+.subtitles-menu,
+.quality-submenu,
+.speed-submenu,
+.yt-subtitles-submenu,
+.yt-quality-submenu {
+  /* Ultra-compact: fit to content */
+  width: fit-content !important;
+  min-width: auto !important;
+  max-width: 180px !important;
+  /* Always open to the LEFT */
+  right: 100% !important;
+  left: auto !important;
+  margin-right: 5px !important;
+  margin-left: 0 !important;
+  /* Scrollbar for long lists */
+  max-height: 250px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  /* Text handling */
+  white-space: nowrap !important;
+}
+
+/* All submenu options (inside submenus) */
+.settings-submenu .settings-suboption,
+.subtitles-menu .subtitle-option,
+.quality-submenu .quality-option,
+.speed-submenu .speed-option,
+.yt-subtitles-submenu .quality-option {
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* ===================================
+   SETTINGS MENU - FONT CONSISTENCY
+   =================================== */
+/* Main settings menu options (not in submenus) - keep consistent size */
+.settings-menu > .settings-option,
+.settings-menu > .subtitles-option {
+  font-size: 13px !important;
+}
+
+.settings-menu > .settings-option span,
+.settings-menu > .subtitles-option span {
+  font-size: 13px !important;
+}
+
+/* Override any existing .subtitles-option font-size */
+.subtitles-btn,
+.subtitles-control {
+  font-size: 13px !important;
+}
+
+/* ===================================
+   RESPONSIVE - PROGRESSIVE REDUCTION
+   =================================== */
+/* Tablets and larger phones */
+@media (max-width: 768px) {
+  /* Main menu options stay readable */
+  .settings-menu > .settings-option,
+  .settings-menu > .subtitles-option {
+    font-size: 12px !important;
+  }
+  /* Submenus get smaller */
+  .settings-submenu,
+  .subtitles-menu,
+  .quality-submenu,
+  .speed-submenu,
+  .yt-subtitles-submenu,
+  .yt-quality-submenu {
+    max-width: min(140px, 100vw - 180px) !important;
+  }
+  .settings-submenu .settings-suboption,
+  .subtitles-menu .subtitle-option,
+  .quality-submenu .quality-option,
+  .speed-submenu .speed-option,
+  .yt-subtitles-submenu .quality-option {
+    padding: 7px 8px !important;
+    font-size: 11px !important;
+  }
+}
+/* Small phones */
+@media (max-width: 600px) {
+  .settings-menu > .settings-option,
+  .settings-menu > .subtitles-option {
+    font-size: 11px !important;
+  }
+  .settings-submenu,
+  .subtitles-menu,
+  .quality-submenu,
+  .speed-submenu,
+  .yt-subtitles-submenu,
+  .yt-quality-submenu {
+    max-width: min(120px, 100vw - 160px) !important;
+  }
+  .settings-submenu .settings-suboption,
+  .subtitles-menu .subtitle-option,
+  .quality-submenu .quality-option,
+  .speed-submenu .speed-option,
+  .yt-subtitles-submenu .quality-option {
+    padding: 6px 7px !important;
+    font-size: 10px !important;
+  }
+}
+/* Very small phones */
+@media (max-width: 450px) {
+  .settings-menu > .settings-option,
+  .settings-menu > .subtitles-option {
+    font-size: 10px !important;
+  }
+  .settings-submenu,
+  .subtitles-menu,
+  .quality-submenu,
+  .speed-submenu,
+  .yt-subtitles-submenu,
+  .yt-quality-submenu {
+    max-width: min(100px, 100vw - 140px) !important;
+  }
+  .settings-submenu .settings-suboption,
+  .subtitles-menu .subtitle-option,
+  .quality-submenu .quality-option,
+  .speed-submenu .speed-option,
+  .yt-subtitles-submenu .quality-option {
+    padding: 5px 6px !important;
+    font-size: 9px !important;
+  }
+}
+/* Ultra small phones */
+@media (max-width: 350px) {
+  .settings-menu > .settings-option,
+  .settings-menu > .subtitles-option {
+    font-size: 9px !important;
+  }
+  .settings-submenu,
+  .subtitles-menu,
+  .quality-submenu,
+  .speed-submenu,
+  .yt-subtitles-submenu,
+  .yt-quality-submenu {
+    max-width: min(90px, 100vw - 120px) !important;
+  }
+  .settings-submenu .settings-suboption,
+  .subtitles-menu .subtitle-option,
+  .quality-submenu .quality-option,
+  .speed-submenu .speed-option,
+  .yt-subtitles-submenu .quality-option {
+    padding: 4px 5px !important;
+    font-size: 8px !important;
+  }
+}
 /* QUALITY BUTTON WITH DUAL DISPLAY */
 .quality-btn {
   min-height: 36px;
@@ -10851,7 +11131,7 @@ video::-webkit-media-text-track-display {
   color: var(--player-primary-color);
 }
 
-/* RESPONSIVE DESIGN - PROGRESSIVE DEGRADATION CON MENU A TENDINA */
+/* RESPONSIVE DESIGN - PROGRESSIVE DEGRADATION WITH DROP-DOWN MENU */
 /* Large tablets and small desktops */
 @media (max-width: 768px) {
   .controls-left,
@@ -10946,19 +11226,19 @@ video::-webkit-media-text-track-display {
     margin-right: 5px;
   }
 }
-/* SCHERMI MOLTO PICCOLI - ATTIVA MENU SETTINGS DROPDOWN */
+/* VERY SMALL SCREENS - ENABLE MENU SETTINGS DROPDOWN */
 @media (max-width: 350px) {
-  /* Mostra il menu Settings solo su schermi molto piccoli */
+  /* Show the Settings menu only on very small screens */
   .settings-control {
     display: block !important;
   }
-  /* Nascondi i controlli individuali e spostali nel menu */
+  /* Hide individual controls and move them to the menu */
   .pip-btn,
   .speed-control,
   .subtitles-control {
     display: none !important;
   }
-  /* Riduci ulteriormente gli spazi */
+  /* Reduce the spaces further */
   .controls-left,
   .controls-right {
     gap: 4px;
@@ -10985,9 +11265,9 @@ video::-webkit-media-text-track-display {
     margin-right: 3px;
   }
   .volume-slider {
-    width: 30px; /* Volume slider ancora più piccolo */
+    width: 30px; /* Even smaller volume slider */
   }
-  /* Riduci il menu settings per schermi ultra-piccoli */
+  /* Reduce the settings menu for ultra-small screens */
   .settings-menu {
     min-width: 160px;
     font-size: 12px;
@@ -11034,7 +11314,7 @@ video::-webkit-media-text-track-display {
   .volume-slider {
     width: 25px;
   }
-  /* Menu settings ultra-compatto */
+  /* Menu settings ultra-compact */
   .settings-menu {
     min-width: 140px;
     font-size: 11px;
@@ -13005,7 +13285,7 @@ video::-webkit-media-text-track-display {
 }
 
 /* Horizontal Volume Slider (default) - Base width reduced */
-.volume-container[data-orientation=horizontal] .volume-slider {
+.volume-container[data-mobile-slider=show] .volume-slider {
   width: 80px;
   height: var(--player-volume-height);
   background: var(--player-volume-bg);
@@ -13015,32 +13295,32 @@ video::-webkit-media-text-track-display {
 
 /* Responsive width reduction for horizontal slider */
 @media (max-width: 1200px) {
-  .volume-container[data-orientation=horizontal] .volume-slider {
+  .volume-container[data-mobile-slider=show] .volume-slider {
     width: 70px;
   }
 }
 @media (max-width: 900px) {
-  .volume-container[data-orientation=horizontal] .volume-slider {
+  .volume-container[data-mobile-slider=show] .volume-slider {
     width: 60px;
   }
 }
 @media (max-width: 768px) {
-  .volume-container[data-orientation=horizontal] .volume-slider {
+  .volume-container[data-mobile-slider=show] .volume-slider {
     width: 50px;
   }
 }
 @media (max-width: 600px) {
-  .volume-container[data-orientation=horizontal] .volume-slider {
+  .volume-container[data-mobile-slider=show] .volume-slider {
     width: 40px;
   }
 }
 @media (max-width: 550px) {
   /* Hide tooltip on mobile */
-  .volume-container[data-orientation=horizontal] .volume-tooltip {
+  .volume-container[data-mobile-slider=show] .volume-tooltip {
     display: none !important;
   }
   /* Volume container */
-  .volume-container[data-orientation=horizontal] {
+  .volume-container[data-mobile-slider=show] {
     pointer-events: auto !important;
     position: relative;
   }
@@ -13051,7 +13331,7 @@ video::-webkit-media-text-track-display {
     pointer-events: auto !important;
   }
   /* Hide slider by default - stay open for 2 seconds */
-  .volume-container[data-orientation=horizontal] .volume-slider {
+  .volume-container[data-mobile-slider=show] .volume-slider {
     position: absolute;
     opacity: 0;
     visibility: hidden;
@@ -13062,9 +13342,10 @@ video::-webkit-media-text-track-display {
     transition: opacity 0s ease, visibility 0s ease 2s, width 0s ease 2s;
   }
   /* Show slider on hover */
-  .mute-btn:hover ~ .volume-container[data-orientation=horizontal] .volume-slider,
-  .volume-container[data-orientation=horizontal]:hover .volume-slider,
-  .mute-btn:hover + .volume-container[data-orientation=horizontal] .volume-slider {
+  .controls-left:hover .volume-container[data-mobile-slider=show] .volume-slider,
+  .mute-btn:hover ~ .volume-container[data-mobile-slider=show] .volume-slider,
+  .volume-container[data-mobile-slider=show]:hover .volume-slider,
+  .volume-slider:hover {
     position: absolute;
     opacity: 1;
     visibility: visible;
@@ -13084,23 +13365,23 @@ video::-webkit-media-text-track-display {
     backdrop-filter: blur(10px);
     transition: opacity 0.2s ease, visibility 0s ease, width 0.2s ease;
   }
-  /* stay open on mouse hover */
-  .volume-container[data-orientation=horizontal]:hover {
+  /* Keep slider open when hovering controls-left */
+  .controls-left:has(.volume-container[data-mobile-slider=show]):hover {
     pointer-events: auto !important;
   }
   /* Track styling */
-  .volume-container[data-orientation=horizontal]:hover .volume-slider::-webkit-slider-runnable-track,
-  .mute-btn:hover + .volume-container[data-orientation=horizontal] .volume-slider::-webkit-slider-runnable-track,
-  .mute-btn:hover ~ .volume-container[data-orientation=horizontal] .volume-slider::-webkit-slider-runnable-track {
+  .controls-left:hover .volume-slider::-webkit-slider-runnable-track,
+  .volume-container[data-mobile-slider=show]:hover .volume-slider::-webkit-slider-runnable-track,
+  .volume-slider:hover::-webkit-slider-runnable-track {
     width: 60px;
     height: 4px !important;
     background: linear-gradient(to right, var(--player-primary-color) 0%, var(--player-primary-color) var(--player-volume-fill, 50%), rgba(255, 255, 255, 0.4) var(--player-volume-fill, 50%), rgba(255, 255, 255, 0.4) 100%) !important;
     border-radius: 2px;
   }
   /* Thumb styling */
-  .volume-container[data-orientation=horizontal]:hover .volume-slider::-webkit-slider-thumb,
-  .mute-btn:hover + .volume-container[data-orientation=horizontal] .volume-slider::-webkit-slider-thumb,
-  .mute-btn:hover ~ .volume-container[data-orientation=horizontal] .volume-slider::-webkit-slider-thumb {
+  .controls-left:hover .volume-slider::-webkit-slider-thumb,
+  .volume-container[data-mobile-slider=show]:hover .volume-slider::-webkit-slider-thumb,
+  .volume-slider:hover::-webkit-slider-thumb {
     opacity: 1 !important;
     visibility: visible !important;
     -webkit-appearance: none;

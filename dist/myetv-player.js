@@ -1533,14 +1533,19 @@ seek(e) {
     if (!this.video || !this.progressContainer || !this.progressFilled || !this.progressHandle || this.isChangingQuality) return;
 
     const rect = this.progressContainer.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+
+    // Support both mouse and touch events
+    const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
+
+    const clickX = clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
 
     if (this.video.duration && !isNaN(this.video.duration)) {
         this.video.currentTime = percentage * this.video.duration;
-        const progress = percentage * 100;
-        this.progressFilled.style.width = progress + '%';
-        this.progressHandle.style.left = progress + '%';
+
+        const progress = `${percentage * 100}%`;
+        this.progressFilled.style.width = progress;
+        this.progressHandle.style.left = progress;
     }
 }
 
@@ -2514,12 +2519,28 @@ addEventListener(eventType, callback) {
             });
         }
 
-        if (this.progressContainer) {
-            this.progressContainer.addEventListener('click', (e) => this.seek(e));
-            this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
-        }
+    if (this.progressContainer) {
+        // Mouse events (desktop)
+        this.progressContainer.addEventListener('click', (e) => this.seek(e));
+        this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
+
+        // Touch events (mobile)
+        this.progressContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling when touching the seek bar
+            this.startSeeking(e);
+        }, { passive: false });
 
         this.setupSeekTooltip();
+    }
+
+    // Add touch events directly on the handle for better mobile dragging
+    if (this.progressHandle) {
+        this.progressHandle.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior
+            e.stopPropagation(); // Stop event from bubbling to progressContainer
+            this.startSeeking(e);
+        }, { passive: false });
+    }
 
         // NOTE: Auto-hide events are handled in initAutoHide() after everything is ready
 
@@ -2540,7 +2561,19 @@ addEventListener(eventType, callback) {
         document.addEventListener('mozfullscreenchange', () => this.updateFullscreenButton());
 
         document.addEventListener('mousemove', (e) => this.continueSeeking(e));
-        document.addEventListener('mouseup', () => this.endSeeking());
+    document.addEventListener('mouseup', () => this.endSeeking());
+
+    // Touch events for seeking (mobile)
+    document.addEventListener('touchmove', (e) => {
+        if (this.isUserSeeking) {
+            e.preventDefault(); // Prevent scrolling while seeking
+            this.continueSeeking(e);
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => this.endSeeking());
+    document.addEventListener('touchcancel', () => this.endSeeking());
+
     }
 
 /* Controls Module for MYETV Video Player 

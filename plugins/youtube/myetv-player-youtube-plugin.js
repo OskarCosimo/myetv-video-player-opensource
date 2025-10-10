@@ -605,7 +605,6 @@ width: fit-content;
                 cc_load_policy: 1,
                 cc_lang_pref: this.options.autoCaptionLanguage || 'en',
                 hl: this.options.autoCaptionLanguage || 'en',
-                cc_lang_pref: 'en',
                 iv_load_policy: 3,
                 ...options.playerVars
             };

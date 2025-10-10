@@ -197,16 +197,18 @@ const player = new MYETVPlayer('myVideo', {
 </script>
 ```
 
-### Method 4: YouTube URL in Video Source
+### Method 4: YouTube video id in the initialization option
 
 ```html
-<video id="myVideo" class="video-player" 
-       src="https://youtu.be/dQw4w9WgXcQ">
+<video id="myVideo" class="video-player">
 </video>
 
 <script>
     const player = new MYETVPlayer('myVideo', {
-        plugins: { youtube: {} }
+        plugins: { youtube: {
+videoId: 'dQw4w9WgXcQ', // YouTube video ID
+autoplay: true
+} }
     });
 </script>
 ```

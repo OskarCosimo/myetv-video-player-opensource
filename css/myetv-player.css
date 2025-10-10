@@ -4591,6 +4591,19 @@ video::-webkit-media-text-track-display {
   cursor: pointer !important;
 }
 
+.controls,
+.progress-container,
+.progress-bar,
+.controls-main,
+.controls-left,
+.controls-right,
+.time-display {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
 .progress-container {
   position: relative;
   overflow: visible !important;

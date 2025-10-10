@@ -6,6 +6,24 @@
 @use 'variables' as *;
 
 // ===================================
+// PREVENT TEXT SELECTION DURING DRAG
+// ===================================
+
+// Disable text selection on all controls when dragging
+.controls,
+.progress-container,
+.progress-bar,
+.controls-main,
+.controls-left,
+.controls-right,
+.time-display {
+    user-select: none; // Prevent text selection
+    -webkit-user-select: none; // Safari
+    -moz-user-select: none; // Firefox
+    -ms-user-select: none; // IE/Edge
+}
+
+// ===================================
 // PROGRESS BAR SYSTEM
 // ===================================
 

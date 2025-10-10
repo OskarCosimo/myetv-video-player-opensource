@@ -297,12 +297,19 @@
             });
         }
 
-        if (this.progressContainer) {
-            this.progressContainer.addEventListener('click', (e) => this.seek(e));
-            this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
-        }
+    if (this.progressContainer) {
+        // Mouse events (desktop)
+        this.progressContainer.addEventListener('click', (e) => this.seek(e));
+        this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
+
+        // Touch events (mobile)
+        this.progressContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling when touching the seek bar
+            this.startSeeking(e);
+        }, { passive: false });
 
         this.setupSeekTooltip();
+    }
 
         // NOTE: Auto-hide events are handled in initAutoHide() after everything is ready
 
@@ -323,7 +330,19 @@
         document.addEventListener('mozfullscreenchange', () => this.updateFullscreenButton());
 
         document.addEventListener('mousemove', (e) => this.continueSeeking(e));
-        document.addEventListener('mouseup', () => this.endSeeking());
+    document.addEventListener('mouseup', () => this.endSeeking());
+
+    // Touch events for seeking (mobile)
+    document.addEventListener('touchmove', (e) => {
+        if (this.isUserSeeking) {
+            e.preventDefault(); // Prevent scrolling while seeking
+            this.continueSeeking(e);
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => this.endSeeking());
+    document.addEventListener('touchcancel', () => this.endSeeking());
+
     }
 
 // Events methods for main class

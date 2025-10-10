@@ -1137,14 +1137,19 @@ seek(e) {
     if (!this.video || !this.progressContainer || !this.progressFilled || !this.progressHandle || this.isChangingQuality) return;
 
     const rect = this.progressContainer.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+
+    // Support both mouse and touch events
+    const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
+
+    const clickX = clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
 
     if (this.video.duration && !isNaN(this.video.duration)) {
         this.video.currentTime = percentage * this.video.duration;
-        const progress = percentage * 100;
-        this.progressFilled.style.width = progress + '%';
-        this.progressHandle.style.left = progress + '%';
+
+        const progress = `${percentage * 100}%`;
+        this.progressFilled.style.width = progress;
+        this.progressHandle.style.left = progress;
     }
 }
 

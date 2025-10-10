@@ -99,6 +99,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `chapters` | string | json | Enable/Disable chapters: chapter can be in json format or string format (see below) |
 | `plugins` | string | json | Add a customized plugin to the player to extend its functionality (see below) |
+| `seekHandleShape` | string | `true` | Edit the shape of the seek controlbar. Shape type: none, circle, square, diamond, arrow, triangle, heart, star |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `volumeSlider` | string | `show` | Volume slider 'show' or 'hide': with "show" the volume slider is always visible and have the automatic fallback to "hide" under 550px of width; with "hide" the volume slider is visible only at mouse over |
 | `autoplay` | boolean | `false` | Start video automatically |
@@ -249,6 +250,18 @@ player.removeWatermark();
 
 //hide with the controlbar or always show the watermark logo
 player.setWatermarkAutoHide(false);
+```
+### Controlbar seek shape
+```
+// Change dynamically
+player.setSeekHandleShape('heart');
+
+// Get the current shape
+console.log(player.getSeekHandleShape()); // "heart"
+
+// Show all available shape
+console.log(player.getAvailableSeekHandleShapes());
+// ["none", "circle", "square", "diamond", "arrow", "triangle", "heart", "star"]
 ```
 ### Playlist Controls
 ```

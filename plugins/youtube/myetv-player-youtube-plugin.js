@@ -17,6 +17,13 @@
                 quality: options.quality || 'default',
                 enableQualityControl: options.enableQualityControl !== undefined ? options.enableQualityControl : true,
                 enableCaptions: options.enableCaptions !== undefined ? options.enableCaptions : true,
+
+                // Channel watermark option (default false - requires API key)
+                enableChannelWatermark: options.enableChannelWatermark !== undefined ? options.enableChannelWatermark : false,
+
+                // Auto caption language option
+                autoCaptionLanguage: options.autoCaptionLanguage || null, // e.g., 'it', 'en', 'es', 'de', 'fr'
+
                 debug: true,
                 ...options
             };
@@ -39,6 +46,8 @@
             this.captionStateCheckInterval = null;
             this.qualityMonitorInterval = null;
             this.resizeListenerAdded = false;
+            // Channel data cache
+            this.channelData = null;
 
             this.api = player.getPluginAPI();
             if (this.api.player.options.debug) console.log('[YT Plugin] Constructor initialized', this.options);
@@ -75,6 +84,137 @@
             }
 
             if (this.api.player.options.debug) console.log('[YT Plugin] Setup completed');
+        }
+
+        /**
+     * Fetch YouTube channel information using YouTube Data API v3
+     */
+        async fetchChannelInfo(videoId) {
+            if (!this.options.apiKey) {
+                if (this.api.player.options.debug) {
+                    console.warn('[YT Plugin] API Key required to fetch channel information');
+                }
+                return null;
+            }
+
+            try {
+                const videoUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${this.options.apiKey}`;
+                const videoResponse = await fetch(videoUrl);
+                const videoData = await videoResponse.json();
+
+                if (!videoData.items || videoData.items.length === 0) {
+                    if (this.api.player.options.debug) {
+                        console.warn('[YT Plugin] Video not found');
+                    }
+                    return null;
+                }
+
+                const channelId = videoData.items[0].snippet.channelId;
+                const channelTitle = videoData.items[0].snippet.channelTitle;
+
+                const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${this.options.apiKey}`;
+                const channelResponse = await fetch(channelUrl);
+                const channelData = await channelResponse.json();
+
+                if (!channelData.items || channelData.items.length === 0) {
+                    if (this.api.player.options.debug) {
+                        console.warn('[YT Plugin] Channel not found');
+                    }
+                    return null;
+                }
+
+                const channel = channelData.items[0].snippet;
+
+                const channelInfo = {
+                    channelId: channelId,
+                    channelTitle: channelTitle,
+                    channelUrl: `https://www.youtube.com/channel/${channelId}`,
+                    thumbnailUrl: channel.thumbnails.high?.url || channel.thumbnails.default?.url || null
+                };
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Channel info fetched', channelInfo);
+                }
+
+                return channelInfo;
+
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error fetching channel info', error);
+                }
+                return null;
+            }
+        }
+
+        /**
+         * Update main player watermark options with channel data
+         */
+        async updatePlayerWatermark() {
+            if (!this.options.enableChannelWatermark || !this.videoId) {
+                return;
+            }
+
+            this.channelData = await this.fetchChannelInfo(this.videoId);
+
+            if (!this.channelData) {
+                return;
+            }
+
+            if (this.api.player.options) {
+                this.api.player.options.watermarkUrl = this.channelData.thumbnailUrl;
+                this.api.player.options.watermarkLink = this.channelData.channelUrl;
+                this.api.player.options.watermarkTitle = this.channelData.channelTitle;
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Player watermark options updated', {
+                        watermarkUrl: this.api.player.options.watermarkUrl,
+                        watermarkLink: this.api.player.options.watermarkLink,
+                        watermarkTitle: this.api.player.options.watermarkTitle
+                    });
+                }
+
+                if (this.api.player.initializeWatermark) {
+                    this.api.player.initializeWatermark();
+                }
+            }
+        }
+
+        /**
+         * Set auto caption language on player initialization
+         */
+        setAutoCaptionLanguage() {
+            if (!this.options.autoCaptionLanguage || !this.ytPlayer) {
+                return;
+            }
+
+            try {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Setting auto caption language to', this.options.autoCaptionLanguage);
+                }
+
+                this.ytPlayer.setOption('captions', 'reload', true);
+                this.ytPlayer.loadModule('captions');
+
+                this.ytPlayer.setOption('captions', 'track', {
+                    'translationLanguage': this.options.autoCaptionLanguage
+                });
+
+                this.captionsEnabled = true;
+
+                const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
+                if (subtitlesBtn) {
+                    subtitlesBtn.classList.add('active');
+                }
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Auto caption language set successfully');
+                }
+
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error setting auto caption language', error);
+                }
+            }
         }
 
         handleResponsiveLayout() {
@@ -458,9 +598,13 @@ width: fit-content;
             const playerVars = {
                 autoplay: this.options.autoplay ? 1 : 0,
                 controls: this.options.showYouTubeUI ? 1 : 0,
+                fs: this.options.showYouTubeUI ? 1 : 0,
+                disablekb: 1,
                 modestbranding: 1,
                 rel: 0,
                 cc_load_policy: 1,
+                cc_lang_pref: this.options.autoCaptionLanguage || 'en',
+                hl: this.options.autoCaptionLanguage || 'en',
                 cc_lang_pref: 'en',
                 iv_load_policy: 3,
                 ...options.playerVars
@@ -667,7 +811,18 @@ width: fit-content;
                 setTimeout(() => this.setQuality(this.options.quality), 1000);
             }
 
+            // NEW: Update player watermark with channel data
+            if (this.options.enableChannelWatermark) {
+                this.updatePlayerWatermark();
+            }
+
+            // NEW: Set auto caption language
+            if (this.options.autoCaptionLanguage) {
+                setTimeout(() => this.setAutoCaptionLanguage(), 1500);
+            }
+
             this.api.triggerEvent('youtubeplugin:playerready', {});
+
         }
 
         onApiChange(event) {

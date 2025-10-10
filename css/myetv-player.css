@@ -4655,7 +4655,7 @@ video::-webkit-media-text-track-display {
   height: 14px;
   background: var(--player-accent, #ff0000);
   cursor: grab;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
   z-index: 10;
   pointer-events: auto;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -4725,6 +4725,75 @@ video::-webkit-media-text-track-display {
   opacity: 1 !important;
 }
 
+@media (max-width: 768px) {
+  .progress-bar {
+    height: 4px;
+  }
+  .progress-handle {
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+  .progress-handle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: transparent;
+    z-index: -1;
+  }
+  .progress-handle:active {
+    width: 24px !important;
+    height: 24px !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  }
+  .progress-handle-circle:active {
+    border-radius: 50%;
+  }
+  .progress-handle-square:active {
+    border-radius: 5px;
+  }
+  .progress-handle-diamond:active {
+    border-radius: 4px;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  .progress-handle-arrow:active {
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 24px solid var(--player-accent, #ff0000);
+  }
+  .progress-handle-triangle:active {
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-bottom: 24px solid var(--player-accent, #ff0000);
+  }
+  .progress-handle-heart:active,
+  .progress-handle-star:active {
+    width: 26px !important;
+    height: 26px !important;
+  }
+}
+@media (max-width: 480px) {
+  .progress-bar {
+    height: 4px;
+  }
+  .progress-handle::before {
+    width: 60px;
+    height: 60px;
+  }
+  .progress-handle:active {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .progress-handle-heart:active,
+  .progress-handle-star:active {
+    width: 30px !important;
+    height: 30px !important;
+  }
+}
 /* Main controls container */
 .controls {
   position: absolute;
@@ -4748,6 +4817,13 @@ video::-webkit-media-text-track-display {
   position: absolute !important;
   bottom: 0 !important;
   z-index: 20 !important;
+}
+
+.progress-container,
+.progress-bar,
+.progress-handle {
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 
 /* PROGRESS BAR */

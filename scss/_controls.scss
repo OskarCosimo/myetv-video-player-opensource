@@ -84,7 +84,7 @@
     height: 14px;
     background: var(--player-accent, #ff0000);
     cursor: grab; // Indicates draggable
-    transition: opacity 0.2s ease;
+    transition: all 0.2s ease; // Smooth transition for size changes
     z-index: 10; // Above everything (buffer and filled)
     pointer-events: auto; // Ensure it's clickable
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); // Subtle shadow for depth
@@ -173,6 +173,101 @@
 }
 
 // ===================================
+// MOBILE TOUCH ENHANCEMENTS
+// ===================================
+
+// Media query for tablets and mobile devices (max width 768px)
+@media (max-width: 768px) {
+
+    // Progress bar stays thin (4px)
+    .progress-bar {
+        height: 4px; // Keep thin
+    }
+
+    // Handle with large invisible touch area
+    .progress-handle {
+        // Add large invisible touch area using pseudo-element
+        &::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px; // Large touch target (50x50px)
+            height: 50px;
+            border-radius: 50%;
+            background: transparent; // Invisible but touchable
+            z-index: -1; // Behind the visible handle
+        }
+        // Scale up when touched/active
+        &:active {
+            width: 24px !important; // Grow: 14px -> 24px
+            height: 24px !important;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4); // Stronger shadow when active
+        }
+    }
+
+    // Adjust shapes when active (touched)
+    .progress-handle-circle:active {
+        border-radius: 50%;
+    }
+
+    .progress-handle-square:active {
+        border-radius: 5px;
+    }
+
+    .progress-handle-diamond:active {
+        border-radius: 4px;
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .progress-handle-arrow:active {
+        border-left: 12px solid transparent;
+        border-right: 12px solid transparent;
+        border-bottom: 24px solid var(--player-accent, #ff0000);
+    }
+
+    .progress-handle-triangle:active {
+        border-left: 13px solid transparent;
+        border-right: 13px solid transparent;
+        border-bottom: 24px solid var(--player-accent, #ff0000);
+    }
+
+    .progress-handle-heart:active,
+    .progress-handle-star:active {
+        width: 26px !important;
+        height: 26px !important;
+    }
+}
+
+// Enhanced touch targets for very small screens (phones)
+@media (max-width: 480px) {
+
+    // Progress bar stays thin on phones too
+    .progress-bar {
+        height: 4px; // Keep thin
+    }
+
+    .progress-handle {
+        &::before {
+            width: 60px; // Extra large touch target on phones
+            height: 60px;
+        }
+        // Even bigger when touched on phones
+        &:active {
+            width: 28px !important;
+            height: 28px !important;
+        }
+    }
+
+    .progress-handle-heart:active,
+    .progress-handle-star:active {
+        width: 30px !important;
+        height: 30px !important;
+    }
+}
+
+// ===================================
 // CONTROLS CONTAINER
 // ===================================
 
@@ -199,4 +294,16 @@
     position: absolute !important;
     bottom: 0 !important;
     z-index: 20 !important; // Above other elements
+}
+
+// ===================================
+// TOUCH EVENT FIXES FOR MOBILE
+// ===================================
+
+// Prevent default touch behavior on progress bar
+.progress-container,
+.progress-bar,
+.progress-handle {
+    touch-action: none; // Disable browser's default touch gestures
+    -webkit-touch-callout: none; // Disable callout on iOS
 }

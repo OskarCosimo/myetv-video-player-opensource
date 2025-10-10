@@ -311,6 +311,15 @@
         this.setupSeekTooltip();
     }
 
+    // Add touch events directly on the handle for better mobile dragging
+    if (this.progressHandle) {
+        this.progressHandle.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior
+            e.stopPropagation(); // Stop event from bubbling to progressContainer
+            this.startSeeking(e);
+        }, { passive: false });
+    }
+
         // NOTE: Auto-hide events are handled in initAutoHide() after everything is ready
 
         if (this.speedMenu) {

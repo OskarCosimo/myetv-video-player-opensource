@@ -6,10 +6,10 @@
 @use 'variables' as *;
 
 /* ===================================
-   ALL SUBMENUS COMPACTST STYLING
+   ALL SUBMENUS - ULTRA-COMPACT FIX
    =================================== */
 
-/* Apply to ALL submenus - standard player and YouTube plugin */
+/* Apply to ALL submenus */
 .settings-submenu,
 .subtitles-menu,
 .quality-submenu,
@@ -33,11 +33,11 @@
     white-space: nowrap !important;
 }
 
-/* All submenu options */
-.settings-suboption,
-.subtitle-option,
-.quality-option,
-.speed-option,
+/* All submenu options (inside submenus) */
+.settings-submenu .settings-suboption,
+.subtitles-menu .subtitle-option,
+.quality-submenu .quality-option,
+.speed-submenu .speed-option,
 .yt-subtitles-submenu .quality-option {
     padding: 8px 10px !important;
     font-size: 12px !important;
@@ -47,11 +47,39 @@
 }
 
 /* ===================================
+   SETTINGS MENU - FONT CONSISTENCY
+   =================================== */
+
+/* Main settings menu options (not in submenus) - keep consistent size */
+.settings-menu > .settings-option,
+.settings-menu > .subtitles-option {
+    font-size: 13px !important;
+}
+
+.settings-menu > .settings-option span,
+.settings-menu > .subtitles-option span {
+    font-size: 13px !important;
+}
+
+/* Override any existing .subtitles-option font-size */
+.subtitles-btn,
+.subtitles-control {
+    font-size: 13px !important;
+}
+
+/* ===================================
    RESPONSIVE - PROGRESSIVE REDUCTION
    =================================== */
 
 /* Tablets and larger phones */
 @media (max-width: 768px) {
+    /* Main menu options stay readable */
+    .settings-menu > .settings-option,
+    .settings-menu > .subtitles-option {
+        font-size: 12px !important;
+    }
+
+    /* Submenus get smaller */
     .settings-submenu,
     .subtitles-menu,
     .quality-submenu,
@@ -59,13 +87,12 @@
     .yt-subtitles-submenu,
     .yt-quality-submenu {
         max-width: min(140px, calc(100vw - 180px)) !important;
-        font-size: 11px !important;
     }
 
-    .settings-suboption,
-    .subtitle-option,
-    .quality-option,
-    .speed-option,
+    .settings-submenu .settings-suboption,
+    .subtitles-menu .subtitle-option,
+    .quality-submenu .quality-option,
+    .speed-submenu .speed-option,
     .yt-subtitles-submenu .quality-option {
         padding: 7px 8px !important;
         font-size: 11px !important;
@@ -74,6 +101,11 @@
 
 /* Small phones */
 @media (max-width: 600px) {
+    .settings-menu > .settings-option,
+    .settings-menu > .subtitles-option {
+        font-size: 11px !important;
+    }
+
     .settings-submenu,
     .subtitles-menu,
     .quality-submenu,
@@ -81,13 +113,12 @@
     .yt-subtitles-submenu,
     .yt-quality-submenu {
         max-width: min(120px, calc(100vw - 160px)) !important;
-        font-size: 10px !important;
     }
 
-    .settings-suboption,
-    .subtitle-option,
-    .quality-option,
-    .speed-option,
+    .settings-submenu .settings-suboption,
+    .subtitles-menu .subtitle-option,
+    .quality-submenu .quality-option,
+    .speed-submenu .speed-option,
     .yt-subtitles-submenu .quality-option {
         padding: 6px 7px !important;
         font-size: 10px !important;
@@ -96,6 +127,11 @@
 
 /* Very small phones */
 @media (max-width: 450px) {
+    .settings-menu > .settings-option,
+    .settings-menu > .subtitles-option {
+        font-size: 10px !important;
+    }
+
     .settings-submenu,
     .subtitles-menu,
     .quality-submenu,
@@ -103,13 +139,12 @@
     .yt-subtitles-submenu,
     .yt-quality-submenu {
         max-width: min(100px, calc(100vw - 140px)) !important;
-        font-size: 9px !important;
     }
 
-    .settings-suboption,
-    .subtitle-option,
-    .quality-option,
-    .speed-option,
+    .settings-submenu .settings-suboption,
+    .subtitles-menu .subtitle-option,
+    .quality-submenu .quality-option,
+    .speed-submenu .speed-option,
     .yt-subtitles-submenu .quality-option {
         padding: 5px 6px !important;
         font-size: 9px !important;
@@ -118,6 +153,11 @@
 
 /* Ultra small phones */
 @media (max-width: 350px) {
+    .settings-menu > .settings-option,
+    .settings-menu > .subtitles-option {
+        font-size: 9px !important;
+    }
+
     .settings-submenu,
     .subtitles-menu,
     .quality-submenu,
@@ -125,13 +165,12 @@
     .yt-subtitles-submenu,
     .yt-quality-submenu {
         max-width: min(90px, calc(100vw - 120px)) !important;
-        font-size: 8px !important;
     }
 
-    .settings-suboption,
-    .subtitle-option,
-    .quality-option,
-    .speed-option,
+    .settings-submenu .settings-suboption,
+    .subtitles-menu .subtitle-option,
+    .quality-submenu .quality-option,
+    .speed-submenu .speed-option,
     .yt-subtitles-submenu .quality-option {
         padding: 4px 5px !important;
         font-size: 8px !important;

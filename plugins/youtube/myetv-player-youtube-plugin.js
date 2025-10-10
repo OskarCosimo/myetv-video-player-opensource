@@ -38,6 +38,7 @@
             this.captionCheckAttempts = 0;
             this.captionStateCheckInterval = null;
             this.qualityMonitorInterval = null;
+            this.resizeListenerAdded = false;
 
             this.api = player.getPluginAPI();
             if (this.api.player.options.debug) console.log('[YT Plugin] Constructor initialized', this.options);
@@ -74,6 +75,208 @@ getTopTranslationLanguages() {
             }
 
             if (this.api.player.options.debug) console.log('[YT Plugin] Setup completed');
+        }
+
+        handleResponsiveLayout() {
+
+            const containerWidth = this.api.container.offsetWidth;
+            const pipBtn = this.api.container.querySelector('.pip-btn');
+            const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
+            const settingsMenu = this.api.container.querySelector('.settings-menu');
+
+            // ALWAYS hide PiP for YouTube
+            if (pipBtn) {
+                pipBtn.style.display = 'none';
+            }
+
+            // Breakpoint at 600px
+            if (containerWidth < 600) {
+                // Hide subtitles button
+                if (subtitlesBtn) {
+                    subtitlesBtn.style.display = 'none';
+                }
+
+                // Add subtitles option to settings menu
+                if (settingsMenu) {
+                    let subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
+
+                    if (!subtitlesWrapper) {
+                        // Get i18n text
+                        let subtitlesText = 'Subtitles';
+                        if (this.api.player && this.api.player.t) {
+                            subtitlesText = this.api.player.t('subtitles');
+                        } else if (this.player && this.player.t) {
+                            subtitlesText = this.player.t('subtitles');
+                        }
+
+                        // Create wrapper
+                        subtitlesWrapper = document.createElement('div');
+                        subtitlesWrapper.className = 'yt-subtitles-wrapper';
+                        subtitlesWrapper.style.cssText = 'position: relative; display: block;';
+
+                        // Create trigger
+                        const trigger = document.createElement('div');
+                        trigger.className = 'quality-option';
+                        trigger.textContent = subtitlesText;
+
+                        // Create submenu
+                        const submenu = document.createElement('div');
+                        submenu.className = 'yt-subtitles-submenu';
+                        submenu.style.cssText = `
+                    display: none;
+                    position: absolute;
+                    right: 100%;
+                    top: 0;
+                    margin-right: 5px;
+                    background: #1c1c1c;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 4px;
+                    padding: 8px 0;
+                    min-width: 150px;
+                    z-index: 999999;
+                    color: white;
+                `;
+
+                        // Hover state tracking
+                        let isHoveringTrigger = false;
+                        let isHoveringSubmenu = false;
+                        let hideTimeout = null;
+
+                        const checkAndHide = () => {
+                            if (hideTimeout) clearTimeout(hideTimeout);
+                            hideTimeout = setTimeout(() => {
+                                if (!isHoveringTrigger && !isHoveringSubmenu) {
+                                    submenu.style.display = 'none';
+                                }
+                            }, 200);
+                        };
+
+                        // Add OFF option
+                        const offOption = document.createElement('div');
+                        offOption.className = 'quality-option';
+                        offOption.textContent = 'Off';
+                        offOption.style.cssText = 'padding: 8px 16px; cursor: pointer; color: white;';
+                        offOption.addEventListener('click', () => {
+                            if (this.disableCaptions) this.disableCaptions();
+                            submenu.style.display = 'none';
+                            settingsMenu.classList.remove('show');
+                        });
+                        submenu.appendChild(offOption);
+
+                        // Add caption options
+                        if (this.availableCaptions && this.availableCaptions.length > 0) {
+                            this.availableCaptions.forEach((caption, index) => {
+                                const option = document.createElement('div');
+                                option.className = 'quality-option';
+                                option.textContent = caption.label || caption.languageName;
+                                option.style.cssText = 'padding: 8px 16px; cursor: pointer; color: white;';
+                                option.addEventListener('click', () => {
+                                    if (this.setCaptions) this.setCaptions(index);
+                                    submenu.style.display = 'none';
+                                    settingsMenu.classList.remove('show');
+                                });
+                                submenu.appendChild(option);
+                            });
+                        } else {
+                            // Add Auto option
+                            const autoOption = document.createElement('div');
+                            autoOption.className = 'quality-option';
+                            autoOption.textContent = 'On (Auto)';
+                            autoOption.style.cssText = 'padding: 8px 16px; cursor: pointer; color: white;';
+                            autoOption.addEventListener('click', () => {
+                                if (this.enableAutoCaptions) this.enableAutoCaptions();
+                                submenu.style.display = 'none';
+                                settingsMenu.classList.remove('show');
+                            });
+                            submenu.appendChild(autoOption);
+                        }
+
+                        // Trigger events
+                        trigger.addEventListener('mouseenter', () => {
+                            isHoveringTrigger = true;
+                            if (hideTimeout) clearTimeout(hideTimeout);
+                            submenu.style.display = 'block';
+                        });
+
+                        trigger.addEventListener('mouseleave', () => {
+                            isHoveringTrigger = false;
+                            checkAndHide();
+                        });
+
+                        // Submenu events
+                        submenu.addEventListener('mouseenter', () => {
+                            isHoveringSubmenu = true;
+                            if (hideTimeout) clearTimeout(hideTimeout);
+                            submenu.style.display = 'block';
+                        });
+
+                        submenu.addEventListener('mouseleave', () => {
+                            isHoveringSubmenu = false;
+                            checkAndHide();
+                        });
+
+                        // Click alternative
+                        trigger.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (submenu.style.display === 'none' || !submenu.style.display) {
+                                submenu.style.display = 'block';
+                            } else {
+                                submenu.style.display = 'none';
+                            }
+                        });
+
+                        // Assemble
+                        subtitlesWrapper.appendChild(trigger);
+                        subtitlesWrapper.appendChild(submenu);
+                        settingsMenu.insertBefore(subtitlesWrapper, settingsMenu.firstChild);
+                    }
+                }
+            } else {
+                // Wide screen
+                if (subtitlesBtn) {
+                    subtitlesBtn.style.display = '';
+                }
+
+                // Remove from settings
+                if (settingsMenu) {
+                    const subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
+                    if (subtitlesWrapper) {
+                        subtitlesWrapper.remove();
+                    }
+                }
+            }
+        }
+
+        hidePipFromSettingsMenuOnly() {
+            const settingsMenu = this.api.container.querySelector('.settings-menu');
+            if (!settingsMenu) return;
+
+            // Use MutationObserver to watch when options are added to settings menu
+            if (!this.pipObserver) {
+                this.pipObserver = new MutationObserver(() => {
+                    const allOptions = settingsMenu.children;
+
+                    for (let i = 0; i < allOptions.length; i++) {
+                        const option = allOptions[i];
+
+                        // Skip our subtitles wrapper
+                        if (option.classList.contains('yt-subtitles-wrapper')) continue;
+
+                        const text = option.textContent.trim().toLowerCase();
+
+                        // Check if it's the PiP option
+                        if (text.includes('picture') || text === 'pip' || text.includes('in picture')) {
+                            option.style.display = 'none';
+                        }
+                    }
+                });
+
+                // Start observing
+                this.pipObserver.observe(settingsMenu, {
+                    childList: true,
+                    subtree: true
+                });
+            }
         }
 
         addPlayerMethods() {
@@ -310,15 +513,12 @@ setTimeout(() => {
                 const pauseClick = this.api.player.options.pauseClick;
 
                 if (doubleTap) {
-                    // Try multiple ways to get controls visibility
                     let controlsHidden = false;
 
-                    // Method 1: Check via this.api.controls
                     if (this.api.controls) {
                         controlsHidden = this.api.controls.classList.contains('hide');
                     }
 
-                    // Method 2: Query directly from container
                     if (!controlsHidden) {
                         const controls = this.player.container.querySelector('.controls');
                         if (controls) {
@@ -326,48 +526,49 @@ setTimeout(() => {
                         }
                     }
 
-                    // Method 3: Check computed style
                     if (!controlsHidden && this.api.controls) {
                         const style = window.getComputedStyle(this.api.controls);
                         controlsHidden = style.opacity === '0' || style.visibility === 'hidden';
                     }
 
                     if (controlsHidden) {
-                        // Controls are hidden: show them WITHOUT pausing
                         if (this.api.player.showControlsNow) {
                             this.api.player.showControlsNow();
                         }
                         if (this.api.player.resetAutoHideTimer) {
                             this.api.player.resetAutoHideTimer();
                         }
-                        // CRITICAL: return here to prevent pause
                         return;
                     }
 
-                    // Controls are visible: now we can toggle play/pause
+                    // Controls visible: toggle play/pause
                     this.togglePlayPauseYT();
                 } else if (pauseClick) {
-                    // Standard pauseClick behavior
+                    // Always toggle on click when pauseClick is enabled
                     this.togglePlayPauseYT();
                 }
             });
         }
 
         togglePlayPauseYT() {
-        if (!this.ytPlayer) return;
+            if (!this.ytPlayer) return;
 
-        try {
-            const state = this.ytPlayer.getPlayerState();
+            try {
+                const state = this.ytPlayer.getPlayerState();
 
-            if (state === YT.PlayerState.PLAYING) {
-                this.ytPlayer.pauseVideo();
-            } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED) {
-                this.ytPlayer.playVideo();
+                if (state === YT.PlayerState.PLAYING) {
+                    this.ytPlayer.pauseVideo();
+                } else if (state === YT.PlayerState.PAUSED ||
+                    state === YT.PlayerState.CUED ||
+                    state === YT.PlayerState.UNSTARTED ||
+                    state === -1) {
+                    // Handle all non-playing states including initial/unstarted
+                    this.ytPlayer.playVideo();
+                }
+            } catch (error) {
+                if (this.api.player.options.debug) console.error('[YT Plugin] Error toggling play/pause:', error);
             }
-        } catch (error) {
-            if (this.api.player.options.debug) console.error('[YT Plugin] Error toggling play/pause:', error);
         }
-    }
 
         removeMouseMoveOverlay() {
             if (this.mouseMoveOverlay) {
@@ -430,10 +631,24 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
 
             this.hideLoadingOverlay();
             this.hideInitialLoading();
-            this.hidePictureInPictureButton();
             this.injectYouTubeCSSOverride();
 
             this.syncControls();
+
+            // Handle responsive layout for PiP and subtitles buttons
+            this.handleResponsiveLayout();
+
+            // Hide PiP from settings menu (separate function, called after responsive layout)
+            setTimeout(() => this.hidePipFromSettingsMenuOnly(), 500);
+            setTimeout(() => this.hidePipFromSettingsMenuOnly(), 1500);
+            setTimeout(() => this.hidePipFromSettingsMenuOnly(), 3000);
+
+            // Listen for window resize
+            if (!this.resizeListenerAdded) {
+                window.addEventListener('resize', () => this.handleResponsiveLayout());
+                this.resizeListenerAdded = true;
+            }
+
 
             // Load qualities with multiple attempts
             setTimeout(() => this.loadAvailableQualities(), 500);
@@ -455,19 +670,6 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
         onApiChange(event) {
             if (this.api.player.options.debug) console.log('[YT Plugin] API changed event - loading captions');
             setTimeout(() => this.loadAvailableCaptions(), 500);
-        }
-
-        hidePictureInPictureButton() {
-            const pipBtn = this.api.container.querySelector('.pip-btn');
-            if (pipBtn) {
-                pipBtn.style.display = 'none';
-                if (this.api.player.options.debug) console.log('[YT Plugin] PiP button hidden');
-            }
-        }
-
-        showPictureInPictureButton() {
-            const pipBtn = this.api.container.querySelector('.pip-btn');
-            if (pipBtn && this.api.player.isPiPSupported) pipBtn.style.display = '';
         }
 
         injectYouTubeCSSOverride() {
@@ -1114,7 +1316,6 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
         const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
         if (subtitlesBtn) subtitlesBtn.classList.remove('active');
         
-        // SOLO aggiorna le classi CSS, NON ricreare il menu
         this.updateSubtitlesMenuActiveState();
         
         return true;
@@ -1157,21 +1358,46 @@ if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visib
             };
             if (this.api.player.options.debug) console.log('[YT Plugin] State:', states[event.data], event.data);
 
+            // Get play/pause icons
+            const playIcon = this.api.container.querySelector('.play-icon');
+            const pauseIcon = this.api.container.querySelector('.pause-icon');
+
             switch (event.data) {
                 case YT.PlayerState.PLAYING:
                     this.api.triggerEvent('played', {});
                     this.hideLoadingOverlay();
+
+                    // Show pause icon, hide play icon
+                    if (playIcon && pauseIcon) {
+                        playIcon.classList.add('hidden');
+                        pauseIcon.classList.remove('hidden');
+                    }
+
                     if (this.availableQualities.length === 0) {
                         this.loadAvailableQualities();
                     }
                     break;
 
                 case YT.PlayerState.PAUSED:
+                case YT.PlayerState.CUED:
+                case YT.PlayerState.UNSTARTED:
                     this.api.triggerEvent('paused', {});
+
+                    // Show play icon, hide pause icon
+                    if (playIcon && pauseIcon) {
+                        playIcon.classList.remove('hidden');
+                        pauseIcon.classList.add('hidden');
+                    }
                     break;
 
                 case YT.PlayerState.ENDED:
                     this.api.triggerEvent('ended', {});
+
+                    // Show play icon (for replay)
+                    if (playIcon && pauseIcon) {
+                        playIcon.classList.remove('hidden');
+                        pauseIcon.classList.add('hidden');
+                    }
                     break;
             }
         }
@@ -1226,7 +1452,7 @@ this.player.pause = () => {
     }
 };
 
-// ADD: Override seek method
+// Override seek method
 const originalSetCurrentTime = this.player.setCurrentTime;
 this.player.seek = (time) => {
     if (this.ytPlayer && this.ytPlayer.seekTo) {
@@ -1266,7 +1492,16 @@ this.player.setCurrentTime = (time) => {
                     }
 
                     this.api.container.style.setProperty('--player-volume-fill', `${volume}%`);
-                    this.updateMuteButtonState(volume === 0);
+
+                    if (volume > 0 && this.ytPlayer.isMuted && this.ytPlayer.isMuted()) {
+                        this.ytPlayer.unMute();
+                        this.updateMuteButtonState(false);
+                    } else if (volume === 0 && this.ytPlayer.isMuted && !this.ytPlayer.isMuted()) {
+                        this.ytPlayer.mute();
+                        this.updateMuteButtonState(true);
+                    } else {
+                        this.updateMuteButtonState(volume === 0);
+                    }
 
                     if (this.api.player.updateVolumeTooltip) {
                         this.api.player.updateVolumeTooltip();
@@ -1300,6 +1535,70 @@ this.player.setCurrentTime = (time) => {
                     originalToggleMute.call(this.player);
                 }
             };
+
+            // Volume tooltip events for YouTube
+            if (this.api.player.volumeSlider) {
+                const volumeSlider = this.api.player.volumeSlider;
+                const volumeContainer = this.api.container.querySelector('.volume-container');
+
+                // Remove existing listeners to avoid duplicates
+                const newVolumeSlider = volumeSlider.cloneNode(true);
+                volumeSlider.parentNode.replaceChild(newVolumeSlider, volumeSlider);
+                this.api.player.volumeSlider = newVolumeSlider;
+
+                // Update tooltip on input (slider drag)
+                newVolumeSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    this.player.updateVolume(value);
+
+                    // Update tooltip position and text during drag
+                    if (this.api.player.updateVolumeTooltipPosition) {
+                        this.api.player.updateVolumeTooltipPosition(value / 100);
+                    }
+                    if (this.api.player.updateVolumeTooltip) {
+                        this.api.player.updateVolumeTooltip();
+                    }
+                });
+
+                // Update tooltip position on mousemove over slider
+                newVolumeSlider.addEventListener('mousemove', (e) => {
+                    const rect = newVolumeSlider.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+
+                    // Update tooltip position as mouse moves
+                    if (this.api.player.updateVolumeTooltipPosition) {
+                        this.api.player.updateVolumeTooltipPosition(percentage);
+                    }
+
+                    // Update tooltip text to show value under mouse
+                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                    if (volumeTooltip) {
+                        volumeTooltip.textContent = Math.round(percentage * 100) + '%';
+                    }
+                });
+
+                // Show/hide tooltip on hover
+                if (volumeContainer) {
+                    volumeContainer.addEventListener('mouseenter', () => {
+                        const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                        if (volumeTooltip) {
+                            volumeTooltip.classList.add('visible');
+                        }
+                    });
+
+                    volumeContainer.addEventListener('mouseleave', () => {
+                        const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                        if (volumeTooltip) {
+                            volumeTooltip.classList.remove('visible');
+                        }
+                    });
+                }
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Volume tooltip events bound');
+                }
+            }
 
             // Override playback speed
             const originalChangeSpeed = this.player.changeSpeed;
@@ -1457,6 +1756,7 @@ this.player.setCurrentTime = (time) => {
                 this.api.container.style.setProperty('--player-volume-fill', `${initialVolume}%`);
             }
 
+            // Handle volume changes with proper unmute logic
             newVolumeSlider.addEventListener('input', (e) => {
                 const volume = parseFloat(e.target.value);
 
@@ -1464,18 +1764,76 @@ this.player.setCurrentTime = (time) => {
                     this.ytPlayer.setVolume(volume);
                     this.api.container.style.setProperty('--player-volume-fill', `${volume}%`);
 
+                    // Always update mute button state correctly
                     if (volume > 0 && this.ytPlayer.isMuted && this.ytPlayer.isMuted()) {
                         this.ytPlayer.unMute();
                         this.updateMuteButtonState(false);
-                    } else if (volume === 0) {
+                    } else if (volume === 0 && this.ytPlayer.isMuted && !this.ytPlayer.isMuted()) {
+                        this.ytPlayer.mute();
                         this.updateMuteButtonState(true);
+                    } else {
+                        // Update button state even when not changing mute status
+                        this.updateMuteButtonState(volume === 0 || (this.ytPlayer.isMuted && this.ytPlayer.isMuted()));
                     }
 
-                    if (this.api.player.updateVolumeTooltip) {
-                        this.api.player.updateVolumeTooltip();
+                    // Update tooltip position during drag
+                    if (this.api.player.updateVolumeTooltipPosition) {
+                        this.api.player.updateVolumeTooltipPosition(volume / 100);
                     }
+
+                    // Update tooltip position during drag
+                    if (this.api.player.updateVolumeTooltipPosition) {
+                        this.api.player.updateVolumeTooltipPosition(volume / 100);
+                    }
+
+                    // Update tooltip text manually instead of using updateVolumeTooltip
+                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                    if (volumeTooltip) {
+                        volumeTooltip.textContent = Math.round(volume) + '%';
+                    }
+
                 }
             });
+
+            // Update tooltip position on mousemove
+            newVolumeSlider.addEventListener('mousemove', (e) => {
+                const rect = newVolumeSlider.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+
+                // Update tooltip position
+                if (this.api.player.updateVolumeTooltipPosition) {
+                    this.api.player.updateVolumeTooltipPosition(percentage);
+                }
+
+                // Update tooltip text to show value under mouse
+                const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                if (volumeTooltip) {
+                    volumeTooltip.textContent = Math.round(percentage * 100) + '%';
+                }
+            });
+
+            // Show/hide tooltip on hover
+            const volumeContainer = this.api.container.querySelector('.volume-container');
+            if (volumeContainer) {
+                volumeContainer.addEventListener('mouseenter', () => {
+                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                    if (volumeTooltip) {
+                        volumeTooltip.classList.add('visible');
+                    }
+                });
+
+                volumeContainer.addEventListener('mouseleave', () => {
+                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                    if (volumeTooltip) {
+                        volumeTooltip.classList.remove('visible');
+                    }
+                });
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Volume slider bound with tooltip events');
+            }
         }
 
         updateMuteButtonState(isMuted) {
@@ -1542,8 +1900,6 @@ this.player.setCurrentTime = (time) => {
             this.api.container.classList.remove('youtube-active');
             const styleEl = document.getElementById('youtube-controls-override');
             if (styleEl) styleEl.remove();
-
-            this.showPictureInPictureButton();
 
             if (this.player.qualities && this.player.qualities.length > 0) {
                 // Remove YouTube fake qualities

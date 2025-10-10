@@ -354,7 +354,7 @@ createControls() {
                 <div class="progress-bar">
                     <div class="progress-buffer"></div>
                     <div class="progress-filled"></div>
-                    <div class="progress-handle"></div>
+                    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>
                 </div>
                 ${this.options.showSeekTooltip ? '<div class="seek-tooltip">0:00</div>' : ''}
             </div>

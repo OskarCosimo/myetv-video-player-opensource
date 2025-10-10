@@ -52,6 +52,8 @@ constructor(videoElement, options = {}) {
         dashLibUrl: 'https://cdn.dashjs.org/latest/dash.all.min.js', // Dash.js library URL
         hlsLibUrl: 'https://cdn.jsdelivr.net/npm/hls.js@latest', // HLS.js library URL
         adaptiveQualityControl: true, // Show quality control for adaptive streams
+        //seek shape
+        seekHandleShape: 'circle', // Available shape: none, circle, square, diamond, arrow, triangle, heart, star
         // AUDIO PLAYER
         audiofile: false,
         audiowave: false,
@@ -1693,6 +1695,51 @@ loadScript(src) {
         script.onerror = reject;
         document.head.appendChild(script);
     });
+}
+
+/**
+ * Set seek handle shape dynamically
+ * @param {string} shape - Shape type: none, circle, square, diamond, arrow, triangle, heart, star
+ * @returns {Object} this
+ */
+setSeekHandleShape(shape) {
+    const validShapes = ['none', 'circle', 'square', 'diamond', 'arrow', 'triangle', 'heart', 'star'];
+
+    if (!validShapes.includes(shape)) {
+        if (this.options.debug) console.warn('Invalid seek handle shape:', shape);
+        return this;
+    }
+
+    this.options.seekHandleShape = shape;
+
+    // Update handle class
+    if (this.progressHandle) {
+        // Remove all shape classes
+        validShapes.forEach(s => {
+            this.progressHandle.classList.remove(`progress-handle-${s}`);
+        });
+        // Add new shape class
+        this.progressHandle.classList.add(`progress-handle-${shape}`);
+    }
+
+    if (this.options.debug) console.log('Seek handle shape changed to:', shape);
+    return this;
+}
+
+/**
+ * Get current seek handle shape
+ * @returns {string} Current shape
+ */
+getSeekHandleShape() {
+    return this.options.seekHandleShape;
+}
+
+/**
+ * Get available seek handle shapes
+ * @returns {Array} Array of available shapes
+ */
+getAvailableSeekHandleShapes() {
+    return ['none', 'circle', 'square', 'diamond', 'arrow', 'triangle', 'heart', 'star'];
 }
 
 dispose() {

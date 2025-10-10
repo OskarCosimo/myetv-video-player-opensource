@@ -6,31 +6,136 @@
 @use 'variables' as *;
 
 /* ===================================
-   SUBMENU OVERFLOW CONTROL
+   ALL SUBMENUS COMPACTST STYLING
    =================================== */
 
-/* Ensure all menus stay within player bounds */
-.video-container {
-    overflow: hidden; /* Clip content outside player */
-}
-
-.controls {
-    overflow: visible; /* Allow menus to appear above controls */
-}
-
-/* Override YouTube plugin's inline styles for subtitle menu */
-.yt-subtitles-submenu {
-    min-width: 150px !important;
+/* Apply to ALL submenus - standard player and YouTube plugin */
+.settings-submenu,
+.subtitles-menu,
+.quality-submenu,
+.speed-submenu,
+.yt-subtitles-submenu,
+.yt-quality-submenu {
+    /* Ultra-compact: fit to content */
+    width: fit-content !important;
+    min-width: auto !important;
     max-width: 180px !important;
-    font-size: 13px !important;
+    /* Always open to the LEFT */
+    right: 100% !important;
+    left: auto !important;
+    margin-right: 5px !important;
+    margin-left: 0 !important;
+    /* Scrollbar for long lists */
+    max-height: 250px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    /* Text handling */
+    white-space: nowrap !important;
 }
 
+/* All submenu options */
+.settings-suboption,
+.subtitle-option,
+.quality-option,
+.speed-option,
 .yt-subtitles-submenu .quality-option {
-    padding: 8px 12px !important;
-    font-size: 13px !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+}
+
+/* ===================================
+   RESPONSIVE - PROGRESSIVE REDUCTION
+   =================================== */
+
+/* Tablets and larger phones */
+@media (max-width: 768px) {
+    .settings-submenu,
+    .subtitles-menu,
+    .quality-submenu,
+    .speed-submenu,
+    .yt-subtitles-submenu,
+    .yt-quality-submenu {
+        max-width: min(140px, calc(100vw - 180px)) !important;
+        font-size: 11px !important;
+    }
+
+    .settings-suboption,
+    .subtitle-option,
+    .quality-option,
+    .speed-option,
+    .yt-subtitles-submenu .quality-option {
+        padding: 7px 8px !important;
+        font-size: 11px !important;
+    }
+}
+
+/* Small phones */
+@media (max-width: 600px) {
+    .settings-submenu,
+    .subtitles-menu,
+    .quality-submenu,
+    .speed-submenu,
+    .yt-subtitles-submenu,
+    .yt-quality-submenu {
+        max-width: min(120px, calc(100vw - 160px)) !important;
+        font-size: 10px !important;
+    }
+
+    .settings-suboption,
+    .subtitle-option,
+    .quality-option,
+    .speed-option,
+    .yt-subtitles-submenu .quality-option {
+        padding: 6px 7px !important;
+        font-size: 10px !important;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 450px) {
+    .settings-submenu,
+    .subtitles-menu,
+    .quality-submenu,
+    .speed-submenu,
+    .yt-subtitles-submenu,
+    .yt-quality-submenu {
+        max-width: min(100px, calc(100vw - 140px)) !important;
+        font-size: 9px !important;
+    }
+
+    .settings-suboption,
+    .subtitle-option,
+    .quality-option,
+    .speed-option,
+    .yt-subtitles-submenu .quality-option {
+        padding: 5px 6px !important;
+        font-size: 9px !important;
+    }
+}
+
+/* Ultra small phones */
+@media (max-width: 350px) {
+    .settings-submenu,
+    .subtitles-menu,
+    .quality-submenu,
+    .speed-submenu,
+    .yt-subtitles-submenu,
+    .yt-quality-submenu {
+        max-width: min(90px, calc(100vw - 120px)) !important;
+        font-size: 8px !important;
+    }
+
+    .settings-suboption,
+    .subtitle-option,
+    .quality-option,
+    .speed-option,
+    .yt-subtitles-submenu .quality-option {
+        padding: 4px 5px !important;
+        font-size: 8px !important;
+    }
 }
 
 /* QUALITY BUTTON WITH DUAL DISPLAY */
@@ -561,46 +666,6 @@
         font-size: 9px;
     }
 
-
-    /* SUBMENU OVERFLOW FIX - Prevent clipping on mobile devices */
-    .settings-submenu,
-    .subtitles-menu {
-        right: 100%;
-        margin-right: 5px;
-        max-width: min(160px, calc(100vw - 220px));
-        font-size: 12px;
-    }
-
-    .settings-suboption,
-    .subtitle-option {
-        padding: 8px 10px;
-        font-size: 12px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* YouTube plugin subtitle menu - tablet/mobile */
-    .yt-subtitles-submenu {
-        max-width: 150px !important;
-        font-size: 12px !important;
-    }
-
-    .yt-subtitles-submenu .quality-option {
-        padding: 7px 10px !important;
-        font-size: 12px !important;
-    }
-
-    /* If submenu would overflow left, flip to right side */
-    .settings-menu .settings-option:first-child .settings-submenu,
-    .settings-menu .settings-option:nth-child(2) .settings-submenu {
-        right: auto;
-        left: 100%;
-        margin-right: 0;
-        margin-left: 5px;
-    }
-
-
     .seek-tooltip {
         font-size: 11px;
         padding: 4px 8px;
@@ -741,44 +806,6 @@
         font-size: 12px;
     }
 
-
-    /* SUBMENU OVERFLOW FIX - Compact submenus on ultra small screens */
-    .settings-submenu,
-    .subtitles-menu {
-        max-width: min(120px, calc(100vw - 160px));
-        min-width: 100px !important; /* Override default min-width */
-        font-size: 10px;
-    }
-
-    .settings-suboption,
-    .subtitle-option {
-        padding: 6px 8px;
-        font-size: 10px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* YouTube plugin subtitle menu - ultra small screens */
-    .yt-subtitles-submenu {
-        max-width: 110px !important;
-        min-width: 100px !important;
-        font-size: 10px !important;
-    }
-
-    .yt-subtitles-submenu .quality-option {
-        padding: 5px 6px !important;
-        font-size: 10px !important;
-    }
-
-    .settings-option .icon,
-    .settings-suboption .icon {
-        width: 14px;
-        height: 14px;
-        font-size: 12px;
-    }
-
-
     .settings-option {
         padding: 6px 12px;
         font-size: 12px;
@@ -796,33 +823,6 @@
 
 /* Very small screens - ultra mobile */
 @media (max-width: 280px) {
-
-    /* SUBMENU OVERFLOW FIX - Maximum compression for extreme small screens */
-    .settings-submenu,
-    .subtitles-menu {
-        max-width: min(100px, calc(100vw - 140px));
-        min-width: 90px !important;
-        font-size: 9px;
-    }
-
-    .settings-suboption,
-    .subtitle-option {
-        padding: 5px 6px;
-        font-size: 9px;
-    }
-
-    /* YouTube plugin subtitle menu - extreme small screens */
-    .yt-subtitles-submenu {
-        max-width: 95px !important;
-        min-width: 90px !important;
-        font-size: 9px !important;
-    }
-
-    .yt-subtitles-submenu .quality-option {
-        padding: 4px 5px !important;
-        font-size: 9px !important;
-    }
-
     .controls-left,
     .controls-right {
         gap: 3px;
@@ -1444,7 +1444,7 @@ video::-webkit-media-text-track-display {
 
 /* Horizontal Volume Slider (default) - Base width reduced */
 .volume-container[data-orientation="horizontal"] .volume-slider {
-    width: 80px; /* Reduced from var(--player-volume-width) to 80px fixed */
+    width: 80px; /* Ridotto da var(--player-volume-width) a 80px fissi */
     height: var(--player-volume-height);
     background: var(--player-volume-bg);
     border-radius: calc(var(--player-volume-height) / 2);
@@ -2849,36 +2849,6 @@ video::-webkit-media-text-track-display {
         font-size: 12px;
     }
 
-
-    /* SUBMENU OVERFLOW FIX - Smaller submenus on small screens */
-    .settings-submenu,
-    .subtitles-menu {
-        max-width: min(140px, calc(100vw - 200px));
-        font-size: 11px;
-    }
-
-    .settings-suboption,
-    .subtitle-option {
-        padding: 7px 8px;
-        font-size: 11px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* YouTube plugin subtitle menu - small screens */
-    .yt-subtitles-submenu {
-        max-width: 130px !important;
-        min-width: 120px !important;
-        font-size: 11px !important;
-    }
-
-    .yt-subtitles-submenu .quality-option {
-        padding: 6px 8px !important;
-        font-size: 11px !important;
-    }
-
-
     .settings-option {
         padding: 6px 12px;
         font-size: 12px;
@@ -3517,7 +3487,7 @@ video::-webkit-media-text-track-display {
 
 /* Horizontal Volume Slider (default) - Base width reduced */
 .volume-container[data-orientation="horizontal"] .volume-slider {
-    width: 80px; /* Reduced from var(--player-volume-width) to 80px fixed */
+    width: 80px; /* Ridotto da var(--player-volume-width) a 80px fissi */
     height: var(--player-volume-height);
     background: var(--player-volume-bg);
     border-radius: calc(var(--player-volume-height) / 2);

@@ -175,9 +175,72 @@
 
                 if (this.api.player.initializeWatermark) {
                     this.api.player.initializeWatermark();
+
+                    // Wait for watermark to be in DOM and apply circular style
+                    this.applyCircularWatermark();
                 }
             }
         }
+
+        applyCircularWatermark() {
+            let attempts = 0;
+            const maxAttempts = 20;
+
+            const checkAndApply = () => {
+                attempts++;
+
+                // Try all possible selectors for watermark elements
+                const watermarkSelectors = [
+                    '.watermark',
+                    '.watermark-image',
+                    '.watermark img',
+                    '.watermark a',
+                    '.watermark-link',
+                    '[class*="watermark"]',
+                    'img[src*="' + (this.channelData?.thumbnailUrl || '') + '"]'
+                ];
+
+                let found = false;
+
+                watermarkSelectors.forEach(selector => {
+                    try {
+                        const elements = this.api.container.querySelectorAll(selector);
+                        if (elements.length > 0) {
+                            elements.forEach(el => {
+                                el.style.borderRadius = '50%';
+                                el.style.overflow = 'hidden';
+                                found = true;
+
+                                if (this.api.player.options.debug) {
+                                    console.log('[YT Plugin] Applied circular style to:', selector, el);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        // Selector might not be valid, skip it
+                    }
+                });
+
+                if (!found && attempts < maxAttempts) {
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] Watermark not found yet, retry', attempts + '/' + maxAttempts);
+                    }
+                    setTimeout(checkAndApply, 200);
+                } else if (found) {
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] ✅ Watermark made circular successfully');
+                    }
+                } else {
+                    if (this.api.player.options.debug) {
+                        console.warn('[YT Plugin] Could not find watermark element after', maxAttempts, 'attempts');
+                    }
+                }
+            };
+
+            // Start checking
+            setTimeout(checkAndApply, 100);
+        }
+
 
         /**
          * Set auto caption language on player initialization
@@ -830,21 +893,35 @@ width: fit-content;
         }
 
         injectYouTubeCSSOverride() {
-            if (document.getElementById('youtube-controls-override')) return;
+            if (document.getElementById('youtube-controls-override')) {
+                return;
+            }
 
             const style = document.createElement('style');
             style.id = 'youtube-controls-override';
             style.textContent = `
-                .video-wrapper.youtube-active .quality-control,
-                .video-wrapper.youtube-active .subtitles-control {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
-            `;
+        .video-wrapper.youtube-active .quality-control,
+        .video-wrapper.youtube-active .subtitles-control {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Make watermark circular */
+        .video-wrapper .watermark,
+        .video-wrapper .watermark-image,
+        .video-wrapper .watermark img {
+            border-radius: 50% !important;
+            overflow: hidden !important;
+        }
+    `;
+
             document.head.appendChild(style);
             this.api.container.classList.add('youtube-active');
-            if (this.api.player.options.debug) console.log('[YT Plugin] CSS override injected');
+
+            if (this.api.player.options.debug) {
+                console.log('YT Plugin: CSS override injected');
+            }
         }
 
         // ===== QUALITY CONTROL METHODS =====
@@ -1105,17 +1182,16 @@ width: fit-content;
             }
         }
 
-        // ===== SUBTITLES CONTROL METHODS =====
+        // ===== RECONSTRUCTED SUBTITLE METHODS =====
 
         /**
-         * Load available captions and create menu
+         * Load available captions and create subtitle control
          */
         loadAvailableCaptions() {
             if (!this.ytPlayer || !this.options.enableCaptions) return;
 
-            // Prevent creating menu multiple times
             if (this.subtitlesMenuCreated) {
-                if (this.api.player.options.debug) console.log('[YT Plugin] Subtitles menu already created, skipping');
+                if (this.api.player.options.debug) console.log('[YT Plugin] Subtitles menu already created');
                 return;
             }
 
@@ -1128,7 +1204,6 @@ width: fit-content;
                     if (this.api.player.options.debug) console.log('[YT Plugin] Captions module error:', e.message);
                 }
 
-                // FIXED: If tracklist is available and populated, use it
                 if (captionModule && Array.isArray(captionModule) && captionModule.length > 0) {
                     this.availableCaptions = captionModule.map((track, index) => {
                         const isAutomatic = track.kind === 'asr' || track.isautomatic || track.kind === 'auto';
@@ -1143,39 +1218,36 @@ width: fit-content;
                     });
 
                     if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Captions loaded:', this.availableCaptions);
-                    this.createSubtitlesControl(true); // true = has tracklist
+                    this.createSubtitlesControl();
                     this.subtitlesMenuCreated = true;
 
                 } else if (this.captionCheckAttempts < 5) {
-                    // Retry if tracklist not yet available
                     this.captionCheckAttempts++;
                     if (this.api.player.options.debug) console.log(`[YT Plugin] Retry caption load (${this.captionCheckAttempts}/5)`);
                     setTimeout(() => this.loadAvailableCaptions(), 1000);
 
                 } else {
-                    // FIXED: After 5 attempts without tracklist, use Off/On (Auto) buttons
-                    if (this.api.player.options.debug) console.log('[YT Plugin] No tracklist found - using Off/On (Auto)');
-                    this.availableCaptions = []; // Empty tracklist
-                    this.createSubtitlesControl(false); // false = no tracklist, use On/Off buttons
+                    if (this.api.player.options.debug) console.log('[YT Plugin] No tracklist - creating basic control');
+                    this.availableCaptions = [];
+                    this.createSubtitlesControl();
                     this.subtitlesMenuCreated = true;
                 }
 
             } catch (error) {
                 if (this.api.player.options.debug) console.error('[YT Plugin] Error loading captions:', error);
-                this.createSubtitlesControl(false); // Fallback to On/Off buttons
+                this.createSubtitlesControl();
                 this.subtitlesMenuCreated = true;
             }
         }
 
         /**
-         * Create subtitles control button and menu
-         * @param {boolean} hasTracklist - true if YouTube provides caption tracks, false for auto captions only
+         * Create subtitle control in the control bar
          */
-        createSubtitlesControl(hasTracklist) {
+        createSubtitlesControl() {
             let subtitlesControl = this.api.container.querySelector('.subtitles-control');
             if (subtitlesControl) {
                 if (this.api.player.options.debug) console.log('[YT Plugin] Subtitles control exists - updating menu');
-                this.populateSubtitlesMenu(hasTracklist);
+                this.buildSubtitlesMenu();
                 return;
             }
 
@@ -1183,13 +1255,13 @@ width: fit-content;
             if (!controlsRight) return;
 
             const subtitlesHTML = `
-                <div class="subtitles-control">
-                    <button class="control-btn subtitles-btn" data-tooltip="Subtitles">
-                        <span class="icon">CC</span>
-                    </button>
-                    <div class="subtitles-menu"></div>
-                </div>
-            `;
+        <div class="subtitles-control">
+            <button class="control-btn subtitles-btn" data-tooltip="Subtitles">
+                <span class="icon">CC</span>
+            </button>
+            <div class="subtitles-menu"></div>
+        </div>
+    `;
 
             const qualityControl = controlsRight.querySelector('.quality-control');
             if (qualityControl) {
@@ -1204,89 +1276,376 @@ width: fit-content;
             }
 
             if (this.api.player.options.debug) console.log('[YT Plugin] Subtitles control created');
-            this.populateSubtitlesMenu(hasTracklist);
+            this.buildSubtitlesMenu();
             this.bindSubtitlesButton();
             this.checkInitialCaptionState();
             this.startCaptionStateMonitoring();
         }
 
         /**
-         * Populate subtitles menu with tracks or On/Off buttons
-         * FIXED: Correctly handles both scenarios
-         * @param {boolean} hasTracklist - true if tracks available, false for auto captions only
+         * Build the subtitles menu
          */
-        populateSubtitlesMenu(hasTracklist) {
+        buildSubtitlesMenu() {
             const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
             if (!subtitlesMenu) return;
+
             subtitlesMenu.innerHTML = '';
 
-            // OFF option
-            const offItem = document.createElement('div');
-            offItem.className = 'subtitles-option';
-            offItem.textContent = 'Off';
-            offItem.dataset.track = 'off';
-            offItem.addEventListener('click', (e) => {
+            // Off option
+            const offOption = document.createElement('div');
+            offOption.className = 'subtitles-option';
+            offOption.textContent = 'Off';
+            offOption.dataset.id = 'off';
+            offOption.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.disableCaptions();
+                this.updateMenuSelection('off');
+                subtitlesMenu.classList.remove('show');
             });
-            subtitlesMenu.appendChild(offItem);
+            subtitlesMenu.appendChild(offOption);
 
-            // Show available caption tracks if any
+            // If captions are available
             if (this.availableCaptions.length > 0) {
-                this.availableCaptions.forEach(caption => {
-                    const menuItem = document.createElement('div');
-                    menuItem.className = 'subtitles-option';
-                    menuItem.textContent = caption.label;
-                    menuItem.addEventListener('click', () => this.setCaptions(caption.index));
-                    menuItem.dataset.track = caption.index;
-                    menuItem.dataset.languageCode = caption.languageCode;
-                    // Display only - no click handler
-                    subtitlesMenu.appendChild(menuItem);
+                // Add original languages
+                this.availableCaptions.forEach((caption, index) => {
+                    const option = document.createElement('div');
+                    option.className = 'subtitles-option';
+                    option.textContent = caption.label;
+                    option.dataset.id = `caption-${index}`;
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.setCaptionTrack(caption.languageCode);
+                        this.updateMenuSelection(`caption-${index}`);
+                        subtitlesMenu.classList.remove('show');
+                    });
+                    subtitlesMenu.appendChild(option);
                 });
             } else {
-                // No tracklist - show ON (Auto) option
-                const onItem = document.createElement('div');
-                onItem.className = 'subtitles-option';
-                onItem.textContent = 'On (Auto)';
-                onItem.dataset.track = 'auto';
-                onItem.addEventListener('click', (e) => {
+                // Auto-caption only (without tracklist)
+                const autoOption = document.createElement('div');
+                autoOption.className = 'subtitles-option';
+                autoOption.textContent = 'Auto-generated';
+                autoOption.dataset.id = 'auto';
+                autoOption.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.enableAutoCaptions();
+                    this.updateMenuSelection('auto');
+                    subtitlesMenu.classList.remove('show');
                 });
-                subtitlesMenu.appendChild(onItem);
+                subtitlesMenu.appendChild(autoOption);
+            }
+
+            // Always add "Auto-translate" (both with and without tracklist)
+            const translateOption = document.createElement('div');
+            translateOption.className = 'subtitles-option translate-option';
+            translateOption.textContent = 'Auto-translate';
+            translateOption.dataset.id = 'translate';
+            translateOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showTranslationMenu();
+            });
+            subtitlesMenu.appendChild(translateOption);
+        }
+
+        /**
+         * Show translation menu (submenu)
+         */
+        showTranslationMenu() {
+            if (this.api.player.options.debug) console.log('[YT Plugin] showTranslationMenu called');
+
+            const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
+            if (!subtitlesMenu) return;
+
+            // Clear and rebuild with translation languages
+            subtitlesMenu.innerHTML = '';
+
+            // Back option
+            const backOption = document.createElement('div');
+            backOption.className = 'subtitles-option back-option';
+            backOption.innerHTML = '← Back';
+            backOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (this.api.player.options.debug) console.log('[YT Plugin] Back clicked');
+                this.buildSubtitlesMenu();
+            });
+            subtitlesMenu.appendChild(backOption);
+
+            // Add translation languages
+            const translationLanguages = this.getTopTranslationLanguages();
+            translationLanguages.forEach(lang => {
+                const option = document.createElement('div');
+                option.className = 'subtitles-option';
+                option.textContent = lang.name;
+                option.dataset.id = `translate-${lang.code}`;
+                option.dataset.langcode = lang.code;
+
+                if (this.api.player.options.debug) console.log('[YT Plugin] Creating option for:', lang.name, lang.code);
+
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.api.player.options.debug) console.log('[YT Plugin] Language clicked:', lang.code, lang.name);
+                    if (this.api.player.options.debug) console.log('[YT Plugin] this:', this);
+                    if (this.api.player.options.debug) console.log('[YT Plugin] About to call setTranslatedCaptions with:', lang.code);
+
+                    const result = this.setTranslatedCaptions(lang.code);
+
+                    if (this.api.player.options.debug) console.log('[YT Plugin] setTranslatedCaptions returned:', result);
+
+                    this.updateMenuSelection(`translate-${lang.code}`);
+                    subtitlesMenu.classList.remove('show');
+
+                    // Return to main menu
+                    setTimeout(() => this.buildSubtitlesMenu(), 300);
+                });
+
+                subtitlesMenu.appendChild(option);
+            });
+
+            if (this.api.player.options.debug) console.log('[YT Plugin] Translation menu built with', translationLanguages.length, 'languages');
+        }
+
+        /**
+         * Update selection in the menu
+         */
+        updateMenuSelection(selectedId) {
+            const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
+            if (!subtitlesMenu) return;
+
+            // Remove all selections
+            subtitlesMenu.querySelectorAll('.subtitles-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+
+            // Add selection to current option
+            const selectedOption = subtitlesMenu.querySelector(`[data-id="${selectedId}"]`);
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+
+            // Update button state
+            const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
+            if (subtitlesBtn) {
+                if (selectedId === 'off') {
+                    subtitlesBtn.classList.remove('active');
+                } else {
+                    subtitlesBtn.classList.add('active');
+                }
             }
         }
 
+        /**
+         * Bind subtitle button (toggle)
+         */
         bindSubtitlesButton() {
             const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
             if (!subtitlesBtn) return;
 
-            // Remove existing event listeners by cloning
             const newBtn = subtitlesBtn.cloneNode(true);
             subtitlesBtn.parentNode.replaceChild(newBtn, subtitlesBtn);
 
             newBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.toggleCaptions();
+
+                // Toggle: if active disable, otherwise enable first available
+                if (this.captionsEnabled) {
+                    this.disableCaptions();
+                    this.updateMenuSelection('off');
+                } else {
+                    if (this.availableCaptions.length > 0) {
+                        const firstCaption = this.availableCaptions[0];
+                        this.setCaptionTrack(firstCaption.languageCode);
+                        this.updateMenuSelection('caption-0');
+                    } else {
+                        this.enableAutoCaptions();
+                        this.updateMenuSelection('auto');
+                    }
+                }
             });
         }
 
+        /**
+         * Set a specific caption track
+         */
+        setCaptionTrack(languageCode) {
+            if (!this.ytPlayer) return false;
+
+            try {
+                this.ytPlayer.setOption('captions', 'track', { languageCode: languageCode });
+                this.ytPlayer.loadModule('captions');
+
+                this.captionsEnabled = true;
+                this.currentCaption = languageCode;
+                this.currentTranslation = null;
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Caption track set:', languageCode);
+                }
+
+                return true;
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error setting caption track:', error);
+                }
+                return false;
+            }
+        }
+
+        /**
+         * Set automatic translation
+         */
+        setTranslatedCaptions(translationLanguageCode) {
+            if (this.api.player.options.debug) console.log('[YT Plugin] setTranslatedCaptions called with:', translationLanguageCode);
+
+            if (!this.ytPlayer) {
+                if (this.api.player.options.debug) console.error('[YT Plugin] ytPlayer not available');
+                return false;
+            }
+
+            try {
+                if (this.api.player.options.debug) console.log('[YT Plugin] Available captions:', this.availableCaptions);
+
+                if (this.availableCaptions.length > 0) {
+                    // WITH TRACKLIST: Use first available caption as base
+                    const baseLanguageCode = this.availableCaptions[0].languageCode;
+                    if (this.api.player.options.debug) console.log('[YT Plugin] Using base language:', baseLanguageCode);
+
+                    this.ytPlayer.setOption('captions', 'track', {
+                        'languageCode': baseLanguageCode,
+                        'translationLanguage': {
+                            'languageCode': translationLanguageCode
+                        }
+                    });
+                } else {
+                    // WITHOUT TRACKLIST: Get current auto-generated track
+                    if (this.api.player.options.debug) console.log('[YT Plugin] No tracklist - getting auto-generated track');
+
+                    let currentTrack = null;
+                    try {
+                        currentTrack = this.ytPlayer.getOption('captions', 'track');
+                        if (this.api.player.options.debug) console.log('[YT Plugin] Current track:', currentTrack);
+                    } catch (e) {
+                        if (this.api.player.options.debug) console.log('[YT Plugin] Could not get current track:', e.message);
+                    }
+
+                    if (currentTrack && currentTrack.languageCode) {
+                        // Use auto-generated language as base
+                        if (this.api.player.options.debug) console.log('[YT Plugin] Using auto-generated language:', currentTrack.languageCode);
+
+                        this.ytPlayer.setOption('captions', 'track', {
+                            'languageCode': currentTrack.languageCode,
+                            'translationLanguage': {
+                                'languageCode': translationLanguageCode
+                            }
+                        });
+                    } else {
+                        // Fallback: try with 'en' as base
+                        if (this.api.player.options.debug) console.log('[YT Plugin] Fallback: using English as base');
+
+                        this.ytPlayer.setOption('captions', 'track', {
+                            'languageCode': 'en',
+                            'translationLanguage': {
+                                'languageCode': translationLanguageCode
+                            }
+                        });
+                    }
+                }
+
+                this.captionsEnabled = true;
+                this.currentTranslation = translationLanguageCode;
+
+                if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Translation applied');
+
+                return true;
+            } catch (error) {
+                if (this.api.player.options.debug) console.error('[YT Plugin] Error setting translation:', error);
+                return false;
+            }
+        }
+
+        /**
+         * Get language name from code
+         */
+        getLanguageName(languageCode) {
+            const languages = this.getTopTranslationLanguages();
+            const lang = languages.find(l => l.code === languageCode);
+            return lang ? lang.name : languageCode;
+        }
+
+        /**
+         * Enable automatic captions
+         */
+        enableAutoCaptions() {
+            if (!this.ytPlayer) return false;
+
+            try {
+                this.ytPlayer.setOption('captions', 'reload', true);
+                this.ytPlayer.loadModule('captions');
+
+                this.captionsEnabled = true;
+                this.currentCaption = null;
+                this.currentTranslation = null;
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Auto captions enabled');
+                }
+
+                return true;
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error enabling auto captions:', error);
+                }
+                return false;
+            }
+        }
+
+        /**
+         * Disable captions
+         */
+        disableCaptions() {
+            if (!this.ytPlayer) return false;
+
+            try {
+                this.ytPlayer.unloadModule('captions');
+
+                this.captionsEnabled = false;
+                this.currentCaption = null;
+                this.currentTranslation = null;
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Captions disabled');
+                }
+
+                return true;
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error disabling captions:', error);
+                }
+                return false;
+            }
+        }
+
+        /**
+         * Check initial caption state
+         */
         checkInitialCaptionState() {
             setTimeout(() => {
                 try {
                     const currentTrack = this.ytPlayer.getOption('captions', 'track');
                     if (currentTrack && currentTrack.languageCode) {
                         this.captionsEnabled = true;
-                        const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
-                        if (subtitlesBtn) subtitlesBtn.classList.add('active');
-                        this.updateSubtitlesMenuActiveState();
+                        this.updateMenuSelection('caption-0');
+                    } else {
+                        this.updateMenuSelection('off');
                     }
                 } catch (e) {
-                    // Ignore errors
+                    this.updateMenuSelection('off');
                 }
             }, 1500);
         }
 
+        /**
+         * Monitor caption state
+         */
         startCaptionStateMonitoring() {
             if (this.captionStateCheckInterval) {
                 clearInterval(this.captionStateCheckInterval);
@@ -1308,7 +1667,6 @@ width: fit-content;
                                 subtitlesBtn.classList.remove('active');
                             }
                         }
-                        this.updateSubtitlesMenuActiveState();
                     }
                 } catch (e) {
                     // Ignore errors
@@ -1360,78 +1718,6 @@ width: fit-content;
                 return true;
             } catch (error) {
                 if (this.api.player.options.debug) console.error('[YT Plugin] Error enabling captions:', error);
-                return false;
-            }
-        }
-
-        setTranslatedCaptions(translationLanguageCode) {
-            if (!this.ytPlayer) return false;
-
-            try {
-                // First, disable current captions if any
-                if (this.captionsEnabled) {
-                    this.ytPlayer.unloadModule('captions');
-                }
-
-                // If no caption tracks exist, try to enable auto-generated captions
-                if (this.availableCaptions.length === 0) {
-                    if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] Enabling auto-generated captions with translation to:', translationLanguageCode);
-                    }
-
-                    // Enable auto-generated captions with translation
-                    this.ytPlayer.setOption('captions', 'track', {
-                        translationLanguage: translationLanguageCode
-                    });
-                    this.ytPlayer.loadModule('captions');
-                    this.currentCaption = null;
-                } else {
-                    // Use the first available caption track as base for translation
-                    const baseCaption = this.availableCaptions[0];
-
-                    if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] Translating from', baseCaption.languageCode, 'to', translationLanguageCode);
-                    }
-
-                    // Set caption with translation
-                    this.ytPlayer.setOption('captions', 'track', {
-                        languageCode: baseCaption.languageCode,
-                        translationLanguage: translationLanguageCode
-                    });
-                    this.ytPlayer.loadModule('captions');
-                    this.currentCaption = baseCaption.index;
-                }
-
-                // Update state
-                this.captionsEnabled = true;
-                this.currentTranslation = translationLanguageCode;
-
-                // Update UI
-                const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
-                if (subtitlesBtn) subtitlesBtn.classList.add('active');
-
-                // Update menu state
-                this.updateSubtitlesMenuActiveState();
-
-                // Close the menu
-                const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
-                if (subtitlesMenu) {
-                    subtitlesMenu.classList.remove('show');
-                }
-
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] ✅ Auto-translation enabled:', translationLanguageCode);
-                }
-
-                this.api.triggerEvent('youtubeplugin:captionchanged', {
-                    translationLanguage: translationLanguageCode
-                });
-
-                return true;
-            } catch (error) {
-                if (this.api.player.options.debug) {
-                    console.error('[YT Plugin] Error setting translated captions:', error);
-                }
                 return false;
             }
         }

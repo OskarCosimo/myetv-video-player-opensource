@@ -97,21 +97,6 @@ body {
   opacity: 0;
 }
 
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-  bottom: 15px;
-}
-
-.video-wrapper.has-controls .video-watermark {
-  visibility: visible;
-  opacity: 0.7;
-}
-
-.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
-.video-wrapper.has-controls .video-watermark.watermark-bottomright {
-  bottom: 90px;
-}
-
 .hidden {
   display: none !important;
 }
@@ -2301,73 +2286,6 @@ video::-webkit-media-text-track-display {
   right: 15px;
 }
 
-/* Bottom positions - Increased spacing from controlbar (was 70px, now 90px) */
-.video-watermark.watermark-bottomleft {
-  bottom: 90px; /* Increased spacing */
-  left: 15px;
-}
-
-.video-watermark.watermark-bottomright {
-  bottom: 90px; /* Increased spacing */
-  right: 15px;
-}
-
-/* DYNAMIC POSITIONING: Always visible watermark moves down when controls are hidden */
-/* This applies ONLY to watermarks without hide-on-autohide class (always visible) */
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide) {
-  bottom: 15px; /* Move to bottom corner when controls hidden */
-}
-
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-  bottom: 15px; /* Move to bottom corner when controls hidden */
-}
-
-/* When controls are shown, bottom watermark stays above controlbar */
-.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
-.video-wrapper.has-controls .video-watermark.watermark-bottomright {
-  bottom: 90px; /* Stay above controlbar */
-}
-
-/* Responsive adjustments for mobile */
-@media (max-width: 768px) {
-  .video-watermark img {
-    max-width: 100px;
-    max-height: 50px;
-  }
-  .video-watermark.watermark-topleft,
-  .video-watermark.watermark-topright {
-    top: 10px;
-  }
-  .video-watermark.watermark-topleft,
-  .video-watermark.watermark-bottomleft {
-    left: 10px;
-  }
-  .video-watermark.watermark-topright,
-  .video-watermark.watermark-bottomright {
-    right: 10px;
-  }
-  /* Bottom spacing adjusted for mobile */
-  .video-watermark.watermark-bottomleft,
-  .video-watermark.watermark-bottomright {
-    bottom: 75px; /* Above controlbar on mobile */
-  }
-  /* Always visible watermark on mobile - moves down when controls hidden */
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-    bottom: 10px; /* Move to corner on mobile */
-  }
-}
-/* Extra small screens */
-@media (max-width: 480px) {
-  .video-watermark.watermark-bottomleft,
-  .video-watermark.watermark-bottomright {
-    bottom: 65px;
-  }
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-    bottom: 8px;
-  }
-}
 /* Clickable watermark cursor */
 .video-watermark[style*="cursor: pointer"] {
   cursor: pointer !important;
@@ -12606,6 +12524,54 @@ video::-webkit-media-text-track-display {
   cursor: pointer !important;
 }
 
+/* ===================================
+   FIX SUBMENU CLIPPING ON SMALL SCREENS
+   =================================== */
+/* Change positioning from bottom-aligned to top-aligned when menu would be clipped */
+/* ONLY affects submenus inside settings menu (small screen mode) */
+@media (max-height: 600px) {
+  .settings-menu .settings-submenu,
+  .settings-option .settings-submenu,
+  .settings-option .quality-submenu,
+  .settings-option .speed-submenu {
+    /* Remove bottom positioning */
+    bottom: auto !important;
+    /* Align to top of parent option */
+    top: 0 !important;
+    /* Reduce max-height on very small screens */
+    max-height: 150px !important;
+  }
+}
+/* Even smaller screens - ultra compact */
+@media (max-height: 400px) {
+  .settings-menu .settings-submenu,
+  .settings-option .settings-submenu,
+  .settings-option .quality-submenu,
+  .settings-option .speed-submenu {
+    max-height: 120px !important;
+  }
+}
+/* For very small players (width < 400px) - only inside settings menu */
+@media (max-width: 400px) {
+  .settings-menu .settings-submenu,
+  .settings-option .settings-submenu,
+  .settings-option .quality-submenu,
+  .settings-option .speed-submenu {
+    /* Switch to top alignment */
+    bottom: auto !important;
+    top: 0 !important;
+    max-height: 180px !important;
+  }
+}
+/* EXCLUDE standalone subtitles menu (the one that appears when player is large) */
+/* Keep original bottom positioning for standalone menus */
+.subtitles-button .subtitles-menu,
+.yt-subtitles-submenu:not(.settings-option *),
+.yt-quality-submenu:not(.settings-option *) {
+  bottom: 0 !important;
+  top: auto !important;
+}
+
 .audio-player {
   width: 320px;
   height: 80px;
@@ -12644,6 +12610,120 @@ video::-webkit-media-text-track-display {
   --player-primary-color: #f44336;
   --player-primary-hover: #d32f2f;
   --player-primary-dark: #c62828;
+}
+
+.video-watermark {
+  position: absolute;
+  z-index: 15;
+  pointer-events: auto;
+  opacity: 0.7;
+  transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
+}
+
+.video-watermark {
+  visibility: visible;
+  opacity: 0.7;
+}
+
+.video-wrapper:not(.has-controls) .video-watermark.hide-on-autohide {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.video-wrapper.has-controls .video-watermark {
+  visibility: visible;
+  opacity: 0.7;
+}
+
+.video-watermark:hover {
+  opacity: 1;
+}
+
+.video-watermark img {
+  display: block;
+  max-width: 150px;
+  max-height: 80px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Top positions */
+.video-watermark.watermark-topleft {
+  top: 15px;
+  left: 15px;
+}
+
+.video-watermark.watermark-topright {
+  top: 15px;
+  right: 15px;
+}
+
+/* Bottom positions - Dynamic with controlbar height + spacing */
+.video-watermark.watermark-bottomleft {
+  bottom: calc(var(--player-controls-height, 70px) + 15px);
+  left: 15px;
+}
+
+.video-watermark.watermark-bottomright {
+  bottom: calc(var(--player-controls-height, 70px) + 15px);
+  right: 15px;
+}
+
+/* When controls hidden, move to corner */
+.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide) {
+  bottom: 15px;
+}
+
+.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+  bottom: 15px;
+}
+
+/* When controls shown, stay above controlbar */
+.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
+.video-wrapper.has-controls .video-watermark.watermark-bottomright {
+  bottom: calc(var(--player-controls-height, 70px) + 15px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .video-watermark img {
+    max-width: 100px;
+    max-height: 50px;
+  }
+  .video-watermark.watermark-topleft,
+  .video-watermark.watermark-topright {
+    top: 10px;
+  }
+  .video-watermark.watermark-topleft,
+  .video-watermark.watermark-bottomleft {
+    left: 10px;
+  }
+  .video-watermark.watermark-topright,
+  .video-watermark.watermark-bottomright {
+    right: 10px;
+  }
+  .video-watermark.watermark-bottomleft,
+  .video-watermark.watermark-bottomright {
+    bottom: calc(var(--player-controls-height, 60px) + 10px);
+  }
+  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
+  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+    bottom: 10px;
+  }
+}
+@media (max-width: 480px) {
+  .video-watermark.watermark-bottomleft,
+  .video-watermark.watermark-bottomright {
+    bottom: calc(var(--player-controls-height, 55px) + 10px);
+  }
+  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
+  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+    bottom: 8px;
+  }
+}
+.video-watermark[style*="cursor: pointer"] {
+  cursor: pointer !important;
 }
 
 /* RESPONSIVE DESIGN - PROGRESSIVE DEGRADATION CON MENU A TENDINA */
@@ -13868,129 +13948,4 @@ video::-webkit-media-text-track-display {
   position: absolute !important;
   bottom: 0 !important;
   overflow: visible !important;
-}
-
-/* ===================================
-   WATERMARK OVERLAY
-   =================================== */
-.video-watermark {
-  position: absolute;
-  z-index: 15; /* Above video (10), below controls (100) */
-  pointer-events: auto;
-  opacity: 0.7;
-  transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
-}
-
-/* Watermark visible by default */
-.video-watermark {
-  visibility: visible;
-  opacity: 0.7;
-}
-
-/* Hide watermark when it has hide-on-autohide class AND controls are hidden */
-.video-wrapper:not(.has-controls) .video-watermark.hide-on-autohide {
-  visibility: hidden;
-  opacity: 0;
-}
-
-/* Show watermark when controls are shown */
-.video-wrapper.has-controls .video-watermark {
-  visibility: visible;
-  opacity: 0.7;
-}
-
-.video-watermark:hover {
-  opacity: 1;
-}
-
-.video-watermark img {
-  display: block;
-  max-width: 150px;
-  max-height: 80px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-}
-
-/* Watermark positions - Top positions unchanged */
-.video-watermark.watermark-topleft {
-  top: 15px;
-  left: 15px;
-}
-
-.video-watermark.watermark-topright {
-  top: 15px;
-  right: 15px;
-}
-
-/* Bottom positions - Increased spacing from controlbar (was 70px, now 90px) */
-.video-watermark.watermark-bottomleft {
-  bottom: 90px; /* Increased spacing */
-  left: 15px;
-}
-
-.video-watermark.watermark-bottomright {
-  bottom: 90px; /* Increased spacing */
-  right: 15px;
-}
-
-/* DYNAMIC POSITIONING: Always visible watermark moves down when controls are hidden */
-/* This applies ONLY to watermarks without hide-on-autohide class (always visible) */
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide) {
-  bottom: 15px; /* Move to bottom corner when controls hidden */
-}
-
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-  bottom: 15px; /* Move to bottom corner when controls hidden */
-}
-
-/* When controls are shown, bottom watermark stays above controlbar */
-.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
-.video-wrapper.has-controls .video-watermark.watermark-bottomright {
-  bottom: 90px; /* Stay above controlbar */
-}
-
-/* Responsive adjustments for mobile */
-@media (max-width: 768px) {
-  .video-watermark img {
-    max-width: 100px;
-    max-height: 50px;
-  }
-  .video-watermark.watermark-topleft,
-  .video-watermark.watermark-topright {
-    top: 10px;
-  }
-  .video-watermark.watermark-topleft,
-  .video-watermark.watermark-bottomleft {
-    left: 10px;
-  }
-  .video-watermark.watermark-topright,
-  .video-watermark.watermark-bottomright {
-    right: 10px;
-  }
-  /* Bottom spacing adjusted for mobile */
-  .video-watermark.watermark-bottomleft,
-  .video-watermark.watermark-bottomright {
-    bottom: 75px; /* Above controlbar on mobile */
-  }
-  /* Always visible watermark on mobile - moves down when controls hidden */
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-    bottom: 10px; /* Move to corner on mobile */
-  }
-}
-/* Extra small screens */
-@media (max-width: 480px) {
-  .video-watermark.watermark-bottomleft,
-  .video-watermark.watermark-bottomright {
-    bottom: 65px;
-  }
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-  .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-    bottom: 8px;
-  }
-}
-/* Clickable watermark cursor */
-.video-watermark[style*="cursor: pointer"] {
-  cursor: pointer !important;
 }

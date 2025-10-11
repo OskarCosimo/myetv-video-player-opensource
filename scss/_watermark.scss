@@ -5,4 +5,124 @@
 @use 'mixins' as *;
 @use 'variables' as *;
 
+.video-watermark {
+    position: absolute;
+    z-index: 15;
+    pointer-events: auto;
+    opacity: 0.7;
+    transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
+}
 
+.video-watermark {
+    visibility: visible;
+    opacity: 0.7;
+}
+
+.video-wrapper:not(.has-controls) .video-watermark.hide-on-autohide {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.video-wrapper.has-controls .video-watermark {
+    visibility: visible;
+    opacity: 0.7;
+}
+
+.video-watermark:hover {
+    opacity: 1;
+}
+
+.video-watermark img {
+    display: block;
+    max-width: 150px;
+    max-height: 80px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Top positions */
+.video-watermark.watermark-topleft {
+    top: 15px;
+    left: 15px;
+}
+
+.video-watermark.watermark-topright {
+    top: 15px;
+    right: 15px;
+}
+
+/* Bottom positions - Dynamic with controlbar height + spacing */
+.video-watermark.watermark-bottomleft {
+    bottom: calc(var(--player-controls-height, 70px) + 15px);
+    left: 15px;
+}
+
+.video-watermark.watermark-bottomright {
+    bottom: calc(var(--player-controls-height, 70px) + 15px);
+    right: 15px;
+}
+
+/* When controls hidden, move to corner */
+.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide) {
+    bottom: 15px;
+}
+
+.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+    bottom: 15px;
+}
+
+/* When controls shown, stay above controlbar */
+.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
+.video-wrapper.has-controls .video-watermark.watermark-bottomright {
+    bottom: calc(var(--player-controls-height, 70px) + 15px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .video-watermark img {
+        max-width: 100px;
+        max-height: 50px;
+    }
+
+    .video-watermark.watermark-topleft,
+    .video-watermark.watermark-topright {
+        top: 10px;
+    }
+
+    .video-watermark.watermark-topleft,
+    .video-watermark.watermark-bottomleft {
+        left: 10px;
+    }
+
+    .video-watermark.watermark-topright,
+    .video-watermark.watermark-bottomright {
+        right: 10px;
+    }
+
+    .video-watermark.watermark-bottomleft,
+    .video-watermark.watermark-bottomright {
+        bottom: calc(var(--player-controls-height, 60px) + 10px);
+    }
+
+    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
+    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+        bottom: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .video-watermark.watermark-bottomleft,
+    .video-watermark.watermark-bottomright {
+        bottom: calc(var(--player-controls-height, 55px) + 10px);
+    }
+
+    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
+    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
+        bottom: 8px;
+    }
+}
+
+.video-watermark[style*="cursor: pointer"] {
+    cursor: pointer !important;
+}

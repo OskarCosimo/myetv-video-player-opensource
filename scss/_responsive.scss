@@ -265,9 +265,9 @@
         -ms-overflow-style: none; /* Internet Explorer 10+ */
     }
 
-        .controls-main::-webkit-scrollbar {
-            display: none; /* Safari and Chrome */
-        }
+    .controls-main::-webkit-scrollbar {
+        display: none; /* Safari and Chrome */
+    }
 
     .controls-left,
     .controls-right {
@@ -286,10 +286,10 @@
     display: none; /* Hidden by default, shown only when playlist is detected */
 }
 
-    .controls-right .playlist-prev-btn.playlist-active,
-    .controls-right .playlist-next-btn.playlist-active {
-        display: flex;
-    }
+.controls-right .playlist-prev-btn.playlist-active,
+.controls-right .playlist-next-btn.playlist-active {
+    display: flex;
+}
 
 /* Playlist button styles */
 .playlist-prev-btn .icon::before {
@@ -308,10 +308,10 @@
     pointer-events: none;
 }
 
-    .playlist-prev-btn:disabled .icon,
-    .playlist-next-btn:disabled .icon {
-        opacity: 0.5;
-    }
+.playlist-prev-btn:disabled .icon,
+.playlist-next-btn:disabled .icon {
+    opacity: 0.5;
+}
 
 /* Responsive playlist buttons */
 @media (max-width: 768px) {
@@ -390,9 +390,9 @@
         transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 2px));
     }
 
-        .volume-slider::-moz-range-thumb:hover {
-            transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 2px)) scale(1.1);
-        }
+    .volume-slider::-moz-range-thumb:hover {
+        transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 2px)) scale(1.1);
+    }
     /* Ensure the track alignment is also correct */
     .volume-slider::-moz-range-track {
         height: var(--player-volume-height);
@@ -411,13 +411,13 @@
         margin-top: -1px;
     }
 
-        .volume-slider::-moz-range-thumb {
-            transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 1.5px));
-        }
+    .volume-slider::-moz-range-thumb {
+        transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 1.5px));
+    }
 
-            .volume-slider::-moz-range-thumb:hover {
-                transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 1.5px)) scale(1.1);
-            }
+    .volume-slider::-moz-range-thumb:hover {
+        transform: translateY(calc((var(--player-volume-height) - var(--player-volume-handle-size)) / 2 - 1.5px)) scale(1.1);
+    }
 }
 
 /* FIREFOX VOLUME CONTAINER POSITION FIX */
@@ -432,9 +432,9 @@
         transform: translateY(-2px) !important;
     }
 
-        .volume-slider::-moz-range-thumb:hover {
-            transform: translateY(-2px) scale(1.1) !important;
-        }
+    .volume-slider::-moz-range-thumb:hover {
+        transform: translateY(-2px) scale(1.1) !important;
+    }
 }
 
 /* RESOLUTION CONTROL SYSTEM - Video resolution modes management */
@@ -671,49 +671,49 @@ video::-webkit-media-text-track-display {
 }
 /* Custom subtitle overlay responsive styles */
 .custom-subtitle-overlay {
-  font-size: clamp(12px, 4vw, 18px);
+    font-size: clamp(12px, 4vw, 18px);
 }
 
 /* Tablet responsiveness */
 @media (max-width: 768px) {
-  .custom-subtitle-overlay {
-    font-size: 16px !important;
-    bottom: 70px !important;
-    max-width: 85% !important;
-    padding: 6px 12px !important;
-    line-height: 1.2 !important;
-  }
+    .custom-subtitle-overlay {
+        font-size: 16px !important;
+        bottom: 70px !important;
+        max-width: 85% !important;
+        padding: 6px 12px !important;
+        line-height: 1.2 !important;
+    }
 }
 
 /* Mobile phone responsiveness */
 @media (max-width: 480px) {
-  .custom-subtitle-overlay {
-    font-size: 14px !important;
-    bottom: 60px !important;
-    max-width: 90% !important;
-    padding: 5px 10px !important;
-    line-height: 1.15 !important;
-  }
+    .custom-subtitle-overlay {
+        font-size: 14px !important;
+        bottom: 60px !important;
+        max-width: 90% !important;
+        padding: 5px 10px !important;
+        line-height: 1.15 !important;
+    }
 }
 
 /* Very small screens */
 @media (max-width: 360px) {
-  .custom-subtitle-overlay {
-    font-size: 12px !important;
-    bottom: 50px !important;
-    max-width: 95% !important;
-    padding: 4px 8px !important;
-  }
+    .custom-subtitle-overlay {
+        font-size: 12px !important;
+        bottom: 50px !important;
+        max-width: 95% !important;
+        padding: 4px 8px !important;
+    }
 }
 
 /* Landscape mobile optimization */
 @media (max-height: 500px) and (orientation: landscape) {
-  .custom-subtitle-overlay {
-    font-size: 13px !important;
-    bottom: 45px !important;
-    max-width: 85% !important;
-    padding: 4px 10px !important;
-  }
+    .custom-subtitle-overlay {
+        font-size: 13px !important;
+        bottom: 45px !important;
+        max-width: 85% !important;
+        padding: 4px 10px !important;
+    }
 }
 
 /* Scrollable dropdown menus for small player heights */
@@ -726,32 +726,32 @@ video::-webkit-media-text-track-display {
     scrollbar-color: var(--player-primary-color) rgba(255, 255, 255, 0.1);
 }
 
-    /* Custom scrollbar for WebKit browsers */
-    .speed-menu::-webkit-scrollbar,
-    .quality-menu::-webkit-scrollbar,
-    .subtitles-menu::-webkit-scrollbar {
-        width: 6px;
-    }
+/* Custom scrollbar for WebKit browsers */
+.speed-menu::-webkit-scrollbar,
+.quality-menu::-webkit-scrollbar,
+.subtitles-menu::-webkit-scrollbar {
+    width: 6px;
+}
 
-    .speed-menu::-webkit-scrollbar-track,
-    .quality-menu::-webkit-scrollbar-track,
-    .subtitles-menu::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 3px;
-    }
+.speed-menu::-webkit-scrollbar-track,
+.quality-menu::-webkit-scrollbar-track,
+.subtitles-menu::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
 
-    .speed-menu::-webkit-scrollbar-thumb,
-    .quality-menu::-webkit-scrollbar-thumb,
-    .subtitles-menu::-webkit-scrollbar-thumb {
-        background: var(--player-primary-color);
-        border-radius: 3px;
-    }
+.speed-menu::-webkit-scrollbar-thumb,
+.quality-menu::-webkit-scrollbar-thumb,
+.subtitles-menu::-webkit-scrollbar-thumb {
+    background: var(--player-primary-color);
+    border-radius: 3px;
+}
 
-        .speed-menu::-webkit-scrollbar-thumb:hover,
-        .quality-menu::-webkit-scrollbar-thumb:hover,
-        .subtitles-menu::-webkit-scrollbar-thumb:hover {
-            background: var(--player-primary-hover);
-        }
+.speed-menu::-webkit-scrollbar-thumb:hover,
+.quality-menu::-webkit-scrollbar-thumb:hover,
+.subtitles-menu::-webkit-scrollbar-thumb:hover {
+    background: var(--player-primary-hover);
+}
 
 /* Responsive max-height for very small players */
 @media (max-height: 400px) {
@@ -778,24 +778,24 @@ video::-webkit-media-text-track-display {
     scrollbar-color: var(--player-primary-color) rgba(255, 255, 255, 0.1);
 }
 
-    /* Custom scrollbar for settings submenu in WebKit browsers */
-    .settings-submenu::-webkit-scrollbar {
-        width: 6px;
-    }
+/* Custom scrollbar for settings submenu in WebKit browsers */
+.settings-submenu::-webkit-scrollbar {
+    width: 6px;
+}
 
-    .settings-submenu::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 3px;
-    }
+.settings-submenu::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
 
-    .settings-submenu::-webkit-scrollbar-thumb {
-        background: var(--player-primary-color);
-        border-radius: 3px;
-    }
+.settings-submenu::-webkit-scrollbar-thumb {
+    background: var(--player-primary-color);
+    border-radius: 3px;
+}
 
-        .settings-submenu::-webkit-scrollbar-thumb:hover {
-            background: var(--player-primary-hover);
-        }
+.settings-submenu::-webkit-scrollbar-thumb:hover {
+    background: var(--player-primary-hover);
+}
 
 /* Responsive adjustments for settings submenu on very small screens */
 @media (max-width: 350px) {
@@ -818,14 +818,14 @@ video::-webkit-media-text-track-display {
     gap: var(--player-controls-gap);
 }
 
-    /* Horizontal Volume Slider (default) - Base width reduced */
-    .volume-container[data-mobile-slider="show"] .volume-slider {
-        width: 80px;
-        height: var(--player-volume-height);
-        background: var(--player-volume-bg);
-        border-radius: calc(var(--player-volume-height) / 2);
-        transition: all 0.3s ease;
-    }
+/* Horizontal Volume Slider (default) - Base width reduced */
+.volume-container[data-mobile-slider="show"] .volume-slider {
+    width: 80px;
+    height: var(--player-volume-height);
+    background: var(--player-volume-bg);
+    border-radius: calc(var(--player-volume-height) / 2);
+    transition: all 0.3s ease;
+}
 
 /* Responsive width reduction for horizontal slider */
 @media (max-width: 1200px) {
@@ -968,21 +968,21 @@ video::-webkit-media-text-track-display {
     transform: translateX(-50%);
 }
 
-    /* Hover state for chapter marker */
-    .chapter-marker:hover {
-        opacity: 1;
-        width: 4px;
-        height: 120%;
-        top: -10%;
-        box-shadow: 0 0 8px var(--player-primary-color);
-    }
+/* Hover state for chapter marker */
+.chapter-marker:hover {
+    opacity: 1;
+    width: 4px;
+    height: 120%;
+    top: -10%;
+    box-shadow: 0 0 8px var(--player-primary-color);
+}
 
-    /* Active chapter marker (currently playing) */
-    .chapter-marker.active {
-        background: var(--player-primary-hover);
-        opacity: 1;
-        width: 4px;
-    }
+/* Active chapter marker (currently playing) */
+.chapter-marker.active {
+    background: var(--player-primary-hover);
+    opacity: 1;
+    width: 4px;
+}
 
 /* Chapter tooltip */
 .chapter-tooltip {
@@ -1007,19 +1007,19 @@ video::-webkit-media-text-track-display {
     pointer-events: none;
 }
 
-    /* Tooltip arrow */
-    .chapter-tooltip::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 6px solid rgba(0, 0, 0, 0.95);
-    }
+/* Tooltip arrow */
+.chapter-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, 0.95);
+}
 
 /* Chapter tooltip image */
 .chapter-tooltip-image {
@@ -1057,9 +1057,9 @@ video::-webkit-media-text-track-display {
         width: 2px;
     }
 
-        .chapter-marker:hover {
-            width: 3px;
-        }
+    .chapter-marker:hover {
+        width: 3px;
+    }
 
     .chapter-tooltip {
         min-width: 160px;
@@ -1090,73 +1090,73 @@ video::-webkit-media-text-track-display {
     pointer-events: none;
 }
 
-    /* Visible state */
-    .video-poster-overlay.visible {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-    }
+/* Visible state */
+.video-poster-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
 
-    /* Hidden state */
-    .video-poster-overlay.hidden {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-    }
+/* Hidden state */
+.video-poster-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
 
-    /* Hover effect on poster */
-    .video-poster-overlay.visible:hover {
-        opacity: 0.95;
-    }
+/* Hover effect on poster */
+.video-poster-overlay.visible:hover {
+    opacity: 0.95;
+}
 
-    /* Play button overlay on poster - THEMED COLORS 🎨 */
-    .video-poster-overlay::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80px;
-        height: 80px;
-        background: rgba(0, 0, 0, 0.7);
-        border-radius: 50%;
-        border: 3px solid var(--player-primary-color); /* THEMED BORDER ✨ */
-        opacity: 0;
-        transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
-        pointer-events: none;
-    }
+/* Play button overlay on poster - THEMED COLORS 🎨 */
+.video-poster-overlay::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    border: 3px solid var(--player-primary-color); /* THEMED BORDER ✨ */
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    pointer-events: none;
+}
 
-    /* Show play button on hover with animation and themed glow */
-    .video-poster-overlay.visible:hover::after {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.1);
-        border-color: var(--player-primary-hover); /* THEMED HOVER COLOR 🌟 */
-        box-shadow: 0 0 20px var(--player-primary-color); /* THEMED GLOW 💫 */
-    }
+/* Show play button on hover with animation and themed glow */
+.video-poster-overlay.visible:hover::after {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+    border-color: var(--player-primary-hover); /* THEMED HOVER COLOR 🌟 */
+    box-shadow: 0 0 20px var(--player-primary-color); /* THEMED GLOW 💫 */
+}
 
-    /* Play icon triangle - THEMED COLOR 🎨 */
-    .video-poster-overlay::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-40%, -50%);
-        width: 0;
-        height: 0;
-        border-style: solid;
-        border-width: 15px 0 15px 25px;
-        border-color: transparent transparent transparent var(--player-primary-color); /* THEMED TRIANGLE ✨ */
-        z-index: 2;
-        opacity: 0;
-        transition: opacity 0.3s ease, border-color 0.3s ease;
-        pointer-events: none;
-    }
+/* Play icon triangle - THEMED COLOR 🎨 */
+.video-poster-overlay::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-40%, -50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 15px 0 15px 25px;
+    border-color: transparent transparent transparent var(--player-primary-color); /* THEMED TRIANGLE ✨ */
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.3s ease, border-color 0.3s ease;
+    pointer-events: none;
+}
 
-    /* Show play icon on hover with themed color */
-    .video-poster-overlay.visible:hover::before {
-        opacity: 1;
-        border-color: transparent transparent transparent var(--player-primary-hover); /* THEMED HOVER 🌟 */
-    }
+/* Show play icon on hover with themed color */
+.video-poster-overlay.visible:hover::before {
+    opacity: 1;
+    border-color: transparent transparent transparent var(--player-primary-hover); /* THEMED HOVER 🌟 */
+}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
@@ -1357,138 +1357,4 @@ video::-webkit-media-text-track-display {
     position: absolute !important;
     bottom: 0 !important;
     overflow: visible !important;
-}
-
-/* ===================================
-   WATERMARK OVERLAY
-   =================================== */
-
-.video-watermark {
-    position: absolute;
-    z-index: 15; /* Above video (10), below controls (100) */
-    pointer-events: auto;
-    opacity: 0.7;
-    transition: opacity 0.3s ease, visibility 0.3s ease, bottom 0.3s ease;
-}
-
-/* Watermark visible by default */
-.video-watermark {
-    visibility: visible;
-    opacity: 0.7;
-}
-
-/* Hide watermark when it has hide-on-autohide class AND controls are hidden */
-.video-wrapper:not(.has-controls) .video-watermark.hide-on-autohide {
-    visibility: hidden;
-    opacity: 0;
-}
-
-/* Show watermark when controls are shown */
-.video-wrapper.has-controls .video-watermark {
-    visibility: visible;
-    opacity: 0.7;
-}
-
-.video-watermark:hover {
-    opacity: 1;
-}
-
-.video-watermark img {
-    display: block;
-    max-width: 150px;
-    max-height: 80px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-}
-
-/* Watermark positions - Top positions unchanged */
-.video-watermark.watermark-topleft {
-    top: 15px;
-    left: 15px;
-}
-
-.video-watermark.watermark-topright {
-    top: 15px;
-    right: 15px;
-}
-
-/* Bottom positions - Increased spacing from controlbar (was 70px, now 90px) */
-.video-watermark.watermark-bottomleft {
-    bottom: 90px; /* Increased spacing */
-    left: 15px;
-}
-
-.video-watermark.watermark-bottomright {
-    bottom: 90px; /* Increased spacing */
-    right: 15px;
-}
-
-/* DYNAMIC POSITIONING: Always visible watermark moves down when controls are hidden */
-/* This applies ONLY to watermarks without hide-on-autohide class (always visible) */
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide) {
-    bottom: 15px; /* Move to bottom corner when controls hidden */
-}
-
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-    bottom: 15px; /* Move to bottom corner when controls hidden */
-}
-
-/* When controls are shown, bottom watermark stays above controlbar */
-.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
-.video-wrapper.has-controls .video-watermark.watermark-bottomright {
-    bottom: 90px; /* Stay above controlbar */
-}
-
-/* Responsive adjustments for mobile */
-@media (max-width: 768px) {
-    .video-watermark img {
-        max-width: 100px;
-        max-height: 50px;
-    }
-
-    .video-watermark.watermark-topleft,
-    .video-watermark.watermark-topright {
-        top: 10px;
-    }
-
-    .video-watermark.watermark-topleft,
-    .video-watermark.watermark-bottomleft {
-        left: 10px;
-    }
-
-    .video-watermark.watermark-topright,
-    .video-watermark.watermark-bottomright {
-        right: 10px;
-    }
-
-    /* Bottom spacing adjusted for mobile */
-    .video-watermark.watermark-bottomleft,
-    .video-watermark.watermark-bottomright {
-        bottom: 75px; /* Above controlbar on mobile */
-    }
-
-    /* Always visible watermark on mobile - moves down when controls hidden */
-    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-        bottom: 10px; /* Move to corner on mobile */
-    }
-}
-
-/* Extra small screens */
-@media (max-width: 480px) {
-    .video-watermark.watermark-bottomleft,
-    .video-watermark.watermark-bottomright {
-        bottom: 65px;
-    }
-
-    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-    .video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-        bottom: 8px;
-    }
-}
-
-/* Clickable watermark cursor */
-.video-watermark[style*="cursor: pointer"] {
-    cursor: pointer !important;
 }

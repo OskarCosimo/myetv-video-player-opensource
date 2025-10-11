@@ -101,21 +101,6 @@ body {
     opacity: 0;
 }
 
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomleft:not(.hide-on-autohide),
-.video-wrapper:not(.has-controls) .video-watermark.watermark-bottomright:not(.hide-on-autohide) {
-    bottom: 15px;
-}
-
-.video-wrapper.has-controls .video-watermark {
-    visibility: visible;
-    opacity: 0.7;
-}
-
-.video-wrapper.has-controls .video-watermark.watermark-bottomleft,
-.video-wrapper.has-controls .video-watermark.watermark-bottomright {
-    bottom: 90px;
-}
-
 .hidden {
     display: none !important;
 }

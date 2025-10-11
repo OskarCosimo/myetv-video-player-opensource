@@ -35,17 +35,17 @@
 // 10. Poster Overlay
 @use 'poster';
 
-// 11. Watermark
-@use 'watermark';
-
-// 12. Tooltips
+// 11. Tooltips
 @use 'tooltips';
 
-// 12.5 Audio Player (audiofile + audiowave)
+// 12 Audio Player (audiofile + audiowave)
 @use 'audio-player';
 
 // 13. Themes (Blue, Green, Red)
 @use 'themes';
 
-// 14. Responsive (must be last)
+// 14. Watermark
+@use 'watermark';
+
+// 15. Responsive (must be last)
 @use 'responsive';

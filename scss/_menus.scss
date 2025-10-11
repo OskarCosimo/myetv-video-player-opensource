@@ -4236,3 +4236,54 @@ video::-webkit-media-text-track-display {
 .video-watermark[style*="cursor: pointer"] {
     cursor: pointer !important;
 }
+/* ===================================
+   FIX SUBMENU CLIPPING ON SMALL SCREENS
+   =================================== */
+
+/* Change positioning from bottom-aligned to top-aligned when menu would be clipped */
+/* ONLY affects submenus inside settings menu (small screen mode) */
+@media (max-height: 600px) {
+    .settings-menu .settings-submenu,
+    .settings-option .settings-submenu,
+    .settings-option .quality-submenu,
+    .settings-option .speed-submenu {
+        /* Remove bottom positioning */
+        bottom: auto !important;
+        /* Align to top of parent option */
+        top: 0 !important;
+        /* Reduce max-height on very small screens */
+        max-height: 150px !important;
+    }
+}
+
+/* Even smaller screens - ultra compact */
+@media (max-height: 400px) {
+    .settings-menu .settings-submenu,
+    .settings-option .settings-submenu,
+    .settings-option .quality-submenu,
+    .settings-option .speed-submenu {
+        max-height: 120px !important;
+    }
+}
+
+/* For very small players (width < 400px) - only inside settings menu */
+@media (max-width: 400px) {
+    .settings-menu .settings-submenu,
+    .settings-option .settings-submenu,
+    .settings-option .quality-submenu,
+    .settings-option .speed-submenu {
+        /* Switch to top alignment */
+        bottom: auto !important;
+        top: 0 !important;
+        max-height: 180px !important;
+    }
+}
+
+/* EXCLUDE standalone subtitles menu (the one that appears when player is large) */
+/* Keep original bottom positioning for standalone menus */
+.subtitles-button .subtitles-menu,
+.yt-subtitles-submenu:not(.settings-option *),
+.yt-quality-submenu:not(.settings-option *) {
+    bottom: 0 !important;
+    top: auto !important;
+}

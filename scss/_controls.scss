@@ -186,6 +186,8 @@
 
     // Handle with large invisible touch area
     .progress-handle {
+        touch-action: none; // Critical for mobile drag
+        -webkit-touch-callout: none; // Disable iOS callout
         // Add large invisible touch area using pseudo-element
         &::before {
             content: '';

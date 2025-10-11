@@ -1002,12 +1002,77 @@ width: fit-content;
             // Apply UI changes
             this.hideTimeDisplay();
             this.createLiveBadge();
-            this.modifyProgressBarForLive();
+
+            // Check if DVR is available before disabling progress bar
+            this.checkDVRAvailability();
+
             this.startLiveMonitoring();
 
             if (this.api.player.options.debug) {
                 console.log('[YT Plugin] ✅ Live UI setup complete');
             }
+        }
+
+        checkDVRAvailability() {
+            // Disable progress bar immediately while testing
+            const progressContainer = this.api.container.querySelector('.progress-container');
+            if (progressContainer) {
+                progressContainer.style.opacity = '0.3';
+                progressContainer.style.pointerEvents = 'none';
+            }
+
+            // Wait a bit for YouTube to fully initialize
+            setTimeout(() => {
+                if (!this.ytPlayer) return;
+
+                try {
+                    const currentTime = this.ytPlayer.getCurrentTime();
+                    const duration = this.ytPlayer.getDuration();
+                    const testSeekPosition = Math.max(0, currentTime - 5);
+
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] 🔍 Testing DVR availability...');
+                    }
+
+                    this.ytPlayer.seekTo(testSeekPosition, true);
+
+                    setTimeout(() => {
+                        if (!this.ytPlayer) return;
+
+                        const newCurrentTime = this.ytPlayer.getCurrentTime();
+                        const seekDifference = Math.abs(newCurrentTime - testSeekPosition);
+
+                        const progressContainer = this.api.container.querySelector('.progress-container');
+
+                        if (seekDifference < 2) {
+                            // DVR enabled - restore progress bar
+                            if (progressContainer) {
+                                progressContainer.style.opacity = '';
+                                progressContainer.style.pointerEvents = '';
+                            }
+
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] ✅ DVR ENABLED - progress bar active');
+                            }
+
+                            this.ytPlayer.seekTo(duration, true);
+                        } else {
+                            // No DVR - keep progress bar disabled
+                            this.modifyProgressBarForLive();
+
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] ❌ DVR DISABLED - progress bar locked');
+                            }
+                        }
+                    }, 500);
+
+                } catch (error) {
+                    if (this.api.player.options.debug) {
+                        console.error('[YT Plugin] Error checking DVR:', error);
+                    }
+                    this.modifyProgressBarForLive();
+                }
+            }, 1000);
         }
 
         createLiveBadge() {

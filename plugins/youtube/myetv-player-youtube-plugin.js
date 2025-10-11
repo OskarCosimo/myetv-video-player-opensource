@@ -48,6 +48,9 @@
             this.resizeListenerAdded = false;
             // Channel data cache
             this.channelData = null;
+            //live streaming
+            this.isLiveStream = false;
+            this.liveCheckInterval = null;
 
             this.api = player.getPluginAPI();
             if (this.api.player.options.debug) console.log('[YT Plugin] Constructor initialized', this.options);
@@ -851,6 +854,10 @@ width: fit-content;
             setTimeout(() => this.hidePipFromSettingsMenuOnly(), 500);
             setTimeout(() => this.hidePipFromSettingsMenuOnly(), 1500);
             setTimeout(() => this.hidePipFromSettingsMenuOnly(), 3000);
+            // Check if this is a live stream
+            setTimeout(() => this.checkIfLiveStream(), 2000);
+            setTimeout(() => this.checkIfLiveStream(), 5000);
+
 
             // Listen for window resize
             if (!this.resizeListenerAdded) {
@@ -885,6 +892,321 @@ width: fit-content;
 
             this.api.triggerEvent('youtubeplugin:playerready', {});
 
+        }
+
+        checkIfLiveStream() {
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] 🔍 Starting live stream check...');
+            }
+
+            if (!this.ytPlayer) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] ❌ ytPlayer not available');
+                }
+                return false;
+            }
+
+            try {
+                // Method 1: Check video data for isLive property
+                if (this.ytPlayer.getVideoData) {
+                    const videoData = this.ytPlayer.getVideoData();
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] 📹 Video Data:', videoData);
+                    }
+
+                    // Check if video data indicates it's live
+                    if (videoData.isLive || videoData.isLiveBroadcast) {
+                        if (this.api.player.options.debug) {
+                            console.log('[YT Plugin] ✅ LIVE detected via videoData.isLive');
+                        }
+                        this.isLiveStream = true;
+                        this.handleLiveStreamUI();
+                        return true;
+                    }
+                }
+
+                // Method 2: Check duration (live streams have special duration values)
+                if (this.ytPlayer.getDuration) {
+                    const duration = this.ytPlayer.getDuration();
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] ⏱️ Initial duration:', duration);
+                    }
+
+                    // For live streams, duration changes over time
+                    // Wait 3 seconds and check again
+                    setTimeout(() => {
+                        if (!this.ytPlayer || !this.ytPlayer.getDuration) {
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] ❌ ytPlayer lost during duration check');
+                            }
+                            return;
+                        }
+
+                        const newDuration = this.ytPlayer.getDuration();
+                        const difference = Math.abs(newDuration - duration);
+
+                        if (this.api.player.options.debug) {
+                            console.log('[YT Plugin] ⏱️ Duration after 3s:', newDuration);
+                            console.log('[YT Plugin] 📊 Duration difference:', difference);
+                        }
+
+                        // If duration increased by more than 0.5 seconds, it's live
+                        if (difference > 0.5) {
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] ✅ LIVE STREAM DETECTED (duration changing)');
+                            }
+                            this.isLiveStream = true;
+                            this.handleLiveStreamUI();
+                        } else {
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] ℹ️ Regular video (duration stable)');
+                            }
+                            this.isLiveStream = false;
+                        }
+                    }, 3000);
+                }
+
+                // Method 3: Check player state
+                if (this.ytPlayer.getPlayerState) {
+                    const state = this.ytPlayer.getPlayerState();
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] 🎮 Player state:', state);
+                    }
+                }
+
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] ❌ Error checking live stream:', error);
+                }
+            }
+
+            return this.isLiveStream;
+        }
+
+        handleLiveStreamUI() {
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] 🎬 Applying live stream UI changes');
+                console.log('[YT Plugin] 📦 Container:', this.api.container);
+            }
+
+            // Stop time update for live streams
+            if (this.timeUpdateInterval) {
+                clearInterval(this.timeUpdateInterval);
+                this.timeUpdateInterval = null;
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] ✅ Time update interval stopped');
+                }
+            }
+
+            // Apply UI changes
+            this.hideTimeDisplay();
+            this.createLiveBadge();
+            this.modifyProgressBarForLive();
+            this.startLiveMonitoring();
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] ✅ Live UI setup complete');
+            }
+        }
+
+        createLiveBadge() {
+            // Remove existing badge if present
+            let existingBadge = this.api.container.querySelector('.live-badge');
+            if (existingBadge) {
+                existingBadge.remove();
+            }
+
+            // Create LIVE badge
+            const liveBadge = document.createElement('div');
+            liveBadge.className = 'live-badge';
+            liveBadge.innerHTML = 'LIVE';
+            liveBadge.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ff0000;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        user-select: none;
+        margin-left: 8px;
+    `;
+
+            // Add pulsing indicator style
+            if (!document.getElementById('live-badge-style')) {
+                const style = document.createElement('style');
+                style.id = 'live-badge-style';
+                style.textContent = `
+            .live-indicator {
+                width: 8px;
+                height: 8px;
+                background: white;
+                border-radius: 50%;
+                animation: live-pulse 1.5s ease-in-out infinite;
+            }
+            @keyframes live-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+            }
+        `;
+                document.head.appendChild(style);
+            }
+
+            // Click to return to live
+            liveBadge.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.seekToLive();
+            });
+
+            // Insert badge in control bar, next to time display area
+            const controlsLeft = this.api.container.querySelector('.controls-left');
+            if (controlsLeft) {
+                controlsLeft.appendChild(liveBadge);
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Live badge added to controls-left');
+                }
+            } else {
+                // Fallback: add to container
+                this.api.container.appendChild(liveBadge);
+                liveBadge.style.position = 'absolute';
+                liveBadge.style.left = '10px';
+                liveBadge.style.bottom = '50px';
+                liveBadge.style.zIndex = '11';
+            }
+        }
+
+        seekToLive() {
+            if (!this.ytPlayer || !this.isLiveStream) return;
+
+            try {
+                // For live streams, seek to the current live position
+                const duration = this.ytPlayer.getDuration();
+                this.ytPlayer.seekTo(duration, true);
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Seeking to live position:', duration);
+                }
+
+                // Update badge to show we're at live
+                const badge = this.api.container.querySelector('.live-badge');
+                if (badge) {
+                    badge.style.background = '#ff0000';
+                }
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('[YT Plugin] Error seeking to live:', error);
+                }
+            }
+        }
+
+        hideTimeDisplay() {
+            // Hide both current time and duration elements
+            const currentTimeEl = this.api.container.querySelector('.current-time');
+            const durationEl = this.api.container.querySelector('.duration');
+
+            if (currentTimeEl) {
+                currentTimeEl.style.display = 'none';
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Current time hidden');
+                }
+            }
+
+            if (durationEl) {
+                durationEl.style.display = 'none';
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Duration hidden');
+                }
+            }
+        }
+
+        showTimeDisplay() {
+            const currentTimeEl = this.api.container.querySelector('.current-time');
+            const durationEl = this.api.container.querySelector('.duration');
+
+            if (currentTimeEl) {
+                currentTimeEl.style.display = '';
+            }
+
+            if (durationEl) {
+                durationEl.style.display = '';
+            }
+        }
+
+        modifyProgressBarForLive() {
+            const progressContainer = this.api.container.querySelector('.progress-container');
+            const progressHandle = this.api.container.querySelector('.progress-handle');
+
+            if (progressContainer) {
+                // Disable all pointer events on progress bar
+                progressContainer.style.pointerEvents = 'none';
+                progressContainer.style.cursor = 'default';
+                progressContainer.style.opacity = '0.6';
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Progress bar disabled for live stream');
+                }
+            }
+
+            if (progressHandle) {
+                progressHandle.style.display = 'none';
+            }
+        }
+
+        restoreProgressBarNormal() {
+            const progressContainer = this.api.container.querySelector('.progress-container');
+            const progressHandle = this.api.container.querySelector('.progress-handle');
+
+            if (progressContainer) {
+                progressContainer.style.pointerEvents = '';
+                progressContainer.style.cursor = '';
+                progressContainer.style.opacity = '';
+            }
+
+            if (progressHandle) {
+                progressHandle.style.display = '';
+            }
+        }
+
+        startLiveMonitoring() {
+            if (this.liveCheckInterval) {
+                clearInterval(this.liveCheckInterval);
+            }
+
+            this.liveCheckInterval = setInterval(() => {
+                if (!this.ytPlayer || !this.isLiveStream) return;
+
+                try {
+                    const currentTime = this.ytPlayer.getCurrentTime();
+                    const duration = this.ytPlayer.getDuration();
+                    const latency = duration - currentTime;
+
+                    // Update badge color based on latency
+                    const badge = this.api.container.querySelector('.live-badge');
+                    if (badge) {
+                        if (latency < 5) {
+                            // Very close to live
+                            badge.style.background = '#ff0000';
+                        } else if (latency < 30) {
+                            // Slightly behind live
+                            badge.style.background = '#ff6600';
+                        } else {
+                            // Significantly behind live
+                            badge.style.background = '#cc0000';
+                        }
+                    }
+
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] Live latency:', latency.toFixed(1), 'seconds');
+                    }
+                } catch (error) {
+                    if (this.api.player.options.debug) {
+                        console.error('[YT Plugin] Error monitoring live:', error);
+                    }
+                }
+            }, 5000); // Check every 5 seconds
         }
 
         onApiChange(event) {
@@ -2353,6 +2675,25 @@ width: fit-content;
             }
 
             this.showPosterOverlay();
+
+            if (this.liveCheckInterval) {
+                clearInterval(this.liveCheckInterval);
+                this.liveCheckInterval = null;
+            }
+
+            // Restore normal UI when destroying
+            if (this.isLiveStream) {
+                this.showTimeDisplay();
+                this.restoreProgressBarNormal();
+
+                const liveBadge = this.api.container.querySelector('.live-badge');
+                if (liveBadge) {
+                    liveBadge.remove();
+                }
+            }
+
+            this.isLiveStream = false;
+
         }
     }
 

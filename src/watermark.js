@@ -70,7 +70,17 @@ initializeWatermark() {
     }
 
     // Store reference to watermark element
+    // Store reference to watermark element
     this.watermarkElement = watermark;
+
+    // Set initial position
+    this.updateWatermarkPosition();
+
+    // Update position on window resize
+    this.watermarkResizeHandler = () => {
+        this.updateWatermarkPosition();
+    };
+    window.addEventListener('resize', this.watermarkResizeHandler);
 
     if (this.options.debug) {
         console.log('🏷️ Watermark created:', {
@@ -90,6 +100,7 @@ initializeWatermark() {
  * @param {string} position - Position of watermark (topleft, topright, bottomleft, bottomright)
  * @param {string} title - Optional tooltip title for the watermark
  */
+
 setWatermark(url, link = '', position = 'bottomright', title = '') {
     // Update options
     this.options.watermarkUrl = url;
@@ -120,6 +131,12 @@ removeWatermark() {
         this.watermarkElement = null;
     }
 
+    // Remove resize listener
+    if (this.watermarkResizeHandler) {
+        window.removeEventListener('resize', this.watermarkResizeHandler);
+        this.watermarkResizeHandler = null;
+    }
+
     this.options.watermarkUrl = '';
     this.options.watermarkLink = '';
     this.options.watermarkPosition = 'bottomright';
@@ -134,6 +151,7 @@ removeWatermark() {
  * Update watermark position
  * @param {string} position - New position (topleft, topright, bottomleft, bottomright)
  */
+
 setWatermarkPosition(position) {
     if (!['topleft', 'topright', 'bottomleft', 'bottomright'].includes(position)) {
         if (this.options.debug) console.warn('🏷️ Invalid watermark position:', position);
@@ -158,6 +176,39 @@ setWatermarkPosition(position) {
     if (this.options.debug) console.log('🏷️ Watermark position updated to:', position);
 
     return this;
+}
+
+/**
+ * Update watermark position based on current controlbar height
+ * Called during window resize to keep watermark above controlbar
+ */
+updateWatermarkPosition() {
+    if (!this.watermarkElement) return;
+    if (!this.controls) return;
+
+    const position = this.options.watermarkPosition || 'bottomright';
+
+    // Only update bottom positions (top positions don't need adjustment)
+    if (position === 'bottomleft' || position === 'bottomright') {
+        const controlsHeight = this.controls.offsetHeight;
+        const spacing = 15; // Same spacing used in CSS
+        const bottomValue = controlsHeight + spacing;
+
+        // Check if controls are visible
+        const hasControls = this.container.classList.contains('has-controls');
+
+        if (hasControls || !this.options.hideWatermark) {
+            // Position above controlbar
+            this.watermarkElement.style.bottom = `${bottomValue}px`;
+        } else {
+            // Position at bottom corner when controls hidden
+            this.watermarkElement.style.bottom = '15px';
+        }
+
+        if (this.options.debug) {
+            console.log(`🏷️ Watermark position updated: bottom ${this.watermarkElement.style.bottom}`);
+        }
+    }
 }
 
 /**

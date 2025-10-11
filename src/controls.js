@@ -4,7 +4,7 @@
  * Created by https://www.myetv.tv https://oskarcosimo.com 
  */
 
-/* AUTO-HIDE SYSTEM - IMPROVED AND COMPREHENSIVE */
+/* AUTO-HIDE SYSTEM */
 initAutoHide() {
     if (!this.options.autoHide) {
         if (this.options.debug) console.log('Auto-hide disabled in options');
@@ -144,12 +144,17 @@ showControlsNow() {
         this.controls.classList.add('show');
     }
 
-    // ADD THIS: Add has-controls class to container for watermark visibility
+    // Add has-controls class to container for watermark visibility
     if (this.container) {
         this.container.classList.add('has-controls');
+        this.updateControlbarHeight();
+        // Update watermark position
+        if (this.updateWatermarkPosition) {
+            this.updateWatermarkPosition();
+        }
     }
 
-    // Fix: Show title overlay with controls if not persistent
+    // Show title overlay with controls if not persistent
     if (this.options.showTitleOverlay && !this.options.persistentTitle && this.options.videoTitle) {
         this.showTitleOverlay();
     }
@@ -160,32 +165,44 @@ showControlsNow() {
 hideControlsNow() {
     // Don't hide if mouse is still over controls (allow hiding on touch devices)
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     if (this.mouseOverControls && !isTouchDevice) {
-        if (this.autoHideDebug && this.options.debug) console.log('⏸️ Not hiding - mouse still over controls');
+        if (this.autoHideDebug && this.options.debug) {
+            console.log('🚫 Not hiding - mouse still over controls');
+        }
         return;
     }
 
     // Don't hide if video is paused
     if (this.video && this.video.paused) {
-        if (this.autoHideDebug && this.options.debug) console.log('⏸️ Not hiding - video is paused');
+        if (this.autoHideDebug && this.options.debug) {
+            console.log('🚫 Not hiding - video is paused');
+        }
         return;
     }
 
     if (this.controls) {
         this.controls.classList.remove('show');
+
+        // Remove has-controls class from container for watermark visibility
+        if (this.container) {
+            this.container.classList.remove('has-controls');
+            this.updateControlbarHeight();
+            // Update watermark position
+            if (this.updateWatermarkPosition) {
+                this.updateWatermarkPosition();
+            }
+        }
     }
 
-    // ADD THIS: Remove has-controls class from container for watermark visibility
-    if (this.container) {
-        this.container.classList.remove('has-controls');
-    }
-
-    // Fix: Hide title overlay with controls if not persistent
+    // Hide title overlay with controls (if not persistent)
     if (this.options.showTitleOverlay && !this.options.persistentTitle) {
         this.hideTitleOverlay();
     }
 
-    if (this.autoHideDebug && this.options.debug) console.log('❌ Controls hidden');
+    if (this.autoHideDebug && this.options.debug) {
+        console.log('👁️ Controls hidden');
+    }
 }
 
 showControls() {
@@ -464,28 +481,62 @@ createControls() {
     // NEW: Initialize responsive settings menu
     setTimeout(() => {
         this.initializeResponsiveMenu();
+        this.updateControlbarHeight();
     }, 100);
 }
 
-/* NEW: Initialize responsive menu with dynamic width calculation */
+/* Initialize responsive menu with dynamic width calculation */
 initializeResponsiveMenu() {
     if (!this.controls) return;
 
     // Track screen size
     this.isSmallScreen = false;
 
-    // Check initial size and set up listener
+    // Check initial size
     this.checkScreenSize();
 
-    window.addEventListener('resize', () => {
+    // Bind resize handler with updateControlbarHeight
+    const resizeHandler = () => {
         this.checkScreenSize();
-    });
+        this.updateControlbarHeight();
+    };
+
+    // Bind del context
+    this.resizeHandler = resizeHandler.bind(this);
+    window.addEventListener('resize', this.resizeHandler);
 
     // Bind events for settings menu
     this.bindSettingsMenuEvents();
 }
 
-/* NEW: Dynamic width calculation based on logo presence */
+// Dynamic controlbar height tracking for watermark positioning
+updateControlbarHeight() {
+    if (!this.controls) return;
+
+    const height = this.controls.offsetHeight;
+    if (this.container) {
+
+        this.container.style.setProperty('--player-controls-height', `${height}px`);
+
+        const watermark = this.container.querySelector('.video-watermark.watermark-bottomleft, .video-watermark.watermark-bottomright');
+        if (watermark) {
+            const hasControls = this.container.classList.contains('has-controls');
+            const isHideOnAutoHide = watermark.classList.contains('hide-on-autohide');
+
+            if (hasControls || !isHideOnAutoHide) {
+                watermark.style.bottom = `${height + 15}px`;
+            } else {
+                watermark.style.bottom = '15px';
+            }
+        }
+    }
+
+    if (this.options.debug) {
+        console.log(`Controlbar height updated: ${height}px`);
+    }
+}
+
+/* Dynamic width calculation based on logo presence */
 getResponsiveThreshold() {
     // Check if brand logo is enabled and present
     const hasLogo = this.options.brandLogoEnabled && this.options.brandLogoUrl;
@@ -494,7 +545,7 @@ getResponsiveThreshold() {
     return hasLogo ? 650 : 550;
 }
 
-/* NEW: Check if screen is under dynamic threshold */
+/* Check if screen is under dynamic threshold */
 checkScreenSize() {
     const threshold = this.getResponsiveThreshold();
     const newIsSmallScreen = window.innerWidth <= threshold;
@@ -504,12 +555,12 @@ checkScreenSize() {
         this.updateSettingsMenuVisibility();
 
         if (this.options.debug) {
-            console.log(`Screen check: ${window.innerWidth}px vs ${threshold}px threshold (logo: ${this.options.brandLogoEnabled}), small: ${this.isSmallScreen}`);
+            console.log(`Screen check: ${window.innerWidth}px vs ${threshold}px (threshold), logo: ${this.options.brandLogoEnabled}, small: ${this.isSmallScreen}`);
         }
     }
 }
 
-/* NEW: Update settings menu visibility based on screen size */
+/* Update settings menu visibility based on screen size */
 updateSettingsMenuVisibility() {
     const settingsControl = this.controls?.querySelector('.settings-control');
     if (!settingsControl) return;
@@ -549,7 +600,7 @@ updateSettingsMenuVisibility() {
     }
 }
 
-/* NEW: Populate settings menu with controls */
+/* Populate settings menu with controls */
 populateSettingsMenu() {
     const settingsMenu = this.controls?.querySelector('.settings-menu');
     if (!settingsMenu) return;
@@ -611,7 +662,7 @@ populateSettingsMenu() {
     settingsMenu.innerHTML = menuHTML;
 }
 
-/* NEW: Bind settings menu events */
+/* Bind settings menu events */
 bindSettingsMenuEvents() {
     const settingsMenu = this.controls?.querySelector('.settings-menu');
     if (!settingsMenu) return;

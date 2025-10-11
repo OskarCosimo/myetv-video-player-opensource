@@ -51,6 +51,7 @@
             //live streaming
             this.isLiveStream = false;
             this.liveCheckInterval = null;
+            this.isAtLiveEdge = true; // Track if viewer is at live edge
 
             this.api = player.getPluginAPI();
             if (this.api.player.options.debug) console.log('[YT Plugin] Constructor initialized', this.options);
@@ -1087,14 +1088,19 @@ width: fit-content;
                 this.ytPlayer.seekTo(duration, true);
 
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Seeking to live position:', duration);
+                    console.log('[YT Plugin] ⏩ Seeking to live edge:', duration);
                 }
 
-                // Update badge to show we're at live
+                // Immediately update badge to red (will be confirmed by monitoring)
                 const badge = this.api.container.querySelector('.live-badge');
                 if (badge) {
                     badge.style.background = '#ff0000';
+                    badge.textContent = 'LIVE';
+                    badge.title = '';
                 }
+
+                this.isAtLiveEdge = true;
+
             } catch (error) {
                 if (this.api.player.options.debug) {
                     console.error('[YT Plugin] Error seeking to live:', error);
@@ -1182,31 +1188,109 @@ width: fit-content;
                     const currentTime = this.ytPlayer.getCurrentTime();
                     const duration = this.ytPlayer.getDuration();
                     const latency = duration - currentTime;
+                    const playerState = this.ytPlayer.getPlayerState();
 
-                    // Update badge color based on latency
                     const badge = this.api.container.querySelector('.live-badge');
                     if (badge) {
-                        if (latency < 5) {
-                            // Very close to live
-                            badge.style.background = '#ff0000';
-                        } else if (latency < 30) {
-                            // Slightly behind live
-                            badge.style.background = '#ff6600';
-                        } else {
-                            // Significantly behind live
-                            badge.style.background = '#cc0000';
+                        // Check player state first
+                        if (playerState === YT.PlayerState.PAUSED) {
+                            // Keep orange when paused - don't override
+                            badge.style.background = '#ff8800';
+                            badge.textContent = '⏸ LIVE';
+                            badge.title = 'Livestreaming in Pause';
+
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] 🟠 Live paused (monitoring)');
+                            }
+                        } else if (playerState === YT.PlayerState.PLAYING) {
+                            // Only update color if playing
+                            // Check latency only if duration is reasonable
+                            if (latency > 60 && duration < 7200) {
+                                // DE-SYNCED - Black background
+                                badge.style.background = '#1a1a1a';
+                                badge.textContent = 'LIVE';
+                                badge.title = `${Math.floor(latency)} seconds back from the live`;
+                                this.isAtLiveEdge = false;
+
+                                if (this.api.player.options.debug) {
+                                    console.log('[YT Plugin] ⚫ De-synced, latency:', latency.toFixed(1), 's');
+                                }
+                            } else {
+                                // AT LIVE EDGE - Red background
+                                badge.style.background = '#ff0000';
+                                badge.textContent = 'LIVE';
+                                badge.title = 'Livestreaming';
+                                this.isAtLiveEdge = true;
+
+                                if (this.api.player.options.debug) {
+                                    console.log('[YT Plugin] 🔴 At live edge');
+                                }
+                            }
                         }
                     }
 
-                    if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] Live latency:', latency.toFixed(1), 'seconds');
-                    }
                 } catch (error) {
                     if (this.api.player.options.debug) {
                         console.error('[YT Plugin] Error monitoring live:', error);
                     }
                 }
-            }, 5000); // Check every 5 seconds
+            }, 2000); // Check every 2 seconds
+        }
+
+        handleLiveStreamEnded() {
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] 📹 Handling live stream end transition');
+            }
+
+            // Stop live monitoring
+            if (this.liveCheckInterval) {
+                clearInterval(this.liveCheckInterval);
+                this.liveCheckInterval = null;
+            }
+
+            // Update badge to show "REPLAY" or remove it
+            const badge = this.api.container.querySelector('.live-badge');
+            if (badge) {
+                // Option 1: Change to REPLAY badge
+                badge.textContent = 'REPLAY';
+                badge.style.background = '#555555';
+                badge.style.cursor = 'default';
+                badge.title = 'Registrazione del live stream';
+
+                // Remove click handler since there's no live to seek to
+                const newBadge = badge.cloneNode(true);
+                badge.parentNode.replaceChild(newBadge, badge);
+
+                // Option 2: Remove badge entirely after 5 seconds
+                setTimeout(() => {
+                    if (newBadge && newBadge.parentNode) {
+                        newBadge.remove();
+                    }
+                }, 5000);
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] ✅ Badge updated to REPLAY mode');
+                }
+            }
+
+            // Restore normal player behavior
+            this.isLiveStream = false;
+            this.isAtLiveEdge = false;
+
+            // Re-enable progress bar
+            this.restoreProgressBarNormal();
+
+            // Show time display again
+            this.showTimeDisplay();
+
+            // Restart normal time updates
+            if (!this.timeUpdateInterval) {
+                this.setupYouTubeSync();
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] ✅ Transitioned from LIVE to REPLAY mode');
+            }
         }
 
         onApiChange(event) {
@@ -2127,6 +2211,66 @@ width: fit-content;
             const playIcon = this.api.container.querySelector('.play-icon');
             const pauseIcon = this.api.container.querySelector('.pause-icon');
 
+            // Get live badge
+            const badge = this.api.container.querySelector('.live-badge');
+
+            // Handle live stream ended
+            if (this.isLiveStream && event.data === YT.PlayerState.ENDED) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] 🔴➡️📹 Live stream ended (player state: ENDED)');
+                }
+                this.handleLiveStreamEnded();
+                return;
+            }
+
+            // Update live badge based on state
+            if (this.isLiveStream && badge) {
+                if (event.data === YT.PlayerState.PAUSED) {
+                    // Orange when paused during live
+                    badge.style.background = '#ff8800';
+                    badge.textContent = '⏸ LIVE';
+                    badge.title = 'Livestreaming in Pause';
+
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] 🟠 Live paused');
+                    }
+                } else if (event.data === YT.PlayerState.PLAYING) {
+                    // Red when playing (will be checked for de-sync below)
+                    badge.style.background = '#ff0000';
+                    badge.textContent = 'LIVE';
+                    badge.title = 'Livestreaming';
+
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] 🔴 Live playing');
+                    }
+                }
+            }
+
+            // Check for de-sync when user seeks during live
+            if (this.isLiveStream && event.data === YT.PlayerState.PLAYING) {
+                setTimeout(() => {
+                    if (!this.ytPlayer) return;
+
+                    const currentTime = this.ytPlayer.getCurrentTime();
+                    const duration = this.ytPlayer.getDuration();
+                    const latency = duration - currentTime;
+
+                    // If latency > 60s and duration is reasonable, user has seeked back
+                    if (latency > 60 && duration < 7200) {
+                        const badge = this.api.container.querySelector('.live-badge');
+                        if (badge) {
+                            badge.style.background = '#1a1a1a';
+                            badge.title = `${Math.floor(latency)} seconds back from the live`;
+                            this.isAtLiveEdge = false;
+
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] ⚫ User seeked back, de-synced from live');
+                            }
+                        }
+                    }
+                }, 500);
+            }
+
             switch (event.data) {
                 case YT.PlayerState.PLAYING:
                     this.api.triggerEvent('played', {});
@@ -2692,7 +2836,26 @@ width: fit-content;
                 }
             }
 
+            // Clear live stream intervals
+            if (this.liveCheckInterval) {
+                clearInterval(this.liveCheckInterval);
+                this.liveCheckInterval = null;
+            }
+
+            // Restore normal UI
+            if (this.isLiveStream) {
+                this.showTimeDisplay();
+                this.restoreProgressBarNormal();
+
+                const liveBadge = this.api.container.querySelector('.live-badge');
+                if (liveBadge) {
+                    liveBadge.remove();
+                }
+            }
+
+            // Reset live stream tracking
             this.isLiveStream = false;
+            this.isAtLiveEdge = false;
 
         }
     }

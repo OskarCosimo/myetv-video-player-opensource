@@ -122,7 +122,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                z-index: 100;
+                z-index: 1;
             `;
 
             this.player.container.appendChild(this.vimeoContainer);
@@ -139,13 +139,13 @@
             // Load available qualities
             this.loadQualities();
 
-            // Sync with native player controls if requested
-            if (this.options.syncControls) {
-                this.syncWithNativeControls();
-            }
+            // Override native methods FIRST
+            this.overrideNativeMethods();
+
+            // sync with native controls
+            this.syncWithNativeControls();
 
             this.isVimeoLoaded = true;
-
             if (this.options.debug) {
                 console.log('🎬 Vimeo player created');
             }
@@ -403,23 +403,229 @@
         }
 
         /**
+ * Override native video element methods to control Vimeo player
+ */
+        overrideNativeMethods() {
+            if (!this.player.video) return;
+
+            const video = this.player.video;
+            const vimeoPlayer = this.vimeoPlayer;
+
+            // Override play method
+            const originalPlay = video.play.bind(video);
+            video.play = () => {
+                vimeoPlayer.play().catch(err => console.error('Play error:', err));
+                return Promise.resolve();
+            };
+
+            // Override pause method
+            const originalPause = video.pause.bind(video);
+            video.pause = () => {
+                vimeoPlayer.pause().catch(err => console.error('Pause error:', err));
+            };
+
+            // Override currentTime setter/getter
+            Object.defineProperty(video, 'currentTime', {
+                get: function () {
+                    // Return cached value immediately
+                    return video._cachedCurrentTime || 0;
+                },
+                set: function (time) {
+                    vimeoPlayer.setCurrentTime(time).catch(err => console.error('Seek error:', err));
+                }
+            });
+
+            // Override volume setter/getter
+            Object.defineProperty(video, 'volume', {
+                get: function () {
+                    return video._cachedVolume || 1;
+                },
+                set: function (volume) {
+                    vimeoPlayer.setVolume(volume).catch(err => console.error('Volume error:', err));
+                }
+            });
+
+            // Override muted setter/getter
+            Object.defineProperty(video, 'muted', {
+                get: function () {
+                    return video._cachedMuted || false;
+                },
+                set: function (muted) {
+                    vimeoPlayer.setMuted(muted).catch(err => console.error('Mute error:', err));
+                }
+            });
+
+            // Override playbackRate setter/getter
+            Object.defineProperty(video, 'playbackRate', {
+                get: function () {
+                    return video._cachedPlaybackRate || 1;
+                },
+                set: function (rate) {
+                    vimeoPlayer.setPlaybackRate(rate).catch(err => console.error('Speed error:', err));
+                }
+            });
+
+            // Override duration getter
+            Object.defineProperty(video, 'duration', {
+                get: function () {
+                    return video._cachedDuration || 0;
+                }
+            });
+
+            // Override paused getter
+            Object.defineProperty(video, 'paused', {
+                get: function () {
+                    return video._cachedPaused !== false;
+                }
+            });
+
+            if (this.options.debug) {
+                console.log('🎬 Vimeo: Native methods overridden');
+            }
+        }
+
+        /**
          * Sync with native player controls
          */
         syncWithNativeControls() {
-            // This would integrate with your custom player controls
-            // Example: sync play/pause buttons
-            const playButton = this.player.container.querySelector('.play-button');
-            if (playButton) {
-                playButton.addEventListener('click', () => {
-                    this.vimeoPlayer.getPaused().then(paused => {
-                        if (paused) {
-                            this.vimeoPlayer.play();
-                        } else {
-                            this.vimeoPlayer.pause();
-                        }
-                    });
-                });
+            if (!this.player.video) return;
+
+            const video = this.player.video;
+
+            // Update cached properties from Vimeo events
+            this.vimeoPlayer.on('timeupdate', (data) => {
+                video._cachedCurrentTime = data.seconds;
+                video._cachedDuration = data.duration;
+
+                // Dispatch native timeupdate event
+                const event = new Event('timeupdate');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('play', () => {
+                video._cachedPaused = false;
+
+                // Hide loading spinner
+                if (this.player.elements && this.player.elements.loading) {
+                    this.player.elements.loading.style.display = 'none';
+                }
+
+                // Dispatch native play event
+                const event = new Event('play');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('playing', () => {
+                video._cachedPaused = false;
+
+                // Hide loading spinner
+                if (this.player.elements && this.player.elements.loading) {
+                    this.player.elements.loading.style.display = 'none';
+                }
+
+                // Dispatch native playing event
+                const event = new Event('playing');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('pause', () => {
+                video._cachedPaused = true;
+
+                // Dispatch native pause event
+                const event = new Event('pause');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('volumechange', (data) => {
+                video._cachedVolume = data.volume;
+
+                // Dispatch native volumechange event
+                const event = new Event('volumechange');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('playbackratechange', (data) => {
+                video._cachedPlaybackRate = data.playbackRate;
+
+                // Dispatch native ratechange event
+                const event = new Event('ratechange');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('loaded', (data) => {
+                video._cachedDuration = data.duration;
+
+                // Hide loading spinner
+                if (this.player.elements && this.player.elements.loading) {
+                    this.player.elements.loading.style.display = 'none';
+                }
+
+                // Dispatch native loadedmetadata event
+                const event = new Event('loadedmetadata');
+                video.dispatchEvent(event);
+            });
+
+            this.vimeoPlayer.on('ended', () => {
+                video._cachedPaused = true;
+
+                // Dispatch native ended event
+                const event = new Event('ended');
+                video.dispatchEvent(event);
+            });
+
+            // Get initial values
+            this.vimeoPlayer.getDuration().then(duration => {
+                video._cachedDuration = duration;
+            });
+
+            this.vimeoPlayer.getVolume().then(volume => {
+                video._cachedVolume = volume;
+            });
+
+            this.vimeoPlayer.getPlaybackRate().then(rate => {
+                video._cachedPlaybackRate = rate;
+            });
+
+            this.vimeoPlayer.getPaused().then(paused => {
+                video._cachedPaused = paused;
+            });
+
+            if (this.options.debug) {
+                console.log('🎬 Vimeo: Synced with native controls');
             }
+        }
+
+        /**
+         * Format time in MM:SS or HH:MM:SS
+         */
+        formatTime(seconds) {
+            if (isNaN(seconds)) return '00:00';
+
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+
+            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        /**
+ * Request Picture-in-Picture
+ */
+        requestPictureInPicture() {
+            if (!this.vimeoPlayer) return Promise.reject('Player not initialized');
+            return this.vimeoPlayer.requestPictureInPicture();
+        }
+
+        /**
+         * Exit Picture-in-Picture
+         */
+        exitPictureInPicture() {
+            if (!this.vimeoPlayer) return Promise.reject('Player not initialized');
+            return this.vimeoPlayer.exitPictureInPicture();
         }
 
         /**

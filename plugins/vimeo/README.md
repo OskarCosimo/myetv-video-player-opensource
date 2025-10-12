@@ -137,7 +137,7 @@ const player = new MYETVPlayer('myVideo', {
             // ========== Plugin Options ==========
             debug: false,               // Enable debug logging
             replaceNativePlayer: true,  // Replace native video element
-            syncControls: false         // Sync with custom controls
+            syncControls: true         // Sync with custom controls
         }
     }
 });

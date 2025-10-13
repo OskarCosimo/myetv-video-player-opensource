@@ -43,6 +43,8 @@
             this.volumeSliderListener = null; // Track volume slider listener
             this.progressTooltipListener = null; // Track progress tooltip listener
             this.currentDuration = 0; // Store current video duration for tooltips
+            this.styleObserver = null;
+            this.isFullscreen = false;
 
             // Get plugin API
             this.api = player.getPluginAPI ? player.getPluginAPI() : {
@@ -293,9 +295,9 @@
             });
         }
 
-        /**
-         * Load Facebook video
-         */
+       /**
+       * Load Facebook video
+       */
         loadVideo(videoInput, options = {}) {
             if (!videoInput) {
                 if (this.api.player.options.debug) {
@@ -334,7 +336,8 @@
                 this.fbContainer = document.createElement('div');
                 this.fbContainer.id = 'fb-player-' + Date.now();
                 this.fbContainer.className = 'fb-player-container';
-                this.fbContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;';
+
+                this.fbContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;overflow:hidden;display:flex;align-items:center;justify-content:center;';
 
                 // Ensure controls are above Facebook player
                 if (this.api.controls) {
@@ -354,22 +357,18 @@
             // Clear container
             this.fbContainer.innerHTML = '';
 
-            // Calculate pixel dimensions
-            const containerWidth = this.fbContainer.clientWidth || this.api.container.clientWidth;
-            const containerHeight = this.fbContainer.clientHeight || this.api.container.clientHeight;
-
             if (this.api.player.options.debug) {
-                console.log('FB Plugin: Using dimensions:', containerWidth, '×', containerHeight);
+                console.log('FB Plugin: Using dimensions: 100%');
             }
 
-            // Create Facebook video element with PIXEL dimensions
+            // Create Facebook video element
             const fbVideo = document.createElement('div');
             fbVideo.className = 'fb-video';
-            fbVideo.style.cssText = `position:absolute;top:0;left:0;width:${containerWidth}px;height:${containerHeight}px;`;
+            fbVideo.style.cssText = `position:absolute;top:0;left:0;width:100%!important;height:100%!important;`;
 
             fbVideo.setAttribute('data-href', this.options.videoUrl);
-            fbVideo.setAttribute('data-width', containerWidth);
-            fbVideo.setAttribute('data-height', containerHeight);
+            fbVideo.setAttribute('data-width', 'auto');
+            fbVideo.setAttribute('data-height', 'auto');
             fbVideo.setAttribute('data-allowfullscreen', this.options.allowFullscreen);
 
             // CRITICAL: Always set autoplay=false on embed, we'll handle autoplay via API
@@ -378,35 +377,33 @@
             fbVideo.setAttribute('data-show-text', this.options.showText);
             fbVideo.setAttribute('data-show-captions', this.options.showCaptions);
 
+            fbVideo.setAttribute('data-controls', this.options.replaceNativePlayer);
+
             this.fbContainer.appendChild(fbVideo);
 
             // Parse XFBML
             if (window.FB && window.FB.XFBML) {
                 FB.XFBML.parse(this.fbContainer);
 
-                // Force styling after parse
+                // Force styling usando la nuova funzione
+                const forceStyles = () => this.forceVideoStyles();
+
+                setTimeout(forceStyles, 500);
+                setTimeout(forceStyles, 1500);
+
+                // Setup MutationObserver
                 setTimeout(() => {
-                    if (this.api.player.options.debug) {
-                        console.log('FB Plugin: Applying final styling...');
-                    }
+                    const span = this.fbContainer?.querySelector('span');
+                    const iframe = this.fbContainer?.querySelector('iframe');
 
-                    FB.XFBML.parse();
+                    const observer = new MutationObserver(forceStyles);
 
-                    const span = this.fbContainer.querySelector('span');
-                    const iframe = this.fbContainer.querySelector('iframe');
+                    if (span) observer.observe(span, { attributes: true, attributeFilter: ['style'] });
+                    if (iframe) observer.observe(iframe, { attributes: true, attributeFilter: ['style'] });
 
-                    if (span) {
-                        span.style.cssText = `position:absolute;top:0;left:0;width:${containerWidth}px;height:${containerHeight}px;display:block;`;
-                    }
+                    this.styleObserver = observer;
+                }, 2000);
 
-                    if (iframe) {
-                        iframe.style.cssText = `position:absolute;top:0;left:0;width:${containerWidth}px;height:${containerHeight}px;border:none;visibility:visible;`;
-                    }
-
-                    if (this.api.player.options.debug) {
-                        console.log('FB Plugin: Styling applied to span:', !!span, 'iframe:', !!iframe);
-                    }
-                }, 1000);
             }
 
             if (this.api.player.options.debug) {
@@ -447,6 +444,9 @@
 
             // Setup speed and PiP controls
             this.setupSpeedAndPip();
+
+            // Setup fullscreen listener
+            this.setupFullscreenListener();
 
             if (this.fbPlayer && this.fbPlayer.getVolume) {
                 try {
@@ -538,6 +538,104 @@
                 pipButton.style.display = 'none';
                 if (this.api.player.options.debug) {
                     console.log('FB Plugin: PiP button hidden (not supported by Facebook iframe)');
+                }
+            }
+        }
+
+        /**
+ * Setup fullscreen event listener
+ */
+        setupFullscreenListener() {
+            const fullscreenChangeHandler = () => {
+                const isNowFullscreen = !!(
+                    document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    document.mozFullScreenElement ||
+                    document.msFullscreenElement
+                );
+
+                this.isFullscreen = isNowFullscreen;
+
+                if (this.api.player.options.debug) {
+                    console.log('FB Plugin: Fullscreen changed:', isNowFullscreen);
+                }
+
+                // Forza stili dopo cambio fullscreen
+                setTimeout(() => {
+                    this.forceVideoStyles();
+                }, 100);
+            };
+
+            document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+            document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+            document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+            document.addEventListener('MSFullscreenChange', fullscreenChangeHandler);
+
+            // Salva per cleanup
+            this.fullscreenChangeHandler = fullscreenChangeHandler;
+        }
+
+        /**
+         * Force video styles (estratto per riuso)
+         */
+        forceVideoStyles() {
+            const span = this.fbContainer?.querySelector('span');
+            const iframe = this.fbContainer?.querySelector('iframe');
+
+            if (span) {
+                span.style.setProperty('position', 'absolute', 'important');
+                span.style.setProperty('top', '0', 'important');
+                span.style.setProperty('left', '0', 'important');
+                span.style.setProperty('width', '100%', 'important');
+                span.style.setProperty('height', '100%', 'important');
+                span.style.setProperty('display', 'flex', 'important');
+                span.style.setProperty('align-items', 'center', 'important');
+                span.style.setProperty('justify-content', 'center', 'important');
+            }
+
+            if (iframe) {
+                // IN FULLSCREEN: usa tutto lo schermo
+                if (this.isFullscreen) {
+                    iframe.style.setProperty('position', 'absolute', 'important');
+                    iframe.style.setProperty('top', '0', 'important');
+                    iframe.style.setProperty('left', '0', 'important');
+                    iframe.style.setProperty('width', '100%', 'important');
+                    iframe.style.setProperty('height', '100%', 'important');
+                    iframe.style.setProperty('transform', 'none', 'important');
+                    iframe.style.setProperty('border', 'none', 'important');
+
+                    if (this.api.player.options.debug) {
+                        console.log('FB Plugin: Fullscreen mode - 100% dimensions');
+                    }
+                } else {
+                    // NORMALE: mantieni aspect ratio 16:9
+                    const container = this.api.container;
+                    const containerWidth = container.clientWidth;
+                    const containerHeight = container.clientHeight;
+                    const containerRatio = containerWidth / containerHeight;
+                    const videoRatio = 16 / 9;
+
+                    let iframeWidth, iframeHeight;
+
+                    if (containerRatio > videoRatio) {
+                        iframeHeight = containerHeight;
+                        iframeWidth = iframeHeight * videoRatio;
+                    } else {
+                        iframeWidth = containerWidth;
+                        iframeHeight = iframeWidth / videoRatio;
+                    }
+
+                    iframe.style.setProperty('position', 'absolute', 'important');
+                    iframe.style.setProperty('top', '50%', 'important');
+                    iframe.style.setProperty('left', '50%', 'important');
+                    iframe.style.setProperty('width', iframeWidth + 'px', 'important');
+                    iframe.style.setProperty('height', iframeHeight + 'px', 'important');
+                    iframe.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
+                    iframe.style.setProperty('border', 'none', 'important');
+
+                    if (this.api.player.options.debug) {
+                        console.log('FB Plugin: Normal mode - aspect ratio maintained');
+                    }
                 }
             }
         }
@@ -794,7 +892,7 @@
             // Create tooltip element
             tooltip = document.createElement('div');
             tooltip.className = 'progress-tooltip';
-            tooltip.textContent = '0:00';
+            tooltip.textContent = '';
             tooltip.style.cssText = `
         position: absolute;
         bottom: 100%;
@@ -843,6 +941,26 @@
          * CRITICAL: Don't prevent API calls, just let them fail gracefully if browser blocks them
          */
         syncControls() {
+            // Hide/show MYETV controls based on replaceNativePlayer option
+            if (!this.options.replaceNativePlayer) {
+                // Hide MYETV control bar, show only Facebook native controls
+                if (this.api.controls) {
+                    this.api.controls.style.display = 'none';
+                    if (this.api.player.options.debug) {
+                        console.log('FB Plugin: MYETV controls hidden (replaceNativePlayer is false)');
+                    }
+                }
+                return; // Don't sync controls, use Facebook's native controls
+            } else {
+                // Show MYETV control bar, hide Facebook native controls (not possible, they'll coexist)
+                if (this.api.controls) {
+                    this.api.controls.style.display = '';
+                    if (this.api.player.options.debug) {
+                        console.log('FB Plugin: MYETV controls visible (replaceNativePlayer is true)');
+                    }
+                }
+            }
+
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Syncing controls');
             }
@@ -1109,6 +1227,7 @@
                     this.originalMethods.toggleMute();
                 }
             };
+
         }
 
         /**
@@ -1353,6 +1472,11 @@
                 this.timeUpdateInterval = null;
             }
 
+            if (this.styleObserver) {
+                this.styleObserver.disconnect();
+                this.styleObserver = null;
+            }
+
             if (this.fbPlayer) {
                 this.fbPlayer = null;
             }
@@ -1360,6 +1484,15 @@
             if (this.fbContainer) {
                 this.fbContainer.remove();
                 this.fbContainer = null;
+            }
+
+            // Dopo il cleanup di styleObserver
+            if (this.fullscreenChangeHandler) {
+                document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+                document.removeEventListener('webkitfullscreenchange', this.fullscreenChangeHandler);
+                document.removeEventListener('mozfullscreenchange', this.fullscreenChangeHandler);
+                document.removeEventListener('MSFullscreenChange', this.fullscreenChangeHandler);
+                this.fullscreenChangeHandler = null;
             }
 
             this.removeMouseMoveOverlay();
@@ -1393,7 +1526,13 @@
                 this.api.video.style.pointerEvents = '';
             }
 
+            // Restore MYETV controls visibility
+            if (this.api.controls) {
+                this.api.controls.style.display = '';
+            }
+
             // Reset interaction flags
+            this.userHasInteracted = false;
             this.userHasInteracted = false;
             this.waitingForUserClick = false;
             this.autoplayAttempted = false;

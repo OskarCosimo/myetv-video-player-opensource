@@ -46,6 +46,7 @@
             this.styleObserver = null;
             this.isFullscreen = false;
 
+
             // Get plugin API
             this.api = player.getPluginAPI ? player.getPluginAPI() : {
                 player: player,
@@ -345,6 +346,16 @@
                     this.api.controls.style.pointerEvents = 'auto';
                 }
 
+                // Ensure title overlay is above Facebook player
+                const titleOverlay = this.api.container.querySelector('.title-overlay');
+                if (titleOverlay) {
+                    titleOverlay.style.zIndex = '15';
+                    titleOverlay.style.pointerEvents = 'none'; // Allow clicks to pass through
+                    if (this.api.player.options.debug) {
+                        console.log('FB Plugin: Title overlay z-index set to 15');
+                    }
+                }
+
                 this.api.container.insertBefore(this.fbContainer, this.api.controls);
             } else {
                 this.fbContainer.style.visibility = 'visible';
@@ -433,6 +444,18 @@
             this.hidePosterOverlay();
             this.removeAllPlayerOverlays();
 
+            // Ensure title overlay is visible and above Facebook player
+            const titleOverlay = this.api.container.querySelector('.title-overlay');
+            if (titleOverlay) {
+                titleOverlay.style.zIndex = '15';
+                titleOverlay.style.pointerEvents = 'none'; // Allow clicks to pass through
+                titleOverlay.style.display = ''; // Remove any display:none
+                titleOverlay.style.visibility = ''; // Remove any visibility:hidden
+                if (this.api.player.options.debug) {
+                    console.log('FB Plugin: Title overlay visibility restored');
+                }
+            }
+
             // Setup event listeners
             this.setupEventListeners();
 
@@ -448,17 +471,23 @@
             // Setup fullscreen listener
             this.setupFullscreenListener();
 
+            // Get initial volume once
             if (this.fbPlayer && this.fbPlayer.getVolume) {
-                try {
-                    const vol = this.fbPlayer.getVolume() || 1;
+                this.fbPlayer.getVolume().then(vol => {
                     const percent = Math.round(vol * 100);
                     this.updateVolumeUI(percent);
-                    this.updateMuteUI(vol === 0);
-                } catch (error) {
+
+                    // Also check initial mute state
+                    if (this.fbPlayer.isMuted) {
+                        this.fbPlayer.isMuted().then(isMuted => {
+                            this.updateMuteUI(isMuted);
+                        }).catch(() => { });
+                    }
+                }).catch(error => {
                     if (this.api.player.options.debug) {
                         console.warn('FB Plugin: Could not get initial volume', error);
                     }
-                }
+                });
             }
 
             // CRITICAL: If autoplay was requested, try it ONCE via API
@@ -787,10 +816,6 @@
             }
         }
 
-        /**
-         * Start time update interval
-         * CRITICAL: getCurrentPosition and getDuration are PROPERTIES, not methods!
-         */
         startTimeUpdate() {
             if (this.timeUpdateInterval) {
                 clearInterval(this.timeUpdateInterval);
@@ -799,7 +824,7 @@
             this.timeUpdateInterval = setInterval(() => {
                 if (this.fbPlayer && this.fbPlayer.getCurrentPosition !== undefined && this.fbPlayer.getDuration !== undefined) {
                     try {
-                        // CRITICAL FIX: These are properties, not methods - no ()
+                        // CRITICAL FIX: These are properties, not methods
                         const currentTime = this.fbPlayer.getCurrentPosition();
                         const duration = this.fbPlayer.getDuration();
 
@@ -830,6 +855,10 @@
                             // CRITICAL: Update progress bar tooltip with current duration
                             this.updateProgressTooltip(duration);
                         }
+
+                        // REMOVED: Volume monitoring - Facebook API doesn't have volume events
+                        // Volume is only updated via setupVolumeSlider() when user changes it
+
                     } catch (error) {
                         // Ignore timing errors
                     }
@@ -1244,11 +1273,15 @@
 
             // Remove existing listeners if any
             if (this.volumeSliderListener) {
-                volumeSlider.removeEventListener('input', this.volumeSliderListener);
+                volumeSlider.removeEventListener('input', this.volumeSliderListener, true);
             }
 
             // Create new listener
             this.volumeSliderListener = (e) => {
+                // CRITICAL: Stop propagation to prevent main player from handling this
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
                 const volume = parseFloat(e.target.value);
 
                 if (this.api.player.options.debug) {
@@ -1259,7 +1292,19 @@
 
                 if (this.fbPlayer && this.fbPlayer.setVolume) {
                     try {
+                        // Set volume on Facebook player (0-1 range)
                         this.fbPlayer.setVolume(volume / 100);
+
+                        // CRITICAL FIX: Update UI immediately
+                        const fill = this.api.container.querySelector('.volume-filled');
+                        if (fill) {
+                            fill.style.width = volume + '%';
+                        }
+
+                        // Update CSS custom property
+                        if (this.api.container) {
+                            this.api.container.style.setProperty('--player-volume-fill', volume + '%');
+                        }
 
                         // Auto-unmute when user changes volume
                         if (volume > 0) {
@@ -1271,19 +1316,23 @@
                             }).catch(() => { });
                         }
 
-                        this.updateVolumeUI(volume);
+                        if (this.api.player.options.debug) {
+                            console.log('FB Plugin: Volume set to', volume, '%, Facebook volume:', (volume / 100));
+                        }
+
                     } catch (error) {
                         if (this.api.player.options.debug) {
-                            console.error('FB Plugin: Volume slider error:', error);
+                            console.error('FB Plugin: Volume slider error', error);
                         }
                     }
                 }
             };
 
-            volumeSlider.addEventListener('input', this.volumeSliderListener);
+            // CRITICAL: Use capture phase to intercept BEFORE main player
+            volumeSlider.addEventListener('input', this.volumeSliderListener, true);
 
             if (this.api.player.options.debug) {
-                console.log('FB Plugin: Volume slider listener attached');
+                console.log('FB Plugin: Volume slider listener attached with capture=true');
             }
         }
 
@@ -1293,13 +1342,17 @@
         updateVolumeUI(volume) {
             // Slider
             const volumeSlider = this.api.container.querySelector('.volume-slider');
-            if (volumeSlider) volumeSlider.value = volume;
+            if (volumeSlider && volumeSlider.value != volume) {
+                volumeSlider.value = volume;
+            }
 
             // Progress bar fill
             const fill = this.api.container.querySelector('.volume-filled');
-            if (fill) fill.style.width = volume + '%';
+            if (fill) {
+                fill.style.width = volume + '%';
+            }
 
-            // Update volume visual
+            // Update volume visual (main player method)
             if (this.api.player.updateVolumeSliderVisual) {
                 this.api.player.updateVolumeSliderVisual();
             }
@@ -1312,6 +1365,11 @@
             // Update tooltip
             if (this.api.player.updateVolumeTooltip) {
                 this.api.player.updateVolumeTooltip();
+            }
+
+            // CRITICAL FIX: Also update tooltip position
+            if (this.api.player.updateVolumeTooltipPosition) {
+                this.api.player.updateVolumeTooltipPosition(volume / 100);
             }
         }
 
@@ -1358,8 +1416,9 @@
         }
 
         /**
-         * CRITICAL: Remove ALL player overlays to expose Facebook player completely
-         */
+ * CRITICAL: Remove ALL player overlays to expose Facebook player completely
+ * EXCEPT the title overlay which should remain visible
+ */
         removeAllPlayerOverlays() {
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Removing all player overlays to expose Facebook player');
@@ -1399,11 +1458,12 @@
                 bigPlayButton.style.pointerEvents = 'none';
             }
 
-            // Remove any custom overlays
+            // Remove any custom overlays EXCEPT title overlay
             const customOverlays = this.api.container.querySelectorAll('[class*="overlay"]');
             customOverlays.forEach(overlay => {
-                // Don't remove mouse move overlay or loading overlay we control
-                if (!overlay.classList.contains('fb-mousemove-overlay')) {
+                // Don't remove mouse move overlay, loading overlay we control, or title overlay
+                if (!overlay.classList.contains('fb-mousemove-overlay') &&
+                    !overlay.classList.contains('title-overlay')) {
                     if (this.api.player.options.debug) {
                         console.log('FB Plugin: Hiding overlay:', overlay.className);
                     }
@@ -1416,7 +1476,7 @@
         }
 
         /**
-         * Hide overlays
+         * Hide poster overlays
          */
         hidePosterOverlay() {
             const posterOverlay = this.api.container.querySelector('.video-poster-overlay');

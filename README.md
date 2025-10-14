@@ -780,7 +780,7 @@ language: 'en', // Set to English
 // other options...
 });
 ```
-### 🔄 Changing Language Dynamically
+### Changing Language Dynamically
 
 You can change the player language at any time using the `setLanguage()` method:
 ```
@@ -792,7 +792,7 @@ player.setLanguage('fr');
 ```
 The method returns `true` if the language was successfully changed, `false` if the specified language is not available.
 
-### 📋 Getting Language Information
+### Getting Language Information
 
 The player provides several methods to retrieve language information:
 

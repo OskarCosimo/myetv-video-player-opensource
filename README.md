@@ -15,7 +15,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - [Api Events](#api-events)
 - [Keyboard Controls](#keyboard-controls)
 - [CSS Customization](#css-customization)
-- [Browser Compatibility](#browser-compatibility)
+- [Multi-Language i18n](#internationalization-i18n)
 - [Plugins Feature](#plugins-feature)
 - [Chapters Feature](#chapters-feature)
 - [Playlist Feature](#playlist-feature)

@@ -23,10 +23,12 @@ Official Cloudflare Stream integration plugin for MYETV Video Player. Embed vide
 ## Features
 
 - **Cloudflare Stream Integration**: Full support for Cloudflare Stream videos
+- **DASH/HLS** adaptive streaming ready with full support and libraries hosted on cdnjs.com
 - **Private Videos**: Support for signed URLs and private video access
 - **Live Streaming**: Real-time live stream playback
 - **Player Customization**: Custom colors, poster images, and branding
 - **Auto-Detection**: Automatically detects Cloudflare Stream URLs
+- **Auto-Quality**: Automatically detect video quality (also for hls/dash)
 - **Complete API**: Full control over playback, volume, seeking
 - **Analytics Ready**: Works with Cloudflare Analytics
 - **Ad Support**: VAST ad tag integration

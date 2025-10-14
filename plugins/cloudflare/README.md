@@ -122,6 +122,7 @@ const player = new MYETVPlayer('myVideo', {
             preload: 'metadata',       // 'none', 'metadata', 'auto'
             controls: true,            // Show player controls
             startTime: 0,              // Start position in seconds
+            defaultQuality: 'auto'     // the default quality of the video (auto, 720p, 480p, 360p ecc.)
 
             // ========== Player Customization ==========
             poster: 'https://example.com/poster.jpg',  // Custom poster image

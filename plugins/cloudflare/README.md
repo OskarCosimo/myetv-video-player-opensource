@@ -272,15 +272,34 @@ plugins: {
     });
 </script>
 ```
+**Supported URL Formats:**
+- `https://iframe.videodelivery.net/VIDEO_ID` (iframe)
+- `https://customer-[code].cloudflarestream.com/VIDEO_ID/iframe` (iframe)
+- `https://videodelivery.net/VIDEO_ID`
+
+### Method 4: HLS / DASH Adaptive Streaming
+
+```html
+<video id="myVideo" class="video-player"></video>
+
+<script>
+    const player = new MYETVPlayer('myVideo', {
+        plugins: {
+            cloudflare: {
+                manifestUrl: 'https://customer-[code].cloudflarestream.com/VIDEO_ID/manifest/video.m3u8'
+            }
+        }
+    });
+</script>
+```
 
 **Supported URL Formats:**
-- `https://iframe.videodelivery.net/VIDEO_ID`
-- `https://customer-CODE.cloudflarestream.com/VIDEO_ID/iframe`
-- `https://videodelivery.net/VIDEO_ID`
+- `https://customer-[code].cloudflarestream.com/VIDEO_ID/manifest/video.m3u8` (hls)
+- `https://customer-[code].cloudflarestream.com/VIDEO_ID/manifest/video.mpd` (dash)
 
 ---
 
-### Method 4: Load Dynamically
+### Method 5: Load Dynamically
 
 ```html
 <video id="myVideo" class="video-player"></video>

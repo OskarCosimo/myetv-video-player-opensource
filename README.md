@@ -746,6 +746,79 @@ Minimal DOM manipulation thanks to CSS-based theming
 
 Hardware-accelerated transitions for smooth playback
 
+## Internationalization (i18n)
+
+The MYETV player includes a comprehensive internationalization system that allows the user interface to be displayed in multiple languages. The system automatically translates all controls, buttons, tooltips, and player messages into the selected language.
+
+### Automatic Language Detection
+
+If no language is specified in the initialization options, the player **automatically detects the language from the user's browser** using `navigator.language`. The system extracts the language code (e.g., `en` from `en-US`) and if a translation is available, applies it automatically. Otherwise, it defaults to English.
+
+### Available Languages
+
+The player currently supports the following languages:
+
+| Code | Language | Native Name |
+|------|----------|-------------|
+| `it` | Italian | Italiano |
+| `en` | English | English |
+| `es` | Spanish | Español |
+| `fr` | French | Français |
+| `de` | German | Deutsch |
+| `pt` | Portuguese | Português |
+| `zh` | Chinese | 中文 |
+| `ja` | Japanese | 日本語 |
+| `ru` | Russian | Русский |
+| `ar` | Arabic | العربية |
+
+### Setting Language at Initialization
+
+To specify a language during player initialization, use the `language` option:
+```
+const player = new VideoPlayer('myVideo', {
+language: 'en', // Set to English
+// other options...
+});
+```
+### 🔄 Changing Language Dynamically
+
+You can change the player language at any time using the `setLanguage()` method:
+```
+// Change language to Spanish
+player.setLanguage('es');
+
+// Change language to French
+player.setLanguage('fr');
+```
+The method returns `true` if the language was successfully changed, `false` if the specified language is not available.
+
+### 📋 Getting Language Information
+
+The player provides several methods to retrieve language information:
+
+#### Get current language:
+```
+const currentLang = player.getCurrentLanguage();
+console.log(currentLang); // e.g., 'en'
+```
+#### Get list of supported languages:
+```
+const languages = player.getSupportedLanguages();
+console.log(languages); // ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ru', 'ar']
+```
+### Translated Elements
+
+The i18n system automatically translates the following interface elements:
+
+- Control buttons (play/pause, mute, fullscreen, etc.)
+- Settings menus
+- Video quality options
+- Subtitle controls
+- Playback speed controls
+- Playlist controls
+- Tooltips and help messages
+- Brand logo
+
 ## Plugins feature
 The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
 

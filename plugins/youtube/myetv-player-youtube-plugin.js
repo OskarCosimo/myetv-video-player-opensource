@@ -14,7 +14,7 @@
                 autoplay: options.autoplay !== undefined ? options.autoplay : false,
                 showYouTubeUI: options.showYouTubeUI !== undefined ? options.showYouTubeUI : false,
                 autoLoadFromData: options.autoLoadFromData !== undefined ? options.autoLoadFromData : true,
-                quality: options.quality || 'default',
+                quality: options.quality || 'auto',
                 enableQualityControl: options.enableQualityControl !== undefined ? options.enableQualityControl : true,
                 enableCaptions: options.enableCaptions !== undefined ? options.enableCaptions : true,
 
@@ -23,6 +23,9 @@
 
                 // Auto caption language option
                 autoCaptionLanguage: options.autoCaptionLanguage || null, // e.g., 'it', 'en', 'es', 'de', 'fr'
+
+                // Enable or disable click over youtube player
+                mouseClick: options.mouseClick !== undefined ? options.mouseClick : false,
 
                 debug: true,
                 ...options
@@ -154,6 +157,14 @@
          * Update main player watermark options with channel data
          */
         async updatePlayerWatermark() {
+            // Don't create watermark when YouTube native UI is active
+            if (this.options.showYouTubeUI) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Skipping watermark - YouTube UI active');
+                }
+                return;
+            }
+
             if (!this.options.enableChannelWatermark || !this.videoId) {
                 return;
             }
@@ -673,6 +684,7 @@ width: fit-content;
                 cc_lang_pref: this.options.autoCaptionLanguage || 'en',
                 hl: this.options.autoCaptionLanguage || 'en',
                 iv_load_policy: 3,
+                showinfo: 0,
                 ...options.playerVars
             };
 
@@ -707,60 +719,204 @@ width: fit-content;
         createMouseMoveOverlay() {
             if (this.mouseMoveOverlay) return;
 
+            // Do NOT create overlay if YouTube native UI is enabled (ToS compliant)
+            if (this.options.showYouTubeUI) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Skipping overlay - YouTube native UI enabled (ToS compliant)');
+                }
+
+                // Enable clicks on YouTube player
+                if (this.options.mouseClick !== false) {
+                    this.enableYouTubeClicks();
+                }
+
+                // Setup mouse detection for custom controls visibility
+                this.setupMouseMoveDetection();
+                return;
+            }
+
             this.mouseMoveOverlay = document.createElement('div');
             this.mouseMoveOverlay.className = 'yt-mousemove-overlay';
-            this.mouseMoveOverlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:2;background:transparent;pointer-events:auto;cursor:default;';
+
+            // Apply pointer-events based on mouseClick option
+            const pointerEvents = this.options.mouseClick ? 'none' : 'auto';
+
+            this.mouseMoveOverlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        background: transparent;
+        pointer-events: ${pointerEvents};
+        cursor: default;
+    `;
 
             this.api.container.insertBefore(this.mouseMoveOverlay, this.api.controls);
 
-            // Pass mousemove to core player WITHOUT constantly resetting timer
-            this.mouseMoveOverlay.addEventListener('mousemove', (e) => {
-                // Let the core handle mousemove - it has its own autoHide logic
+            // Setup mouse detection
+            this.setupMouseMoveDetection();
+
+            // Only add event listeners if mouseClick is disabled
+            if (!this.options.mouseClick) {
+                this.mouseMoveOverlay.addEventListener('mousemove', (e) => {
+                    if (this.api.player.onMouseMove) {
+                        this.api.player.onMouseMove(e);
+                    }
+                });
+
+                this.mouseMoveOverlay.addEventListener('click', (e) => {
+                    const doubleTap = this.api.player.options.doubleTapPause;
+                    const pauseClick = this.api.player.options.pauseClick;
+
+                    if (doubleTap) {
+                        let controlsHidden = false;
+                        if (this.api.controls) {
+                            controlsHidden = this.api.controls.classList.contains('hide');
+                        }
+
+                        if (!controlsHidden) {
+                            const controls = this.player.container.querySelector('.controls');
+                            if (controls) {
+                                controlsHidden = controls.classList.contains('hide');
+                            }
+                        }
+
+                        if (!controlsHidden && this.api.controls) {
+                            const style = window.getComputedStyle(this.api.controls);
+                            controlsHidden = style.opacity === '0' || style.visibility === 'hidden';
+                        }
+
+                        if (controlsHidden) {
+                            if (this.api.player.showControlsNow) {
+                                this.api.player.showControlsNow();
+                            }
+                            if (this.api.player.resetAutoHideTimer) {
+                                this.api.player.resetAutoHideTimer();
+                            }
+                            return;
+                        }
+
+                        this.togglePlayPauseYT();
+                    } else if (pauseClick) {
+                        this.togglePlayPauseYT();
+                    }
+                });
+            }
+        }
+
+        // monitor mouse movement over container
+        setupMouseMoveDetection() {
+            // track last mouse position
+            this.lastMouseX = null;
+            this.lastMouseY = null;
+            this.mouseCheckInterval = null;
+
+            // Listener on container
+            this.api.container.addEventListener('mouseenter', () => {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Mouse entered player container');
+                }
+
+                //  show controls immediately
+                if (this.api.player.showControlsNow) {
+                    this.api.player.showControlsNow();
+                }
+                if (this.api.player.resetAutoHideTimer) {
+                    this.api.player.resetAutoHideTimer();
+                }
+
+                // start monitoring
+                this.startMousePositionTracking();
+            });
+
+            this.api.container.addEventListener('mouseleave', () => {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Mouse left player container');
+                }
+
+                // stop monitoring
+                this.stopMousePositionTracking();
+            });
+
+            // capture mouse move on container
+            this.api.container.addEventListener('mousemove', (e) => {
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+
                 if (this.api.player.onMouseMove) {
                     this.api.player.onMouseMove(e);
                 }
-            });
 
-            this.mouseMoveOverlay.addEventListener('click', (e) => {
-                const doubleTap = this.api.player.options.doubleTapPause;
-                const pauseClick = this.api.player.options.pauseClick;
-
-                if (doubleTap) {
-                    let controlsHidden = false;
-
-                    if (this.api.controls) {
-                        controlsHidden = this.api.controls.classList.contains('hide');
-                    }
-
-                    if (!controlsHidden) {
-                        const controls = this.player.container.querySelector('.controls');
-                        if (controls) {
-                            controlsHidden = controls.classList.contains('hide');
-                        }
-                    }
-
-                    if (!controlsHidden && this.api.controls) {
-                        const style = window.getComputedStyle(this.api.controls);
-                        controlsHidden = style.opacity === '0' || style.visibility === 'hidden';
-                    }
-
-                    if (controlsHidden) {
-                        if (this.api.player.showControlsNow) {
-                            this.api.player.showControlsNow();
-                        }
-                        if (this.api.player.resetAutoHideTimer) {
-                            this.api.player.resetAutoHideTimer();
-                        }
-                        return;
-                    }
-
-                    // Controls visible: toggle play/pause
-                    this.togglePlayPauseYT();
-                } else if (pauseClick) {
-                    // Always toggle on click when pauseClick is enabled
-                    this.togglePlayPauseYT();
+                if (this.api.player.resetAutoHideTimer) {
+                    this.api.player.resetAutoHideTimer();
                 }
             });
+        }
+
+        // check mouse position on iframe
+        startMousePositionTracking() {
+            if (this.mouseCheckInterval) return;
+
+            this.mouseCheckInterval = setInterval(() => {
+                // Listener to capture mouse position on iframe
+                const handleGlobalMove = (e) => {
+                    const newX = e.clientX;
+                    const newY = e.clientY;
+
+                    // if mouse is moving
+                    if (this.lastMouseX !== newX || this.lastMouseY !== newY) {
+                        this.lastMouseX = newX;
+                        this.lastMouseY = newY;
+
+                        // verify if mouse is enter the container
+                        const rect = this.api.container.getBoundingClientRect();
+                        const isInside = (
+                            newX >= rect.left &&
+                            newX <= rect.right &&
+                            newY >= rect.top &&
+                            newY <= rect.bottom
+                        );
+
+                        if (isInside) {
+                            if (this.api.player.showControlsNow) {
+                                this.api.player.showControlsNow();
+                            }
+                            if (this.api.player.resetAutoHideTimer) {
+                                this.api.player.resetAutoHideTimer();
+                            }
+                        }
+                    }
+                };
+
+                // Listener temp
+                document.addEventListener('mousemove', handleGlobalMove, { once: true, passive: true });
+            }, 100); // Check ogni 100ms
+        }
+
+        stopMousePositionTracking() {
+            if (this.mouseCheckInterval) {
+                clearInterval(this.mouseCheckInterval);
+                this.mouseCheckInterval = null;
+            }
+        }
+
+
+        // enable or disable clicks over youtube player
+        enableYouTubeClicks() {
+            if (this.ytPlayerContainer) {
+                this.ytPlayerContainer.style.pointerEvents = 'auto';
+
+                const iframe = this.ytPlayerContainer.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.pointerEvents = 'auto';
+                }
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] YouTube clicks enabled - overlay transparent');
+                }
+            }
         }
 
         togglePlayPauseYT() {
@@ -788,6 +944,9 @@ width: fit-content;
                 this.mouseMoveOverlay.remove();
                 this.mouseMoveOverlay = null;
             }
+
+            // stop tracking mouse
+            this.stopMousePositionTracking();
         }
 
         hidePosterOverlay() {
@@ -842,11 +1001,45 @@ width: fit-content;
             document.head.appendChild(forceVisibilityCSS);
             if (this.api.player.options.debug) console.log('[YT Plugin] 🎨 CSS force visibility injected');
 
+            // Enable YouTube clicks if option is set
+            if (this.options.mouseClick) {
+                this.enableYouTubeClicks();
+            }
             this.hideLoadingOverlay();
             this.hideInitialLoading();
             this.injectYouTubeCSSOverride();
 
             this.syncControls();
+
+            // Hide custom controls when YouTube native UI is enabled
+            if (this.options.showYouTubeUI) {
+                // Hide controls
+                if (this.api.controls) {
+                    this.api.controls.style.display = 'none';
+                    this.api.controls.style.opacity = '0';
+                    this.api.controls.style.visibility = 'hidden';
+                    this.api.controls.style.pointerEvents = 'none';
+                }
+
+                // Hide overlay title
+                const overlayTitle = this.api.container.querySelector('.title-overlay');
+                if (overlayTitle) {
+                    overlayTitle.style.display = 'none';
+                    overlayTitle.style.opacity = '0';
+                    overlayTitle.style.visibility = 'hidden';
+                }
+
+                // Hide watermark
+                const watermark = this.api.container.querySelector('.watermark');
+                if (watermark) {
+                    watermark.style.display = 'none';
+                    watermark.style.opacity = '0';
+                    watermark.style.visibility = 'hidden';
+                }
+
+                // Force hide via CSS
+                this.forceHideCustomControls();
+            }
 
             // Handle responsive layout for PiP and subtitles buttons
             this.handleResponsiveLayout();
@@ -893,6 +1086,33 @@ width: fit-content;
 
             this.api.triggerEvent('youtubeplugin:playerready', {});
 
+        }
+
+        forceHideCustomControls() {
+            const existingStyle = document.getElementById('yt-force-hide-controls');
+            if (existingStyle) {
+                return;
+            }
+
+            const style = document.createElement('style');
+            style.id = 'yt-force-hide-controls';
+            style.textContent = `
+        .video-wrapper.youtube-native-ui .controls,
+        .video-wrapper.youtube-native-ui .title-overlay,
+        .video-wrapper.youtube-native-ui .watermark {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+    `;
+            document.head.appendChild(style);
+
+            this.api.container.classList.add('youtube-native-ui');
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] CSS injected - custom elements hidden (simple method)');
+            }
         }
 
         checkIfLiveStream() {
@@ -1008,20 +1228,36 @@ width: fit-content;
 
             this.startLiveMonitoring();
 
+            // Force progress bar to 100% for live streams
+            this.liveProgressInterval = setInterval(() => {
+                if (this.isLiveStream && this.api.player.progressFilled) {
+                    this.api.player.progressFilled.style.width = '100%';
+
+                    if (this.api.player.progressHandle) {
+                        this.api.player.progressHandle.style.left = '100%';
+                    }
+                }
+            }, 100); // Every 100ms to override any other updates
+
             if (this.api.player.options.debug) {
                 console.log('[YT Plugin] ✅ Live UI setup complete');
             }
         }
 
         checkDVRAvailability() {
-            // Disable progress bar immediately while testing
             const progressContainer = this.api.container.querySelector('.progress-container');
+            const progressFill = this.api.container.querySelector('.progress-fill');
+
             if (progressContainer) {
                 progressContainer.style.opacity = '0.3';
                 progressContainer.style.pointerEvents = 'none';
             }
 
-            // Wait a bit for YouTube to fully initialize
+            // Set darkgoldenrod during test
+            if (progressFill) {
+                progressFill.style.backgroundColor = 'darkgoldenrod';
+            }
+
             setTimeout(() => {
                 if (!this.ytPlayer) return;
 
@@ -1043,25 +1279,31 @@ width: fit-content;
                         const seekDifference = Math.abs(newCurrentTime - testSeekPosition);
 
                         const progressContainer = this.api.container.querySelector('.progress-container');
+                        const progressFill = this.api.container.querySelector('.progress-fill');
 
                         if (seekDifference < 2) {
-                            // DVR enabled - restore progress bar
+                            // DVR enabled - restore with theme color
                             if (progressContainer) {
                                 progressContainer.style.opacity = '';
                                 progressContainer.style.pointerEvents = '';
                             }
 
+                            // Remove inline style to use theme color
+                            if (progressFill) {
+                                progressFill.style.backgroundColor = ''; // Let theme CSS handle color
+                            }
+
                             if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ✅ DVR ENABLED - progress bar active');
+                                console.log('[YT Plugin] ✅ DVR ENABLED - progress bar active with theme color');
                             }
 
                             this.ytPlayer.seekTo(duration, true);
                         } else {
-                            // No DVR - keep progress bar disabled
+                            // No DVR - keep darkgoldenrod
                             this.modifyProgressBarForLive();
 
                             if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ❌ DVR DISABLED - progress bar locked');
+                                console.log('[YT Plugin] ❌ DVR DISABLED - progress bar locked with darkgoldenrod');
                             }
                         }
                     }, 500);
@@ -1209,6 +1451,7 @@ width: fit-content;
         modifyProgressBarForLive() {
             const progressContainer = this.api.container.querySelector('.progress-container');
             const progressHandle = this.api.container.querySelector('.progress-handle');
+            const progressFill = this.api.container.querySelector('.progress-fill');
 
             if (progressContainer) {
                 // Disable all pointer events on progress bar
@@ -1224,11 +1467,21 @@ width: fit-content;
             if (progressHandle) {
                 progressHandle.style.display = 'none';
             }
+
+            // Change color to darkgoldenrod when disabled
+            if (progressFill) {
+                progressFill.style.backgroundColor = 'darkgoldenrod';
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Progress fill color changed to darkgoldenrod');
+                }
+            }
         }
 
         restoreProgressBarNormal() {
             const progressContainer = this.api.container.querySelector('.progress-container');
             const progressHandle = this.api.container.querySelector('.progress-handle');
+            const progressFill = this.api.container.querySelector('.progress-fill');
 
             if (progressContainer) {
                 progressContainer.style.pointerEvents = '';
@@ -1238,6 +1491,15 @@ width: fit-content;
 
             if (progressHandle) {
                 progressHandle.style.display = '';
+            }
+
+            // Remove inline backgroundColor to let CSS theme take over
+            if (progressFill) {
+                progressFill.style.backgroundColor = ''; // Reset to theme color
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Progress fill color restored to theme default');
+                }
             }
         }
 
@@ -1348,9 +1610,9 @@ width: fit-content;
             // Show time display again
             this.showTimeDisplay();
 
-            // Restart normal time updates
-            if (!this.timeUpdateInterval) {
-                this.setupYouTubeSync();
+            if (this.liveProgressInterval) {
+                clearInterval(this.liveProgressInterval);
+                this.liveProgressInterval = null;
             }
 
             if (this.api.player.options.debug) {
@@ -1386,12 +1648,11 @@ width: fit-content;
             overflow: hidden !important;
         }
     `;
-
             document.head.appendChild(style);
             this.api.container.classList.add('youtube-active');
 
             if (this.api.player.options.debug) {
-                console.log('YT Plugin: CSS override injected');
+                console.log('[YT Plugin] CSS override injected (ToS compliant)');
             }
         }
 
@@ -1620,27 +1881,57 @@ width: fit-content;
             if (!this.ytPlayer || !this.ytPlayer.setPlaybackQuality) return false;
 
             try {
-                // Try multiple methods to force quality change
-                this.ytPlayer.setPlaybackQuality(quality);
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Setting quality to:', quality);
+                    console.log('[YT Plugin] Current quality:', this.ytPlayer.getPlaybackQuality());
+                    console.log('[YT Plugin] Available qualities:', this.ytPlayer.getAvailableQualityLevels());
+                }
 
-                // Also try setPlaybackQualityRange if available
-                if (this.ytPlayer.setPlaybackQualityRange) {
-                    this.ytPlayer.setPlaybackQualityRange(quality, quality);
+                // Check if requested quality is actually available
+                const availableLevels = this.ytPlayer.getAvailableQualityLevels();
+                if (quality !== 'default' && quality !== 'auto' && !availableLevels.includes(quality)) {
+                    if (this.api.player.options.debug) {
+                        console.warn('[YT Plugin] Requested quality not available:', quality);
+                    }
                 }
 
                 // Update state
                 this.currentQuality = quality;
-                this.currentPlayingQuality = quality; // Force UI update
+
+                // Set the quality
+                this.ytPlayer.setPlaybackQuality(quality);
+
+                // Also try setPlaybackQualityRange for better enforcement
+                if (this.ytPlayer.setPlaybackQualityRange) {
+                    this.ytPlayer.setPlaybackQualityRange(quality, quality);
+                }
 
                 // Force UI update immediately
                 this.updateQualityMenuPlayingState(quality);
-
-                // Update button display
                 const qualityLabel = this.getQualityLabel(quality);
-                this.updateQualityButtonDisplay(qualityLabel, '');
+
+                // For manual quality selection, show only the selected quality
+                if (quality !== 'default' && quality !== 'auto') {
+                    this.updateQualityButtonDisplay(qualityLabel, '');
+                } else {
+                    // For auto mode, show "Auto" and let monitoring update the actual quality
+                    this.updateQualityButtonDisplay('Auto', '');
+                }
 
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Quality set to:', quality);
+                    // Check actual quality after a moment
+                    setTimeout(() => {
+                        if (this.ytPlayer && this.ytPlayer.getPlaybackQuality) {
+                            const actualQuality = this.ytPlayer.getPlaybackQuality();
+                            console.log('[YT Plugin] Actual quality after 1s:', actualQuality);
+                            if (actualQuality !== quality && quality !== 'default' && quality !== 'auto') {
+                                console.warn('[YT Plugin] YouTube did not apply requested quality. This may mean:');
+                                console.warn('  - The quality is not available for this video');
+                                console.warn('  - Embedding restrictions apply');
+                                console.warn('  - Network/bandwidth limitations');
+                            }
+                        }
+                    }, 1000); // Check every 1 second for faster updates
                 }
 
                 this.api.triggerEvent('youtubeplugin:qualitychanged', { quality });
@@ -1653,7 +1944,7 @@ width: fit-content;
             }
         }
 
-        // ===== RECONSTRUCTED SUBTITLE METHODS =====
+        // ===== SUBTITLE METHODS =====
 
         /**
          * Load available captions and create subtitle control
@@ -2700,7 +2991,24 @@ width: fit-content;
                     const duration = this.ytPlayer.getDuration();
 
                     if (this.api.player.progressFilled && duration) {
-                        const progress = (currentTime / duration) * 100;
+                        let progress;
+
+                        // For live streams, always show progress at 100%
+                        if (this.isLiveStream) {
+                            progress = 100;
+                        } else {
+                            // For regular videos, calculate normally
+                            progress = (currentTime / duration) * 100;
+                        }
+
+                        // Check if live badge exists = it's a live stream
+                        const liveBadge = this.api.container.querySelector('.live-badge');
+
+                        if (liveBadge) {
+                            // Force 100% for live streams
+                            progress = 100;
+                        }
+
                         this.api.player.progressFilled.style.width = `${progress}%`;
                         if (this.api.player.progressHandle) {
                             this.api.player.progressHandle.style.left = `${progress}%`;
@@ -2922,6 +3230,10 @@ width: fit-content;
             this.isLiveStream = false;
             this.isAtLiveEdge = false;
 
+            if (this.liveProgressInterval) {
+                clearInterval(this.liveProgressInterval);
+                this.liveProgressInterval = null;
+            }
         }
     }
 

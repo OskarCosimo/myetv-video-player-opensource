@@ -110,11 +110,14 @@ const player = new MYETVPlayer('myVideo', {
             // Show YouTube native controls (true) or use player controls (false)
             showYouTubeUI: false,
 
+            // enable or disable the mouse click over the Youtube player also if showYouTubeUI is false
+            mouseClick: false,
+
             // Auto-detect video ID from data attributes and sources
             autoLoadFromData: true,
 
-            // Initial quality ('default', 'small', 'medium', 'large', 'hd720', 'hd1080', 'highres')
-            quality: 'default',
+            // Initial quality ('auto', 'tiny', 'small', 'medium', 'large', 'hd720', 'hd1080', 'hd1440', 'hd2160', 'highres')
+            quality: 'auto',
 
             // Enable quality control in player UI
             enableQualityControl: true,

@@ -1117,12 +1117,12 @@ width: fit-content;
 
         checkIfLiveStream() {
             if (this.api.player.options.debug) {
-                console.log('[YT Plugin] 🔍 Starting live stream check...');
+                console.log('[YT Plugin] Starting live stream check...');
             }
 
             if (!this.ytPlayer) {
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] ❌ ytPlayer not available');
+                    console.log('[YT Plugin] ytPlayer not available');
                 }
                 return false;
             }
@@ -1131,14 +1131,15 @@ width: fit-content;
                 // Method 1: Check video data for isLive property
                 if (this.ytPlayer.getVideoData) {
                     const videoData = this.ytPlayer.getVideoData();
+
                     if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] 📹 Video Data:', videoData);
+                        console.log('[YT Plugin] Video Data:', videoData);
                     }
 
                     // Check if video data indicates it's live
                     if (videoData.isLive || videoData.isLiveBroadcast) {
                         if (this.api.player.options.debug) {
-                            console.log('[YT Plugin] ✅ LIVE detected via videoData.isLive');
+                            console.log('[YT Plugin] LIVE detected via videoData.isLive');
                         }
                         this.isLiveStream = true;
                         this.handleLiveStreamUI();
@@ -1146,19 +1147,18 @@ width: fit-content;
                     }
                 }
 
-                // Method 2: Check duration (live streams have special duration values)
+                // Method 2: Check duration - live streams have special duration values
                 if (this.ytPlayer.getDuration) {
                     const duration = this.ytPlayer.getDuration();
+
                     if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] ⏱️ Initial duration:', duration);
+                        console.log('[YT Plugin] Initial duration:', duration);
                     }
 
-                    // For live streams, duration changes over time
-                    // Wait 3 seconds and check again
                     setTimeout(() => {
                         if (!this.ytPlayer || !this.ytPlayer.getDuration) {
                             if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ❌ ytPlayer lost during duration check');
+                                console.log('[YT Plugin] ytPlayer lost during duration check');
                             }
                             return;
                         }
@@ -1167,37 +1167,36 @@ width: fit-content;
                         const difference = Math.abs(newDuration - duration);
 
                         if (this.api.player.options.debug) {
-                            console.log('[YT Plugin] ⏱️ Duration after 3s:', newDuration);
-                            console.log('[YT Plugin] 📊 Duration difference:', difference);
+                            console.log('[YT Plugin] Duration after 5s:', newDuration);
+                            console.log('[YT Plugin] Duration difference:', difference);
                         }
 
-                        // If duration increased by more than 0.5 seconds, it's live
-                        if (difference > 0.5) {
+                        if (difference > 10) {
                             if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ✅ LIVE STREAM DETECTED (duration changing)');
+                                console.log('[YT Plugin] LIVE STREAM DETECTED - duration changing significantly');
                             }
                             this.isLiveStream = true;
                             this.handleLiveStreamUI();
                         } else {
                             if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ℹ️ Regular video (duration stable)');
+                                console.log('[YT Plugin] Regular video - duration stable');
                             }
                             this.isLiveStream = false;
                         }
-                    }, 3000);
+                    }, 5000);
                 }
 
                 // Method 3: Check player state
                 if (this.ytPlayer.getPlayerState) {
                     const state = this.ytPlayer.getPlayerState();
                     if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] 🎮 Player state:', state);
+                        console.log('[YT Plugin] Player state:', state);
                     }
                 }
 
             } catch (error) {
                 if (this.api.player.options.debug) {
-                    console.error('[YT Plugin] ❌ Error checking live stream:', error);
+                    console.error('[YT Plugin] Error checking live stream:', error);
                 }
             }
 
@@ -1532,7 +1531,7 @@ width: fit-content;
                         } else if (playerState === YT.PlayerState.PLAYING) {
                             // Only update color if playing
                             // Check latency only if duration is reasonable
-                            if (latency > 60 && duration < 7200) {
+                            if (latency > 60) {
                                 // DE-SYNCED - Black background
                                 badge.style.background = '#1a1a1a';
                                 badge.textContent = 'LIVE';
@@ -2600,31 +2599,6 @@ width: fit-content;
                         console.log('[YT Plugin] 🔴 Live playing');
                     }
                 }
-            }
-
-            // Check for de-sync when user seeks during live
-            if (this.isLiveStream && event.data === YT.PlayerState.PLAYING) {
-                setTimeout(() => {
-                    if (!this.ytPlayer) return;
-
-                    const currentTime = this.ytPlayer.getCurrentTime();
-                    const duration = this.ytPlayer.getDuration();
-                    const latency = duration - currentTime;
-
-                    // If latency > 60s and duration is reasonable, user has seeked back
-                    if (latency > 60 && duration < 7200) {
-                        const badge = this.api.container.querySelector('.live-badge');
-                        if (badge) {
-                            badge.style.background = '#1a1a1a';
-                            badge.title = `${Math.floor(latency)} seconds back from the live`;
-                            this.isAtLiveEdge = false;
-
-                            if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ⚫ User seeked back, de-synced from live');
-                            }
-                        }
-                    }
-                }, 500);
             }
 
             switch (event.data) {

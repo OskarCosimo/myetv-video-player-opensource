@@ -196,21 +196,23 @@
             // Create container
             this.twitchContainer = document.createElement('div');
             this.twitchContainer.id = 'twitch-player-' + Date.now();
+
+            // Fixed a schermo intero con z-index basso
             this.twitchContainer.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 100;
-            `;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+    `;
 
             this.api.container.appendChild(this.twitchContainer);
 
             // Configure options
             const playerOptions = {
-                width: this.options.width,
-                height: this.options.height,
+                width: '100%',
+                height: '100%',
                 parent: this.options.parent,
                 autoplay: this.options.autoplay,
                 muted: this.options.muted,
@@ -254,12 +256,62 @@
             this.twitchPlayer.addEventListener(Twitch.Player.READY, () => {
                 this.isPlayerReady = true;
                 this.api.debug('Player ready');
+
+                // Nascondi il loading overlay
+                const loadingOverlay = this.api.container.querySelector('.loading-overlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                    this.api.debug('Loading overlay hidden');
+                }
+
+                // Nascondi il poster
+                const posterOverlay = this.api.container.querySelector('.video-poster-overlay');
+                if (posterOverlay) {
+                    posterOverlay.style.display = 'none';
+                    this.api.debug('Poster hidden');
+                }
+
+                // FIX CONTROLBAR: Rendi la controlbar fixed e posizionala in basso
+                if (this.api.controls) {
+                    this.api.controls.style.position = 'fixed';
+                    this.api.controls.style.bottom = '0';
+                    this.api.controls.style.left = '0';
+                    this.api.controls.style.right = '0';
+                    this.api.controls.style.width = '100%';
+                    this.api.controls.style.zIndex = '1000';
+                    this.api.controls.classList.add('show');
+                    this.api.debug('Controls positioned and shown');
+                }
+
+                // FIX TITLE OVERLAY: Posiziona anche il title overlay se esiste
+                const titleOverlay = this.api.container.querySelector('.title-overlay');
+                if (titleOverlay) {
+                    titleOverlay.style.position = 'fixed';
+                    titleOverlay.style.top = '0';
+                    titleOverlay.style.left = '0';
+                    titleOverlay.style.right = '0';
+                    titleOverlay.style.width = '100%';
+                    titleOverlay.style.zIndex = '1000';
+                    this.api.debug('Title overlay positioned');
+                }
+
+                // Trigghera gli eventi
+                this.api.triggerEvent('loadeddata', {});
+                this.api.triggerEvent('loadedmetadata', {});
+                this.api.triggerEvent('canplay', {});
+                this.api.triggerEvent('canplaythrough', {});
+
                 this.api.triggerEvent('twitchplugin:ready', {});
             });
 
             // Playing
             this.twitchPlayer.addEventListener(Twitch.Player.PLAYING, () => {
                 this.api.debug('Playing');
+
+                // Nascondi loading se ancora visibile
+                const loadingOverlay = this.api.container.querySelector('.loading-overlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+
                 this.api.triggerEvent('play', {});
                 this.api.triggerEvent('playing', {});
             });

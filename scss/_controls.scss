@@ -309,3 +309,56 @@
     touch-action: none; // Disable browser's default touch gestures
     -webkit-touch-callout: none; // Disable callout on iOS
 }
+
+// ===================================
+// ENCODING BADGE - Video in encoding
+// ===================================
+
+/* Badge for video in encoding (duration Infinity/NaN) */
+.encoding-badge {
+    display: inline-block;
+    background: rgba(128, 128, 128, 0.8); // Grigio semi-trasparente
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: encoding-pulse 2s ease-in-out infinite;
+}
+
+/* Class for the container when shows the badge */
+.time-display .encoding-state {
+    display: flex;
+    align-items: center;
+}
+
+/* animation for the badge */
+@keyframes encoding-pulse {
+    0%, 100% {
+        opacity: 0.8;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+// Responsive for badge encoding
+@media (max-width: 480px) {
+    .encoding-badge {
+        font-size: 9px;
+        padding: 1px 6px;
+    }
+}
+
+@media (max-width: 350px) {
+    .encoding-badge {
+        font-size: 8px;
+        padding: 1px 4px;
+    }
+}

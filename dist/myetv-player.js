@@ -422,6 +422,7 @@ constructor(videoElement, options = {}) {
         showSeekTooltip: true,
         showTitleOverlay: false,
         videoTitle: '',
+        videoSubtitle: '',
         persistentTitle: false,
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
@@ -978,8 +979,15 @@ createTitleOverlay() {
     const titleText = document.createElement('h2');
     titleText.className = 'title-text';
     titleText.textContent = this.options.videoTitle || '';
-
     overlay.appendChild(titleText);
+
+    // add subtitles
+    if (this.options.videoSubtitle) {
+        const subtitleText = document.createElement('p');
+        subtitleText.className = 'subtitle-text';
+        subtitleText.textContent = this.options.videoSubtitle;
+        overlay.appendChild(subtitleText);
+    }
 
     if (this.controls) {
         this.container.insertBefore(overlay, this.controls);
@@ -1052,6 +1060,31 @@ setVideoTitle(title) {
 
 getVideoTitle() {
     return this.options.videoTitle;
+}
+
+setVideoSubtitle(subtitle) {
+    this.options.videoSubtitle = subtitle || '';
+
+    if (this.titleOverlay) {
+        let subtitleElement = this.titleOverlay.querySelector('.subtitle-text');
+
+        if (subtitle) {
+            if (!subtitleElement) {
+                subtitleElement = document.createElement('p');
+                subtitleElement.className = 'subtitle-text';
+                this.titleOverlay.appendChild(subtitleElement);
+            }
+            subtitleElement.textContent = subtitle;
+        } else if (subtitleElement) {
+            subtitleElement.remove();
+        }
+    }
+
+    return this;
+}
+
+getVideoSubtitle() {
+    return this.options.videoSubtitle;
 }
 
 setPersistentTitle(persistent) {
@@ -6766,15 +6799,29 @@ getBufferedTime() {
         this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
     }
 
-    updateTimeDisplay() {
-        if (this.currentTimeEl && this.video) {
-            this.currentTimeEl.textContent = this.formatTime(this.video.currentTime || 0);
-        }
+updateTimeDisplay() {
+    // update current time
+    if (this.currentTimeEl && this.video) {
+        this.currentTimeEl.textContent = this.formatTime(this.video.currentTime || 0);
+    }
 
-        if (this.durationEl && this.video && this.video.duration && !isNaN(this.video.duration)) {
-            this.durationEl.textContent = this.formatTime(this.video.duration);
+    // update duration or show badge if encoding
+    if (this.durationEl && this.video) {
+        const duration = this.video.duration;
+
+        // check if duration is valid
+        if (!duration || isNaN(duration) || !isFinite(duration)) {
+            // Video in encoding - show badge instead of duration
+            this.durationEl.innerHTML = '<span class="encoding-badge">Encoding in progress</span>';
+            this.durationEl.classList.add('encoding-state');
+        } else {
+            // valid duration - show normal
+            this.durationEl.textContent = this.formatTime(duration);
+            this.durationEl.classList.remove('encoding-state');
         }
     }
+}
+
 
     formatTime(seconds) {
         if (isNaN(seconds) || seconds < 0) return '0:00';

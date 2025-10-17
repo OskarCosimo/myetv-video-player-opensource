@@ -2433,6 +2433,31 @@ video::-webkit-media-text-track-display {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.subtitle-text {
+  color: var(--player-text-color);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin: 5px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  opacity: 0.9;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (max-width: 768px) {
+  .subtitle-text {
+    font-size: 12px;
+  }
+}
+@media (max-width: 480px) {
+  .subtitle-text {
+    font-size: 11px;
+  }
+}
 /* CONTROLS - IMPROVED RESPONSIVE DESIGN */
 .controls {
   position: absolute;
@@ -4744,6 +4769,50 @@ video::-webkit-media-text-track-display {
   -webkit-touch-callout: none;
 }
 
+/* Badge for video in encoding (duration Infinity/NaN) */
+.encoding-badge {
+  display: inline-block;
+  background: rgba(128, 128, 128, 0.8);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: encoding-pulse 2s ease-in-out infinite;
+}
+
+/* Class for the container when shows the badge */
+.time-display .encoding-state {
+  display: flex;
+  align-items: center;
+}
+
+/* animation for the badge */
+@keyframes encoding-pulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (max-width: 480px) {
+  .encoding-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+}
+@media (max-width: 350px) {
+  .encoding-badge {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+}
 /* PROGRESS BAR */
 .progress-container {
   width: 100%;

@@ -113,6 +113,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `defaultQuality` | string | `'auto'` | Default video quality |
 | `showTitleOverlay` | boolean | `false` | Show video title overlay |
 | `videoTitle` | string | `''` | Title to show in overlay |
+| `videoSubtitle` | string | `''` | Sub-Title to show in overlay |
 | `persistentTitle` | boolean | `false` | Keep title always visible |
 | `language` | string | `en` | Interface language code |
 | `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
@@ -185,7 +186,7 @@ player.getSelectedQuality();      // Selected quality
 player.getCurrentPlayingQuality(); // Actual playing quality
 player.enableAutoQuality();       // Enable automatic selection
 ```
-### Subtitle Controls
+### Subtitles Controls
 ```
 // Subtitles
 player.toggleSubtitles();         // Toggle subtitles

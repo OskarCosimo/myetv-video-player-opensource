@@ -433,6 +433,7 @@ constructor(videoElement, options = {}) {
         brandLogoEnabled: false,  // Enable/disable brand logo
         brandLogoUrl: '',         // URL for brand logo image
         brandLogoLinkUrl: '',     // Optional URL to open when clicking the logo
+        brandLogoTooltipText: '', // Tooltip text for brand logo
         playlistEnabled: true,    // Enable/disable playlist detection
         playlistAutoPlay: true,   // Auto-play next video when current ends
         playlistLoop: false,      // Loop playlist when reaching the end
@@ -1742,7 +1743,14 @@ createBrandLogo() {
     const logo = document.createElement('img');
     logo.className = 'brand-logo';
     logo.src = this.options.brandLogoUrl;
-    logo.alt = this.t('brand_logo');
+    logo.alt = 'Brand logo';
+
+    // Add tooltip ONLY if link URL is present
+    if (this.options.brandLogoLinkUrl) {
+        // Use custom tooltip text if provided, otherwise fallback to URL
+        logo.title = this.options.brandLogoTooltipText || this.options.brandLogoLinkUrl;
+        // NON usare data-tooltip per evitare che venga sovrascritto da updateTooltips()
+    }
 
     // Handle loading error
     logo.onerror = () => {
@@ -1758,7 +1766,7 @@ createBrandLogo() {
     if (this.options.brandLogoLinkUrl) {
         logo.style.cursor = 'pointer';
         logo.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent video controls interference
+            e.stopPropagation();
             window.open(this.options.brandLogoLinkUrl, '_blank', 'noopener,noreferrer');
             if (this.options.debug) console.log('Brand logo clicked, opening:', this.options.brandLogoLinkUrl);
         });
@@ -1766,15 +1774,10 @@ createBrandLogo() {
         logo.style.cursor = 'default';
     }
 
-    // Position the brand logo at the right of the controlbar (at the left of the buttons)
     controlsRight.insertBefore(logo, controlsRight.firstChild);
 
     if (this.options.debug) {
-        if (this.options.brandLogoLinkUrl) {
-            console.log('Brand logo with click handler created for:', this.options.brandLogoLinkUrl);
-        } else {
-            console.log('Brand logo created (no link)');
-        }
+        console.log('Brand logo created with tooltip:', logo.title || 'no tooltip');
     }
 }
 

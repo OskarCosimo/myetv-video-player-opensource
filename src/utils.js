@@ -24,15 +24,29 @@
         this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
     }
 
-    updateTimeDisplay() {
-        if (this.currentTimeEl && this.video) {
-            this.currentTimeEl.textContent = this.formatTime(this.video.currentTime || 0);
-        }
+updateTimeDisplay() {
+    // update current time
+    if (this.currentTimeEl && this.video) {
+        this.currentTimeEl.textContent = this.formatTime(this.video.currentTime || 0);
+    }
 
-        if (this.durationEl && this.video && this.video.duration && !isNaN(this.video.duration)) {
-            this.durationEl.textContent = this.formatTime(this.video.duration);
+    // update duration or show badge if encoding
+    if (this.durationEl && this.video) {
+        const duration = this.video.duration;
+
+        // check if duration is valid
+        if (!duration || isNaN(duration) || !isFinite(duration)) {
+            // Video in encoding - show badge instead of duration
+            this.durationEl.innerHTML = '<span class="encoding-badge">Encoding in progress</span>';
+            this.durationEl.classList.add('encoding-state');
+        } else {
+            // valid duration - show normal
+            this.durationEl.textContent = this.formatTime(duration);
+            this.durationEl.classList.remove('encoding-state');
         }
     }
+}
+
 
     formatTime(seconds) {
         if (isNaN(seconds) || seconds < 0) return '0:00';

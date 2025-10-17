@@ -26,6 +26,7 @@ constructor(videoElement, options = {}) {
         showSeekTooltip: true,
         showTitleOverlay: false,
         videoTitle: '',
+        videoSubtitle: '',
         persistentTitle: false,
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
@@ -582,8 +583,15 @@ createTitleOverlay() {
     const titleText = document.createElement('h2');
     titleText.className = 'title-text';
     titleText.textContent = this.options.videoTitle || '';
-
     overlay.appendChild(titleText);
+
+    // add subtitles
+    if (this.options.videoSubtitle) {
+        const subtitleText = document.createElement('p');
+        subtitleText.className = 'subtitle-text';
+        subtitleText.textContent = this.options.videoSubtitle;
+        overlay.appendChild(subtitleText);
+    }
 
     if (this.controls) {
         this.container.insertBefore(overlay, this.controls);
@@ -656,6 +664,31 @@ setVideoTitle(title) {
 
 getVideoTitle() {
     return this.options.videoTitle;
+}
+
+setVideoSubtitle(subtitle) {
+    this.options.videoSubtitle = subtitle || '';
+
+    if (this.titleOverlay) {
+        let subtitleElement = this.titleOverlay.querySelector('.subtitle-text');
+
+        if (subtitle) {
+            if (!subtitleElement) {
+                subtitleElement = document.createElement('p');
+                subtitleElement.className = 'subtitle-text';
+                this.titleOverlay.appendChild(subtitleElement);
+            }
+            subtitleElement.textContent = subtitle;
+        } else if (subtitleElement) {
+            subtitleElement.remove();
+        }
+    }
+
+    return this;
+}
+
+getVideoSubtitle() {
+    return this.options.videoSubtitle;
 }
 
 setPersistentTitle(persistent) {

@@ -308,6 +308,15 @@ player.addEventListener('played', (event) => {
     });
 });
 ```
+### on playing
+Description: Triggered when the video is playing
+
+When: Video is effectively playing
+```
+player.addEventListener('playing', (event) => {
+    console.log('Video is playing at', event.currentTime);
+});
+```
 ### on paused
 Description: Triggered when the video is pause
 
@@ -317,6 +326,33 @@ player.addEventListener('paused', (event) => {
     console.log('Video paused at:', event.currentTime + 's');
 });
 ```
+### on waiting
+Description: Triggered when the video is buffering
+
+When: Video is buffering and is waiting
+```
+player.addEventListener('waiting', (event) => {
+    console.log('Video is buffering...');
+});
+```
+### on seeking
+Description: Triggered when the video is being seeking
+
+When: The user is seeking over the video
+```
+player.addEventListener('seeking', (event) => {
+    console.log('User is seeking to', event.targetTime);
+});
+```
+### on seeked
+Description: Triggered when the video is finished seeked
+
+When: The user have finished seeking and seeked the video
+```
+player.addEventListener('seeked', (event) => {
+    console.log('Seek completed at', event.currentTime);
+});
+```
 ### on ended
 Description: Triggered when the video is ended
 
@@ -324,6 +360,15 @@ When: Video is ended
 ```
 player.addEventListener('ended', (e) => {
     console.log('Video terminato!', e.currentTime, e.duration, e.playlistInfo);
+});
+```
+### on error
+Description: Triggered when the video have some error
+
+When: Video have some error on load
+```
+player.addEventListener('error', (event) => {
+    console.error('Playback error:', event.message);
 });
 ```
 ### on subtitle change

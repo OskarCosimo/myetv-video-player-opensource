@@ -113,19 +113,42 @@ constructor(videoElement, options = {}) {
 
     // Custom event system
     this.eventCallbacks = {
-        'playerready': [],
-        'played': [],
-        'paused': [],
-        'subtitlechange': [],
-        'chapterchange': [],
-        'pipchange': [],
-        'fullscreenchange': [],
-        'speedchange': [],
-        'timeupdate': [],
-        'volumechange': [],
-        'qualitychange': [],
-        'playlistchange': [],
-        'ended': []
+        // Core lifecycle events
+        'playerready': [],     // Fired when player is fully initialized and ready
+        'played': [],          // Fired when video starts playing
+        'paused': [],          // Fired when video is paused
+        'ended': [],           // Fired when video playback ends
+
+        // Playback state events
+        'playing': [],         // Fired when video is actually playing (after buffering)
+        'waiting': [],         // Fired when video is waiting for data (buffering)
+        'seeking': [],         // Fired when seek operation starts
+        'seeked': [],          // Fired when seek operation completes
+
+        // Loading events
+        'loadstart': [],       // Fired when browser starts looking for media
+        'loadedmetadata': [],  // Fired when metadata (duration, dimensions) is loaded
+        'loadeddata': [],      // Fired when data for current frame is loaded
+        'canplay': [],         // Fired when browser can start playing video
+        'progress': [],        // Fired periodically while downloading media
+        'durationchange': [],  // Fired when duration attribute changes
+
+        // Error events
+        'error': [],           // Fired when media loading or playback error occurs
+        'stalled': [],         // Fired when browser is trying to get data but it's not available
+
+        // Control events
+        'timeupdate': [],      // Fired when current playback position changes
+        'volumechange': [],    // Fired when volume or muted state changes
+        'speedchange': [],     // Fired when playback speed changes
+        'qualitychange': [],   // Fired when video quality changes
+
+        // Feature events
+        'subtitlechange': [],  // Fired when subtitle track changes
+        'chapterchange': [],   // Fired when video chapter changes
+        'pipchange': [],       // Fired when picture-in-picture mode changes
+        'fullscreenchange': [], // Fired when fullscreen mode changes
+        'playlistchange': []   // Fired when playlist item changes
     };
 
     // Playlist management

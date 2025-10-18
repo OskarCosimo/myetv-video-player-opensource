@@ -113,6 +113,7 @@ constructor(videoElement, options = {}) {
 
     // Custom event system
     this.eventCallbacks = {
+        'playerready': [],
         'played': [],
         'paused': [],
         'subtitlechange': [],
@@ -485,6 +486,14 @@ markPlayerReady() {
         if (this.container) {
             this.container.classList.add('player-initialized');
         }
+
+        this.triggerEvent('playerready', {
+            playerState: this.getPlayerState(),
+            qualities: this.qualities,
+            subtitles: this.textTracks,
+            chapters: this.chapters,
+            playlist: this.getPlaylistInfo()
+        });
 
         if (this.video) {
             this.video.style.visibility = '';

@@ -14,7 +14,8 @@
                 autoplay: options.autoplay !== undefined ? options.autoplay : false,
                 showYouTubeUI: options.showYouTubeUI !== undefined ? options.showYouTubeUI : false,
                 autoLoadFromData: options.autoLoadFromData !== undefined ? options.autoLoadFromData : true,
-                quality: options.quality || 'auto',
+                quality: options.quality || 'default',
+                
                 enableQualityControl: options.enableQualityControl !== undefined ? options.enableQualityControl : true,
                 enableCaptions: options.enableCaptions !== undefined ? options.enableCaptions : true,
 
@@ -30,6 +31,13 @@
                 debug: true,
                 ...options
             };
+
+            // Normalize 'auto' to 'default' for YouTube API compatibility
+            if (this.options.quality === 'auto') {
+                this.options.quality = 'default';
+            }
+            // Track original user choice for UI display
+            this.userQualityChoice = options.quality || 'default';
 
             this.ytPlayer = null;
             this.isYouTubeReady = false;
@@ -716,6 +724,131 @@ width: fit-content;
             this.api.triggerEvent('youtubeplugin:videoloaded', { videoId });
         }
 
+setAdaptiveQuality() {
+    if (!this.ytPlayer) return;
+
+    try {
+        // Check network connection speed if available
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        let suggestedQuality = 'default';
+
+        if (connection) {
+            const effectiveType = connection.effectiveType; // '4g', '3g', '2g', 'slow-2g'
+            const downlink = connection.downlink; // Mbps
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Connection:', effectiveType, 'Downlink:', downlink, 'Mbps');
+            }
+
+            // Set quality based on connection speed
+            if (effectiveType === 'slow-2g' || downlink < 0.5) {
+                suggestedQuality = 'small'; // 240p
+            } else if (effectiveType === '2g' || downlink < 1) {
+                suggestedQuality = 'medium'; // 360p
+            } else if (effectiveType === '3g' || downlink < 2.5) {
+                suggestedQuality = 'large'; // 480p
+            } else if (downlink < 5) {
+                suggestedQuality = 'hd720'; // 720p
+            } else if (downlink < 10) {
+                suggestedQuality = 'hd1080'; // 1080p
+            } else if (downlink < 20) {
+                suggestedQuality = 'hd1440'; // 1440p (2K)
+            } else if (downlink < 35) {
+                suggestedQuality = 'hd2160'; // 2160p (4K)
+            } else {
+                suggestedQuality = 'highres'; // 8K o migliore disponibile
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Setting suggested quality:', suggestedQuality);
+            }
+
+            this.ytPlayer.setPlaybackQuality(suggestedQuality);
+        } else {
+            // Fallback: start with medium quality on unknown devices
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Connection API not available, using large (480p) as safe default');
+            }
+            this.ytPlayer.setPlaybackQuality('large'); // 480p come default sicuro
+        }
+    } catch (error) {
+        if (this.api.player.options.debug) {
+            console.error('[YT Plugin] Error setting adaptive quality:', error);
+        }
+    }
+}
+
+startBufferMonitoring() {
+    if (this.bufferMonitorInterval) {
+        clearInterval(this.bufferMonitorInterval);
+    }
+
+    let bufferingCount = 0;
+    let lastState = null;
+
+    this.bufferMonitorInterval = setInterval(() => {
+        if (!this.ytPlayer) return;
+
+        try {
+            const state = this.ytPlayer.getPlayerState();
+
+            // Detect buffering (state 3)
+            if (state === YT.PlayerState.BUFFERING) {
+                bufferingCount++;
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Buffering detected, count:', bufferingCount);
+                }
+
+                // If buffering happens too often, reduce quality
+                if (bufferingCount >= 3) {
+                    const currentQuality = this.ytPlayer.getPlaybackQuality();
+                    const availableQualities = this.ytPlayer.getAvailableQualityLevels();
+
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] Too much buffering, current quality:', currentQuality);
+                        console.log('[YT Plugin] Available qualities:', availableQualities);
+                    }
+
+                    // Quality hierarchy (highest to lowest)
+                    const qualityLevels = ['highres', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
+                    const currentIndex = qualityLevels.indexOf(currentQuality);
+
+                    // Try to go to next lower quality
+                    if (currentIndex < qualityLevels.length - 1) {
+                        const lowerQuality = qualityLevels[currentIndex + 1];
+
+                        // Check if lower quality is available
+                        if (availableQualities.includes(lowerQuality)) {
+                            if (this.api.player.options.debug) {
+                                console.log('[YT Plugin] Reducing quality to:', lowerQuality);
+                            }
+
+                            this.ytPlayer.setPlaybackQuality(lowerQuality);
+                            bufferingCount = 0; // Reset counter
+                        }
+                    }
+                }
+            } else if (state === YT.PlayerState.PLAYING) {
+                // Reset buffering count when playing smoothly
+                if (lastState === YT.PlayerState.BUFFERING) {
+                    setTimeout(() => {
+                        if (this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                            bufferingCount = Math.max(0, bufferingCount - 1);
+                        }
+                    }, 5000); // Wait 5 seconds of smooth playback
+                }
+            }
+
+            lastState = state;
+        } catch (error) {
+            if (this.api.player.options.debug) {
+                console.error('[YT Plugin] Error in buffer monitoring:', error);
+            }
+        }
+    }, 1000); // Check every second
+}
+
         createMouseMoveOverlay() {
             if (this.mouseMoveOverlay) return;
 
@@ -1010,6 +1143,8 @@ width: fit-content;
             this.injectYouTubeCSSOverride();
 
             this.syncControls();
+            // Start buffer monitoring for auto quality adjustment
+            this.startBufferMonitoring();
 
             // Hide custom controls when YouTube native UI is enabled
             if (this.options.showYouTubeUI) {
@@ -1051,6 +1186,8 @@ width: fit-content;
             // Check if this is a live stream
             setTimeout(() => this.checkIfLiveStream(), 2000);
             setTimeout(() => this.checkIfLiveStream(), 5000);
+            // Set adaptive quality based on connection
+            setTimeout(() => this.setAdaptiveQuality(), 1000);
 
 
             // Listen for window resize
@@ -1700,7 +1837,7 @@ width: fit-content;
                 const actualQuality = this.ytPlayer.getPlaybackQuality();
 
                 // Only update UI if in AUTO mode, otherwise respect manual selection
-                if (this.currentQuality === 'default' || this.currentQuality === 'auto') {
+                if (this.userQualityChoice === 'default' || this.userQualityChoice === 'auto') {
                     if (actualQuality !== this.currentPlayingQuality) {
                         this.currentPlayingQuality = actualQuality;
                         if (this.api.player.options.debug) {
@@ -1880,6 +2017,8 @@ width: fit-content;
             if (!this.ytPlayer || !this.ytPlayer.setPlaybackQuality) return false;
 
             try {
+                // Track user's quality choice for display
+                this.userQualityChoice = quality;
                 if (this.api.player.options.debug) {
                     console.log('[YT Plugin] Setting quality to:', quality);
                     console.log('[YT Plugin] Current quality:', this.ytPlayer.getPlaybackQuality());
@@ -2651,18 +2790,39 @@ width: fit-content;
         }
 
         onPlayerError(event) {
-            const errorMessages = {
-                2: 'Invalid video ID',
-                5: 'HTML5 player error',
-                100: 'Video not found or private',
-                101: 'Video not allowed in embedded players',
-                150: 'Video not allowed in embedded players'
-            };
-            const errorMsg = errorMessages[event.data] || 'Unknown error';
-            if (this.api.player.options.debug) console.error('[YT Plugin] Error:', errorMsg);
+            const errorCode = event.data;
+
+            if (this.api.player.options.debug) {
+                console.error('[YT Plugin] Player error:', errorCode);
+            }
+
+            // Error codes che indicano video non disponibile
+            const unavailableErrors = [
+                2,   // Invalid video ID
+                5,   // HTML5 player error
+                100, // Video not found / removed
+                101, // Video not allowed to be played in embedded players (private/restricted)
+                150  // Same as 101
+            ];
+
+            if (unavailableErrors.includes(errorCode)) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Video unavailable, triggering ended event');
+                }
+
+                // Trigger the ended event from your player API
+                this.api.triggerEvent('ended', {
+                    reason: 'video_unavailable',
+                    errorCode: errorCode
+                });
+
+                // Optional: show poster overlay again
+                this.showPosterOverlay();
+            }
+
             this.api.triggerEvent('youtubeplugin:error', {
-                errorCode: event.data,
-                errorMessage: errorMsg
+                errorCode: errorCode,
+                videoId: this.videoId
             });
         }
 
@@ -3149,6 +3309,16 @@ width: fit-content;
             if (this.ytPlayerContainer) {
                 this.ytPlayerContainer.remove();
                 this.ytPlayerContainer = null;
+            }
+
+            if (this.bufferMonitorInterval) {
+                clearInterval(this.bufferMonitorInterval);
+                this.bufferMonitorInterval = null;
+            }
+
+            if (this.qualityMonitorInterval) {
+                clearInterval(this.qualityMonitorInterval);
+                this.qualityMonitorInterval = null;
             }
 
             this.removeMouseMoveOverlay();

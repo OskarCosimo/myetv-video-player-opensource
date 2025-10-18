@@ -286,6 +286,7 @@ console.log(player.getCurrentResolution()); // Get current resolution
 The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.
 ### on player ready
 Description: Triggered when the video player is ready
+
 When: Player is ready to receive other events
 ```
 player.addEventListener('playerready', (event) => {
@@ -297,6 +298,7 @@ player.addEventListener('playerready', (event) => {
 ```
 ### on played
 Description: Triggered when the video starts playing
+
 When: User presses play or video starts automatically
 ```
 player.addEventListener('played', (event) => {
@@ -308,6 +310,7 @@ player.addEventListener('played', (event) => {
 ```
 ### on paused
 Description: Triggered when the video is pause
+
 When: User presses pause or video stops
 ```
 player.addEventListener('paused', (event) => {
@@ -316,6 +319,7 @@ player.addEventListener('paused', (event) => {
 ```
 ### on ended
 Description: Triggered when the video is ended
+
 When: Video is ended
 ```
 player.addEventListener('ended', (e) => {
@@ -324,6 +328,7 @@ player.addEventListener('ended', (e) => {
 ```
 ### on subtitle change
 Description: Triggered when subtitles are enabled/disabled or track changes
+
 When: User toggles subtitles or switches subtitle tracks
 ```
 player.addEventListener('subtitlechange', (event) => {
@@ -336,6 +341,7 @@ player.addEventListener('subtitlechange', (event) => {
 ```
 ### on chapters change
 Description: Triggered when chapters are changes
+
 When: User switches chapters tracks
 ```
 player.on('chapterchange', (data) => {
@@ -344,6 +350,7 @@ player.on('chapterchange', (data) => {
 ```
 ### on pip change
 Description: Triggered when Picture-in-Picture mode changes
+
 When: Video enters or exits PiP mode
 ```
 player.addEventListener('pipchange', (event) => {
@@ -352,6 +359,7 @@ player.addEventListener('pipchange', (event) => {
 ```
 ### on fullscreen change
 Description: Triggered when fullscreen mode changes
+
 When: Player enters or exits fullscreen mode
 ```
 player.addEventListener('fullscreenchange', (event) => {
@@ -360,6 +368,7 @@ player.addEventListener('fullscreenchange', (event) => {
 ```
 ### on speed change
 Description: Triggered when playback speed changes
+
 When: User modifies playback speed (0.5x, 1x, 1.5x, 2x, etc.)
 ```
 player.addEventListener('speedchange', (event) => {
@@ -368,6 +377,7 @@ player.addEventListener('speedchange', (event) => {
 ```
 ### on time update
 Description: Triggered during playback to update progress
+
 When: Every 250ms during playback (throttled for performance)
 ```
 player.addEventListener('timeupdate', (event) => {
@@ -378,6 +388,7 @@ player.addEventListener('timeupdate', (event) => {
 ```
 ### on volumechange
 Description: Triggered when volume or mute state changes
+
 When: User modifies volume or toggles mute
 ```
 player.addEventListener('volumechange', (event) => {
@@ -396,6 +407,7 @@ player.addEventListener('playlistchange', (e) => {
 ```
 ### Main APIs
 getEventData()
+
 Returns all requested state data in a single object:
 ```
 const state = player.getEventData();

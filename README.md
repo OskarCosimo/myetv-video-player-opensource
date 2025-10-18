@@ -284,6 +284,17 @@ console.log(player.getCurrentResolution()); // Get current resolution
 ```
 ## API Events
 The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.
+### on player ready
+Description: Triggered when the video player is ready
+When: Player is ready to receive other events
+```
+player.addEventListener('playerready', (event) => {
+    console.log('Player is ready!', event);
+//now it's secure to call other apis method
+        player.setVolume(0.8);
+        player.play();
+});
+```
 ### on played
 Description: Triggered when the video starts playing
 When: User presses play or video starts automatically

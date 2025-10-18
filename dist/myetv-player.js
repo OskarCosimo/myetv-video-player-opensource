@@ -509,18 +509,42 @@ constructor(videoElement, options = {}) {
 
     // Custom event system
     this.eventCallbacks = {
-        'played': [],
-        'paused': [],
-        'subtitlechange': [],
-        'chapterchange': [],
-        'pipchange': [],
-        'fullscreenchange': [],
-        'speedchange': [],
-        'timeupdate': [],
-        'volumechange': [],
-        'qualitychange': [],
-        'playlistchange': [],
-        'ended': []
+        // Core lifecycle events
+        'playerready': [],     // Fired when player is fully initialized and ready
+        'played': [],          // Fired when video starts playing
+        'paused': [],          // Fired when video is paused
+        'ended': [],           // Fired when video playback ends
+
+        // Playback state events
+        'playing': [],         // Fired when video is actually playing (after buffering)
+        'waiting': [],         // Fired when video is waiting for data (buffering)
+        'seeking': [],         // Fired when seek operation starts
+        'seeked': [],          // Fired when seek operation completes
+
+        // Loading events
+        'loadstart': [],       // Fired when browser starts looking for media
+        'loadedmetadata': [],  // Fired when metadata (duration, dimensions) is loaded
+        'loadeddata': [],      // Fired when data for current frame is loaded
+        'canplay': [],         // Fired when browser can start playing video
+        'progress': [],        // Fired periodically while downloading media
+        'durationchange': [],  // Fired when duration attribute changes
+
+        // Error events
+        'error': [],           // Fired when media loading or playback error occurs
+        'stalled': [],         // Fired when browser is trying to get data but it's not available
+
+        // Control events
+        'timeupdate': [],      // Fired when current playback position changes
+        'volumechange': [],    // Fired when volume or muted state changes
+        'speedchange': [],     // Fired when playback speed changes
+        'qualitychange': [],   // Fired when video quality changes
+
+        // Feature events
+        'subtitlechange': [],  // Fired when subtitle track changes
+        'chapterchange': [],   // Fired when video chapter changes
+        'pipchange': [],       // Fired when picture-in-picture mode changes
+        'fullscreenchange': [], // Fired when fullscreen mode changes
+        'playlistchange': []   // Fired when playlist item changes
     };
 
     // Playlist management
@@ -881,6 +905,14 @@ markPlayerReady() {
         if (this.container) {
             this.container.classList.add('player-initialized');
         }
+
+        this.triggerEvent('playerready', {
+            playerState: this.getPlayerState(),
+            qualities: this.qualities,
+            subtitles: this.textTracks,
+            chapters: this.chapters,
+            playlist: this.getPlaylistInfo()
+        });
 
         if (this.video) {
             this.video.style.visibility = '';
@@ -2423,36 +2455,129 @@ addEventListener(eventType, callback) {
     }
 
     bindEvents() {
-        if (this.video) {
-            this.video.addEventListener('loadedmetadata', () => {
-                this.updateDuration();
-                setTimeout(() => {
-                    this.initializeSubtitles();
-                }, 100);
+    if (this.video) {
+
+        // Playback events
+        this.video.addEventListener('playing', () => {
+            this.hideLoading();
+            // Trigger playing event - video is now actually playing
+            this.triggerEvent('playing', {
+                currentTime: this.getCurrentTime(),
+                duration: this.getDuration()
             });
+        });
+
+        this.video.addEventListener('waiting', () => {
+            if (!this.isChangingQuality) {
+                this.showLoading();
+                // Trigger waiting event - video is buffering
+                this.triggerEvent('waiting', {
+                    currentTime: this.getCurrentTime()
+                });
+            }
+        });
+
+        this.video.addEventListener('seeking', () => {
+            // Trigger seeking event - seek operation started
+            this.triggerEvent('seeking', {
+                currentTime: this.getCurrentTime(),
+                targetTime: this.video.currentTime
+            });
+        });
+
+        this.video.addEventListener('seeked', () => {
+            // Trigger seeked event - seek operation completed
+            this.triggerEvent('seeked', {
+                currentTime: this.getCurrentTime()
+            });
+        });
+
+        // Loading events
+        this.video.addEventListener('loadstart', () => {
+            if (!this.isChangingQuality) {
+                this.showLoading();
+            }
+            // Trigger loadstart event - browser started loading media
+            this.triggerEvent('loadstart');
+        });
+
+        this.video.addEventListener('loadedmetadata', () => {
+            this.updateDuration();
+
+            // Trigger loadedmetadata event - video metadata loaded
+            this.triggerEvent('loadedmetadata', {
+                duration: this.getDuration(),
+                videoWidth: this.video.videoWidth,
+                videoHeight: this.video.videoHeight
+            });
+
+            // Initialize subtitles after metadata is loaded
+            setTimeout(() => {
+                this.initializeSubtitles();
+            }, 100);
+        });
+
+        this.video.addEventListener('loadeddata', () => {
+            if (!this.isChangingQuality) {
+                this.hideLoading();
+            }
+            // Trigger loadeddata event - current frame data loaded
+            this.triggerEvent('loadeddata', {
+                currentTime: this.getCurrentTime()
+            });
+        });
+
+        this.video.addEventListener('canplay', () => {
+            if (!this.isChangingQuality) {
+                this.hideLoading();
+            }
+            // Trigger canplay event - video can start playing
+            this.triggerEvent('canplay', {
+                currentTime: this.getCurrentTime(),
+                duration: this.getDuration()
+            });
+        });
+
+        this.video.addEventListener('progress', () => {
+            this.updateBuffer();
+            // Trigger progress event - browser is downloading media
+            this.triggerEvent('progress', {
+                buffered: this.getBufferedTime(),
+                duration: this.getDuration()
+            });
+        });
+
+        this.video.addEventListener('durationchange', () => {
+            this.updateDuration();
+            // Trigger durationchange event - video duration changed
+            this.triggerEvent('durationchange', {
+                duration: this.getDuration()
+            });
+        });
+
+        // Error events
+        this.video.addEventListener('error', (e) => {
+            this.onVideoError(e);
+            // Trigger error event - media loading/playback error occurred
+            this.triggerEvent('error', {
+                code: this.video.error?.code,
+                message: this.video.error?.message,
+                src: this.video.currentSrc || this.video.src
+            });
+        });
+
+        this.video.addEventListener('stalled', () => {
+            // Trigger stalled event - browser is trying to fetch data but it's not available
+            this.triggerEvent('stalled', {
+                currentTime: this.getCurrentTime()
+            });
+        });
+
+
             this.video.addEventListener('timeupdate', () => this.updateProgress());
-            this.video.addEventListener('progress', () => this.updateBuffer());
-            this.video.addEventListener('waiting', () => {
-                if (!this.isChangingQuality) {
-                    this.showLoading();
-                }
-            });
-            this.video.addEventListener('canplay', () => {
-                if (!this.isChangingQuality) {
-                    this.hideLoading();
-                }
-            });
+
             this.video.addEventListener('ended', () => this.onVideoEnded());
-            this.video.addEventListener('loadstart', () => {
-                if (!this.isChangingQuality) {
-                    this.showLoading();
-                }
-            });
-            this.video.addEventListener('loadeddata', () => {
-                if (!this.isChangingQuality) {
-                    this.hideLoading();
-                }
-            });
+
             // Complete video click logic with doubleTapPause support (DESKTOP)
             this.video.addEventListener('click', () => {
                 if (!this.options.pauseClick) return;

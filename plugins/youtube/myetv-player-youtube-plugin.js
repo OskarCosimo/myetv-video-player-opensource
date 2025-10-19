@@ -54,6 +54,7 @@
             this.mouseMoveOverlay = null;
             this.qualityCheckAttempts = 0;
             this.captionCheckAttempts = 0;
+            this.liveStreamChecked = false;
             this.captionStateCheckInterval = null;
             this.qualityMonitorInterval = null;
             this.resizeListenerAdded = false;
@@ -77,6 +78,7 @@
                 { code: 'ar', name: 'Arabic' },
                 { code: 'pt', name: 'Portuguese' },
                 { code: 'ru', name: 'Russian' },
+                { code: 'zh', name: 'Chinese' },
                 { code: 'ja', name: 'Japanese' },
                 { code: 'de', name: 'German' },
                 { code: 'fr', name: 'French' },
@@ -1179,10 +1181,11 @@ startBufferMonitoring() {
             // Handle responsive layout for PiP and subtitles buttons
             this.handleResponsiveLayout();
 
+            this.playAttemptTimeout = null;
+
             // Hide PiP from settings menu (separate function, called after responsive layout)
             setTimeout(() => this.hidePipFromSettingsMenuOnly(), 500);
-            setTimeout(() => this.hidePipFromSettingsMenuOnly(), 1500);
-            setTimeout(() => this.hidePipFromSettingsMenuOnly(), 3000);
+
             // Check if this is a live stream
             setTimeout(() => this.checkIfLiveStream(), 2000);
             setTimeout(() => this.checkIfLiveStream(), 5000);
@@ -1199,13 +1202,9 @@ startBufferMonitoring() {
 
             // Load qualities with multiple attempts
             setTimeout(() => this.loadAvailableQualities(), 500);
-            setTimeout(() => this.loadAvailableQualities(), 1000);
-            setTimeout(() => this.loadAvailableQualities(), 2000);
 
             // Load captions with multiple attempts
             setTimeout(() => this.loadAvailableCaptions(), 500);
-            setTimeout(() => this.loadAvailableCaptions(), 1000);
-            setTimeout(() => this.loadAvailableCaptions(), 2000);
 
             if (this.options.quality && this.options.quality !== 'default') {
                 setTimeout(() => this.setQuality(this.options.quality), 1000);
@@ -2701,6 +2700,49 @@ startBufferMonitoring() {
             };
             if (this.api.player.options.debug) console.log('[YT Plugin] State:', states[event.data], event.data);
 
+            // Know if video have some problems to start
+            if (event.data === YT.PlayerState.UNSTARTED || event.data === -1) {
+                // start timeout when video is unstarted
+                if (this.playAttemptTimeout) {
+                    clearTimeout(this.playAttemptTimeout);
+                }
+
+                this.playAttemptTimeout = setTimeout(() => {
+                    if (!this.ytPlayer) return;
+
+                    const currentState = this.ytPlayer.getPlayerState();
+
+                    // If video is unstrated after timeout, consider it restricted
+                    if (currentState === YT.PlayerState.UNSTARTED || currentState === -1) {
+                        if (this.api.player.options.debug) {
+                            console.log('YT Plugin: Video stuck in UNSTARTED - possibly members-only or restricted');
+                        }
+
+                        // Trigger ended event
+                        this.api.triggerEvent('ended', {
+                            reason: 'video_restricted_or_membership',
+                            state: currentState
+                        });
+
+                        // Show poster overlay if present
+                        this.showPosterOverlay();
+
+                        // Trigger custom event
+                        this.api.triggerEvent('youtubeplugin:membershiprestricted', {
+                            videoId: this.videoId
+                        });
+                    }
+                }, 15000); // 15 seconds of timeout
+
+            } else if (event.data === YT.PlayerState.PLAYING ||
+                event.data === YT.PlayerState.BUFFERING) {
+                // Clear the timeout if video starts correctly
+                if (this.playAttemptTimeout) {
+                    clearTimeout(this.playAttemptTimeout);
+                    this.playAttemptTimeout = null;
+                }
+            }
+
             // Get play/pause icons
             const playIcon = this.api.container.querySelector('.play-icon');
             const pauseIcon = this.api.container.querySelector('.pause-icon');
@@ -3285,6 +3327,12 @@ startBufferMonitoring() {
 
         dispose() {
             if (this.api.player.options.debug) console.log('[YT Plugin] Disposing');
+
+            // Cleanup timeout
+            if (this.playAttemptTimeout) {
+                clearTimeout(this.playAttemptTimeout);
+                this.playAttemptTimeout = null;
+            }
 
             if (this.timeUpdateInterval) {
                 clearInterval(this.timeUpdateInterval);

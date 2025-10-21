@@ -56,6 +56,19 @@
     z-index: 2;
     left: 0%;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    pointer-events: all;
+    touch-action: none;
+    /* Larger invisible touch area */
+    &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+    }
 }
 
 .progress-container:hover .progress-handle {
@@ -262,4 +275,45 @@
 
 .progress-handle-none {
     opacity: 0 !important;
+}
+
+/* ===================================
+   TOUCH/DRAG IMPROVEMENTS
+   =================================== */
+
+/* Increase touch target ONLY for the handle, not the entire bar */
+.progress-handle {
+    /* Invisible larger touch area */
+    &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        /* Uncomment to debug: background: rgba(255, 0, 0, 0.2); */
+    }
+}
+
+/* ONLY when actively seeking - enlarge bar */
+.progress-container.seeking {
+    .progress-bar {
+        height: calc(var(--player-progress-height) * 2);
+        transition: height 0.15s ease;
+    }
+
+    .progress-handle {
+        transform: translate(-50%, -50%) scale(1.4);
+        transition: transform 0.15s ease;
+    }
+}
+
+/* Desktop hover - subtle enlargement */
+@media (hover: hover) and (pointer: fine) {
+    .progress-container:hover .progress-bar {
+        height: calc(var(--player-progress-height) * 1.3);
+        transition: height 0.15s ease;
+    }
 }

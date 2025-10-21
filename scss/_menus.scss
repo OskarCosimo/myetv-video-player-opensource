@@ -69,6 +69,22 @@
     background: rgba(255, 255, 255, 0.05);
 }
 
+/* Highlight currently selected subtitle option */
+.subtitles-option.selected,
+.subtitles-option.active {
+    color: var(--player-primary-color);
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.subtitles-option.selected::after,
+.subtitles-option.active::after {
+    content: '✓';
+    position: absolute;
+    right: 10px;
+    font-weight: bold;
+}
+
 /* DUAL QUALITY INDICATORS */
 .quality-option.selected {
     color: var(--player-primary-color);

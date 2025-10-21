@@ -1,4 +1,4 @@
-// ===================================
+﻿// ===================================
 // PROGRESS BAR
 // ===================================
 
@@ -51,7 +51,7 @@
     height: var(--player-progress-handle-size);
     background: var(--player-primary-color);
     border-radius: 50%;
-    opacity: 0;
+    opacity: 1;
     transition: opacity var(--player-transition-fast);
     z-index: 2;
     left: 0%;
@@ -207,4 +207,59 @@
     font-size: 12px;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
+}
+
+/* ===================================
+   SEEK HANDLE SHAPES
+   Available: none, circle, square, diamond, arrow, triangle, heart, star
+   =================================== */
+
+/* Default shape: circle (already defined above) */
+.progress-handle {
+    /* Base styles already defined */
+}
+
+.progress-handle-circle {
+    border-radius: 50%;
+}
+
+.progress-handle-square {
+    border-radius: 2px;
+}
+
+.progress-handle-diamond {
+    border-radius: 2px;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.progress-handle-arrow {
+    border-radius: 0;
+    clip-path: polygon(0% 50%, 60% 0%, 60% 35%, 100% 35%, 100% 65%, 60% 65%, 60% 100%);
+}
+
+.progress-handle-triangle {
+    border-radius: 0;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.progress-handle-heart {
+    border-radius: 0;
+}
+
+.progress-handle-heart::before {
+    content: '❤';
+    font-size: 12px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.progress-handle-star {
+    border-radius: 0;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.progress-handle-none {
+    opacity: 0 !important;
 }

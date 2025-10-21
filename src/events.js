@@ -395,6 +395,10 @@
         // Mouse events (desktop)
         this.progressContainer.addEventListener('click', (e) => this.seek(e));
         this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
+        if (this.progressHandle) {
+            this.progressHandle.addEventListener('mousedown', this.startSeeking.bind(this));
+            this.progressHandle.addEventListener('touchstart', this.startSeeking.bind(this), { passive: false });
+        }
 
         // Touch events (mobile)
         this.progressContainer.addEventListener('touchstart', (e) => {

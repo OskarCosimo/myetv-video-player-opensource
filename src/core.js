@@ -1186,9 +1186,11 @@ updateBuffer() {
 }
 
 startSeeking(e) {
+    if (e.cancelable) e.preventDefault();
     if (this.isChangingQuality) return;
 
     this.isUserSeeking = true;
+    this.progressContainer.classList.add('seeking');
     this.seek(e);
     e.preventDefault();
 
@@ -1200,6 +1202,7 @@ startSeeking(e) {
 }
 
 continueSeeking(e) {
+    if (e.cancelable) e.preventDefault();
     if (this.isUserSeeking && !this.isChangingQuality) {
         this.seek(e);
     }
@@ -1207,9 +1210,13 @@ continueSeeking(e) {
 
 endSeeking() {
     this.isUserSeeking = false;
+    this.progressContainer.classList.remove('seeking');
 }
 
 seek(e) {
+    if (e.cancelable) {
+        e.preventDefault();
+    }
     if (!this.video || !this.progressContainer || !this.progressFilled || !this.progressHandle || this.isChangingQuality) return;
 
     const rect = this.progressContainer.getBoundingClientRect();

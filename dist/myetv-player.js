@@ -1194,6 +1194,10 @@ initializeElements() {
     this.speedMenu = this.controls?.querySelector('.speed-menu');
     this.qualityMenu = this.controls?.querySelector('.quality-menu');
     this.subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
+    // Apply seek handle shape from options
+    if (this.progressHandle && this.options.seekHandleShape) {
+        this.setSeekHandleShape(this.options.seekHandleShape);
+    }
 }
 
 // Generic method to close all active menus (works with plugins too)
@@ -3113,13 +3117,13 @@ createControls() {
     const controlsHTML = `
         <div class="controls" id="${controlsId}">
             <div class="progress-container">
-                <div class="progress-bar">
-                    <div class="progress-buffer"></div>
-                    <div class="progress-filled"></div>
-                    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>
-                </div>
-                ${this.options.showSeekTooltip ? '<div class="seek-tooltip">0:00</div>' : ''}
-            </div>
+    <div class="progress-bar">
+        <div class="progress-buffer"></div>
+        <div class="progress-filled"></div>
+    </div>
+    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>  <!-- ✅ Fuori da progress-bar -->
+    ${this.options.showSeekTooltip ? '<div class="seek-tooltip">0:00</div>' : ''}
+</div>
 
             <div class="controls-main">
                 <div class="controls-left">

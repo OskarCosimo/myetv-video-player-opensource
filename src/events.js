@@ -170,6 +170,7 @@
         // Playback events
         this.video.addEventListener('playing', () => {
             this.hideLoading();
+            this.closeAllMenus();
             // Trigger playing event - video is now actually playing
             this.triggerEvent('playing', {
                 currentTime: this.getCurrentTime(),

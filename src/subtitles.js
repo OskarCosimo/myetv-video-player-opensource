@@ -343,11 +343,11 @@ updateSubtitlesButton() {
     var subtitlesBtn = this.controls && this.controls.querySelector('.subtitles-btn');
     if (!subtitlesBtn) return;
 
+    subtitlesBtn.classList.remove('active');
+
     if (this.subtitlesEnabled) {
-        subtitlesBtn.classList.add('active');
         subtitlesBtn.title = this.t('subtitlesdisable');
     } else {
-        subtitlesBtn.classList.remove('active');
         subtitlesBtn.title = this.t('subtitlesenable');
     }
 }
@@ -383,14 +383,6 @@ updateSubtitlesUI() {
 bindSubtitleEvents() {
     var self = this;
 
-    var subtitlesBtn = this.controls && this.controls.querySelector('.subtitles-btn');
-    if (subtitlesBtn) {
-        subtitlesBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            self.toggleSubtitles();
-        });
-    }
-
     var subtitlesMenu = this.controls && this.controls.querySelector('.subtitles-menu');
     if (subtitlesMenu) {
         subtitlesMenu.addEventListener('click', function (e) {
@@ -398,6 +390,7 @@ bindSubtitleEvents() {
         });
     }
 }
+
 
 handleSubtitlesMenuClick(e) {
     if (!e.target.classList.contains('subtitles-option')) return;

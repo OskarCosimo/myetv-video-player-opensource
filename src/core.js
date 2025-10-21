@@ -70,7 +70,6 @@ constructor(videoElement, options = {}) {
     this.currentQualityIndex = 0;
     this.qualities = [];
     this.originalSources = [];
-        this.setupMenuToggles(); // Initialize menu toggle system
     this.isPiPSupported = this.checkPiPSupport();
     this.seekTooltip = null;
     this.titleOverlay = null;
@@ -182,6 +181,7 @@ constructor(videoElement, options = {}) {
         this.interceptAutoLoading();
         this.createPlayerStructure();
         this.initializeElements();
+        this.setupMenuToggles(); // Initialize menu toggle system
         // audio player adaptation
         this.adaptToAudioFile = function () {
             if (this.options.audiofile) {
@@ -802,70 +802,76 @@ initializeElements() {
 
 // Generic method to close all active menus (works with plugins too)
 closeAllMenus() {
-    // Find all elements with class ending in '-menu' that have 'active' class
-    const allMenus = this.controls?.querySelectorAll('[class*="-menu"].active');
-    allMenus?.forEach(menu => {
-        menu.classList.remove('active');
-    });
+    if (!this.controls) return;
 
-    // Remove active state from all control buttons
-    const allButtons = this.controls?.querySelectorAll('.control-btn.active');
-    allButtons?.forEach(btn => {
-        btn.classList.remove('active');
-    });
+    const menus = this.controls.querySelectorAll('.speed-menu, .quality-menu, .subtitles-menu, .settings-menu');
+    const buttons = this.controls.querySelectorAll('.control-btn');
+
+    menus.forEach(menu => menu.classList.remove('active'));
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    this.currentOpenMenu = null;
+
+    if (this.options.debug) {
+        console.log('All menus closed');
+    }
 }
 
 // Generic menu toggle setup (works with core menus and plugin menus)
 setupMenuToggles() {
-    // Delegate click events to control bar for any button with associated menu
-    if (this.controls) {
-        this.controls.addEventListener('click', (e) => {
-            // Find if clicked element is a control button or inside one
-            const button = e.target.closest('.control-btn');
+    if (!this.controls) return;
 
-            if (!button) return;
+    this.currentOpenMenu = null;
 
-            // Get button classes to find associated menu
-            const buttonClasses = button.className.split(' ');
-            let menuClass = null;
+    this.controls.addEventListener('click', (e) => {
+        const button = e.target.closest('.control-btn');
+        if (!button) return;
 
-            // Find if this button has an associated menu (e.g., speed-btn -> speed-menu)
-            for (const cls of buttonClasses) {
-                if (cls.endsWith('-btn')) {
-                    const menuName = cls.replace('-btn', '-menu');
-                    const menu = this.controls.querySelector('.' + menuName);
-                    if (menu) {
-                        menuClass = menuName;
-                        break;
-                    }
-                }
+        const buttonClasses = Array.from(button.classList);
+        let menuElement = null;
+
+        for (const cls of buttonClasses) {
+            if (cls.endsWith('-btn')) {
+                const menuClass = cls.replace('-btn', '-menu');
+                menuElement = this.controls.querySelector(`.${menuClass}`);
+                if (menuElement) break;
             }
+        }
 
-            if (!menuClass) return;
+        if (!menuElement) return;
 
-            e.stopPropagation();
+        e.stopPropagation();
+        e.preventDefault();
 
-            // Get the menu element
-            const menu = this.controls.querySelector('.' + menuClass);
-            const isOpen = menu.classList.contains('active');
+        const isOpen = menuElement.classList.contains('active');
 
-            // Close all menus first
-            this.closeAllMenus();
+        this.closeAllMenus();
 
-            // If menu was closed, open it
-            if (!isOpen) {
-                menu.classList.add('active');
-                button.classList.add('active');
+        if (!isOpen) {
+            menuElement.classList.add('active');
+            button.classList.add('active');
+            this.currentOpenMenu = menuElement;
+            if (this.options.debug) {
+                console.log('Menu opened:', menuElement.className);
             }
-        });
-    }
+        } else {
+            this.currentOpenMenu = null;
+            if (this.options.debug) {
+                console.log('Menu closed:', menuElement.className);
+            }
+        }
+    });
 
-    // Close menus when clicking outside controls
     document.addEventListener('click', (e) => {
-        if (!this.controls?.contains(e.target)) {
+        if (!this.controls) return;
+        if (!this.controls.contains(e.target)) {
             this.closeAllMenus();
         }
     });
+
+    if (this.options.debug) {
+        console.log('✅ Menu toggle system initialized (click-based, auto-close)');
+    }
 }
 
 updateVolumeSliderVisual() {
@@ -1620,7 +1626,7 @@ bindPosterEvents() {
     // Hide poster when video is loading/playing
     this.video.addEventListener('playing', () => {
         this.hidePoster();
-    });
+        });
 
     // Show poster on load if not autoplay
     if (!this.options.autoplay) {

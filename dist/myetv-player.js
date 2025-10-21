@@ -1582,9 +1582,11 @@ updateBuffer() {
 }
 
 startSeeking(e) {
+    if (e.cancelable) e.preventDefault();
     if (this.isChangingQuality) return;
 
     this.isUserSeeking = true;
+    this.progressContainer.classList.add('seeking');
     this.seek(e);
     e.preventDefault();
 
@@ -1596,6 +1598,7 @@ startSeeking(e) {
 }
 
 continueSeeking(e) {
+    if (e.cancelable) e.preventDefault();
     if (this.isUserSeeking && !this.isChangingQuality) {
         this.seek(e);
     }
@@ -1603,9 +1606,13 @@ continueSeeking(e) {
 
 endSeeking() {
     this.isUserSeeking = false;
+    this.progressContainer.classList.remove('seeking');
 }
 
 seek(e) {
+    if (e.cancelable) {
+        e.preventDefault();
+    }
     if (!this.video || !this.progressContainer || !this.progressFilled || !this.progressHandle || this.isChangingQuality) return;
 
     const rect = this.progressContainer.getBoundingClientRect();
@@ -2695,6 +2702,10 @@ addEventListener(eventType, callback) {
         // Mouse events (desktop)
         this.progressContainer.addEventListener('click', (e) => this.seek(e));
         this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
+        if (this.progressHandle) {
+            this.progressHandle.addEventListener('mousedown', this.startSeeking.bind(this));
+            this.progressHandle.addEventListener('touchstart', this.startSeeking.bind(this), { passive: false });
+        }
 
         // Touch events (mobile)
         this.progressContainer.addEventListener('touchstart', (e) => {

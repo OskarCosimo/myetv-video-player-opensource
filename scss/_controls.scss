@@ -5,275 +5,7 @@
 @use 'mixins' as *;
 @use 'variables' as *;
 
-// ===================================
-// PREVENT TEXT SELECTION DURING DRAG
-// ===================================
-
-// Disable text selection on all controls when dragging
-.controls,
-.progress-container,
-.progress-bar,
-.controls-main,
-.controls-left,
-.controls-right,
-.time-display {
-    user-select: none; // Prevent text selection
-    -webkit-user-select: none; // Safari
-    -moz-user-select: none; // Firefox
-    -ms-user-select: none; // IE/Edge
-}
-
-// ===================================
-// PROGRESS BAR SYSTEM
-// ===================================
-
-.progress-container {
-    position: relative;
-    overflow: visible !important; // Allow handle to extend outside the container
-    padding: 0; // No padding - keeps control bar height normal
-    margin-bottom: 10px; // Space below instead of padding
-    display: flex;
-    align-items: center; // Vertically center the progress bar
-    cursor: pointer;
-}
-
-.progress-bar {
-    position: relative;
-    width: 100%;
-    height: 4px; // Thin progress bar
-    background: rgba(255, 255, 255, 0.3); // Semi-transparent background
-    border-radius: 2px;
-    overflow: visible !important; // Allow handle to be visible
-    cursor: pointer;
-}
-
-// Buffer bar (shows buffered/loaded video)
-.progress-buffer {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 2px;
-    pointer-events: none;
-    z-index: 1; // Below filled bar
-}
-
-// Filled bar (shows watched video progress)
-.progress-filled {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    background: var(--player-accent, #ff0000); // Accent color fill
-    border-radius: 2px;
-    pointer-events: none;
-    z-index: 2; // Above buffer, below handle
-}
-
-// ===================================
-// PROGRESS HANDLE - BASE STYLES
-// ===================================
-
-.progress-handle {
-    position: absolute;
-    top: 50%;
-    left: 0%;
-    transform: translate(-50%, -50%); // Center the handle
-    width: 14px;
-    height: 14px;
-    background: var(--player-accent, #ff0000);
-    cursor: grab; // Indicates draggable
-    transition: all 0.2s ease; // Smooth transition for size changes
-    z-index: 10; // Above everything (buffer and filled)
-    pointer-events: auto; // Ensure it's clickable
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); // Subtle shadow for depth
-}
-
-// Grabbing cursor when actively dragging
-.progress-handle:active {
-    cursor: grabbing;
-}
-
-// ===================================
-// SEEK HANDLE SHAPES
-// ===================================
-
-// Circle - classic round handle (default recommended)
-.progress-handle-circle {
-    border-radius: 50%; // Perfect circle
-}
-
-// Square - sharp corners
-.progress-handle-square {
-    border-radius: 3px; // Slightly rounded corners
-}
-
-// Diamond - rotated square
-.progress-handle-diamond {
-    border-radius: 2px;
-    transform: translate(-50%, -50%) rotate(45deg); // 45 degree rotation
-}
-
-// Arrow - pointing upward
-.progress-handle-arrow {
-    background: transparent;
-    width: 0 !important;
-    height: 0 !important;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-bottom: 14px solid var(--player-accent, #ff0000); // Triangle pointing up
-    border-radius: 0;
-    box-shadow: none; // No shadow for border-based shapes
-}
-
-// Triangle - simple triangle shape
-.progress-handle-triangle {
-    background: transparent;
-    width: 0 !important;
-    height: 0 !important;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 14px solid var(--player-accent, #ff0000);
-    border-radius: 0;
-    box-shadow: none;
-}
-
-// Heart - romantic shape using clip-path
-.progress-handle-heart {
-    width: 16px !important;
-    height: 16px !important;
-    clip-path: polygon( 50% 15%, 65% 0%, 80% 0%, 95% 15%, 95% 30%, 50% 85%, 5% 30%, 5% 15%, 20% 0%, 35% 0% );
-}
-
-// Star - five-pointed star using clip-path
-.progress-handle-star {
-    width: 16px !important;
-    height: 16px !important;
-    clip-path: polygon( 50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35% );
-}
-
-// None - completely hidden (no visual indicator)
-.progress-handle-none {
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-// ===================================
-// FORCE HANDLE ALWAYS VISIBLE
-// ===================================
-
-// Override any other rule that hides the handle
-.progress-handle {
-    opacity: 1 !important; // Always visible
-}
-
-.progress-container .progress-handle {
-    opacity: 1 !important; // Always visible with higher specificity
-}
-
-// ===================================
-// MOBILE TOUCH ENHANCEMENTS
-// ===================================
-
-// Media query for tablets and mobile devices (max width 768px)
-@media (max-width: 768px) {
-
-    // Progress bar stays thin (4px)
-    .progress-bar {
-        height: 4px; // Keep thin
-    }
-
-    // Handle with large invisible touch area
-    .progress-handle {
-        touch-action: none; // Critical for mobile drag
-        -webkit-touch-callout: none; // Disable iOS callout
-        // Add large invisible touch area using pseudo-element
-        &::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px; // Large touch target (50x50px)
-            height: 50px;
-            border-radius: 50%;
-            background: transparent; // Invisible but touchable
-            z-index: -1; // Behind the visible handle
-        }
-        // Scale up when touched/active
-        &:active {
-            width: 24px !important; // Grow: 14px -> 24px
-            height: 24px !important;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4); // Stronger shadow when active
-        }
-    }
-
-    // Adjust shapes when active (touched)
-    .progress-handle-circle:active {
-        border-radius: 50%;
-    }
-
-    .progress-handle-square:active {
-        border-radius: 5px;
-    }
-
-    .progress-handle-diamond:active {
-        border-radius: 4px;
-        transform: translate(-50%, -50%) rotate(45deg);
-    }
-
-    .progress-handle-arrow:active {
-        border-left: 12px solid transparent;
-        border-right: 12px solid transparent;
-        border-bottom: 24px solid var(--player-accent, #ff0000);
-    }
-
-    .progress-handle-triangle:active {
-        border-left: 13px solid transparent;
-        border-right: 13px solid transparent;
-        border-bottom: 24px solid var(--player-accent, #ff0000);
-    }
-
-    .progress-handle-heart:active,
-    .progress-handle-star:active {
-        width: 26px !important;
-        height: 26px !important;
-    }
-}
-
-// Enhanced touch targets for very small screens (phones)
-@media (max-width: 480px) {
-
-    // Progress bar stays thin on phones too
-    .progress-bar {
-        height: 4px; // Keep thin
-    }
-
-    .progress-handle {
-        &::before {
-            width: 60px; // Extra large touch target on phones
-            height: 60px;
-        }
-        // Even bigger when touched on phones
-        &:active {
-            width: 28px !important;
-            height: 28px !important;
-        }
-    }
-
-    .progress-handle-heart:active,
-    .progress-handle-star:active {
-        width: 30px !important;
-        height: 30px !important;
-    }
-}
-
-// ===================================
-// CONTROLS CONTAINER
-// ===================================
-
-/* Main controls container */
+/* CONTROLS CONTAINER - IMPROVED RESPONSIVE DESIGN */
 .controls {
     position: absolute;
     bottom: 0;
@@ -281,84 +13,155 @@
     right: 0;
     background: var(--player-bg-controls);
     padding: var(--player-controls-padding);
-    opacity: 0; // Hidden by default
-    transform: translateY(100%); // Slide out below
+    opacity: 0;
+    transform: translateY(100%);
     transition: all var(--player-transition-normal);
     z-index: 10;
     min-height: 70px !important;
     box-sizing: border-box;
 }
 
-/* Controls visible state */
 .controls.show {
-    opacity: 1; // Fully visible
-    transform: translateY(0); // Slide in
+    opacity: 1;
+    transform: translateY(0);
     position: absolute !important;
     bottom: 0 !important;
-    z-index: 20 !important; // Above other elements
+    z-index: 20 !important;
 }
 
-// ===================================
-// TOUCH EVENT FIXES FOR MOBILE
-// ===================================
-
-// Prevent default touch behavior on progress bar
-.progress-container,
-.progress-bar,
-.progress-handle {
-    touch-action: none; // Disable browser's default touch gestures
-    -webkit-touch-callout: none; // Disable callout on iOS
+/* MAIN CONTROLS - IMPROVED RESPONSIVE LAYOUT */
+.controls-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    min-height: 44px !important;
+    flex-shrink: 0;
 }
 
-// ===================================
-// ENCODING BADGE - Video in encoding
-// ===================================
-
-/* Badge for video in encoding (duration Infinity/NaN) */
-.encoding-badge {
-    display: inline-block;
-    background: rgba(128, 128, 128, 0.8); // Grigio semi-trasparente
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    animation: encoding-pulse 2s ease-in-out infinite;
-}
-
-/* Class for the container when shows the badge */
-.time-display .encoding-state {
+.controls-left,
+.controls-right {
     display: flex;
     align-items: center;
+    gap: 10px;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
-/* animation for the badge */
-@keyframes encoding-pulse {
-    0%, 100% {
-        opacity: 0.8;
-    }
-
-    50% {
-        opacity: 1;
-    }
+/* BUTTONS - IMPROVED RESPONSIVE BEHAVIOR */
+.control-btn {
+    background: none;
+    border: none;
+    color: var(--player-button-color);
+    cursor: pointer;
+    padding: var(--player-button-padding);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all var(--player-transition-fast);
+    font-size: 14px;
+    font-weight: 500;
+    position: relative;
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: nowrap;
 }
 
-// Responsive for badge encoding
-@media (max-width: 480px) {
-    .encoding-badge {
-        font-size: 9px;
-        padding: 1px 6px;
-    }
+.control-btn:hover {
+    background: var(--player-button-hover);
+    transform: scale(1.05);
 }
 
-@media (max-width: 350px) {
-    .encoding-badge {
-        font-size: 8px;
-        padding: 1px 4px;
-    }
+.control-btn:active {
+    transform: scale(0.95);
+    background: var(--player-button-active);
+}
+
+/* SPECIFIC SUBTITLES BUTTON */
+.subtitles-btn {
+    position: relative;
+}
+
+/* QUALITY BUTTON WITH DUAL DISPLAY */
+.quality-btn {
+    min-height: 36px;
+    padding: 6px 8px;
+}
+
+.quality-btn-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+}
+
+.selected-quality {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--player-button-color);
+}
+
+.current-quality {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--player-text-secondary);
+    opacity: 0.8;
+    margin-top: 2px;
+    line-height: 1;
+}
+
+/* TIME DISPLAY - RESPONSIVE */
+.time-display {
+    color: var(--player-text-color);
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 2;
+    min-width: 0;
+}
+
+/* ICONS */
+.icon {
+    width: var(--player-icon-size);
+    height: var(--player-icon-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* BRAND LOGO RESPONSIVE */
+.controls-right .brand-logo {
+    height: 44px;
+    max-width: 120px;
+    object-fit: contain;
+    margin-right: 10px;
+    pointer-events: auto;
+    opacity: 0.8;
+    transition: opacity var(--player-transition-fast);
+    order: -1;
+    flex-shrink: 1;
+}
+
+.controls-right .brand-logo:hover {
+    opacity: 1;
+}
+
+.controls-right .brand-logo-link {
+    order: -1;
+    margin-right: 10px;
+    display: inline-block;
+    text-decoration: none;
+}
+
+.controls-right .brand-logo-link .brand-logo {
+    margin-right: 0;
 }

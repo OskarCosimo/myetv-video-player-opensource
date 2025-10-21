@@ -798,6 +798,10 @@ initializeElements() {
     this.speedMenu = this.controls?.querySelector('.speed-menu');
     this.qualityMenu = this.controls?.querySelector('.quality-menu');
     this.subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
+    // Apply seek handle shape from options
+    if (this.progressHandle && this.options.seekHandleShape) {
+        this.setSeekHandleShape(this.options.seekHandleShape);
+    }
 }
 
 // Generic method to close all active menus (works with plugins too)

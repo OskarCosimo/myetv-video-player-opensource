@@ -368,13 +368,13 @@ createControls() {
     const controlsHTML = `
         <div class="controls" id="${controlsId}">
             <div class="progress-container">
-                <div class="progress-bar">
-                    <div class="progress-buffer"></div>
-                    <div class="progress-filled"></div>
-                    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>
-                </div>
-                ${this.options.showSeekTooltip ? '<div class="seek-tooltip">0:00</div>' : ''}
-            </div>
+    <div class="progress-bar">
+        <div class="progress-buffer"></div>
+        <div class="progress-filled"></div>
+    </div>
+    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>  <!-- ✅ Fuori da progress-bar -->
+    ${this.options.showSeekTooltip ? '<div class="seek-tooltip">0:00</div>' : ''}
+</div>
 
             <div class="controls-main">
                 <div class="controls-left">

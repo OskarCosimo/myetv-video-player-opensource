@@ -600,7 +600,9 @@ updateSettingsMenuVisibility() {
     }
 }
 
-/* Populate settings menu with controls */
+/**
+ * Populate settings menu with controls
+ */
 populateSettingsMenu() {
     const settingsMenu = this.controls?.querySelector('.settings-menu');
     if (!settingsMenu) return;
@@ -615,54 +617,104 @@ populateSettingsMenu() {
         </div>`;
     }
 
-    // Speed Control submenu
+    // Speed Control - expandable
     if (this.options.showSpeedControl) {
         const speedLabel = this.t('playback_speed') || 'Playback Speed';
         const currentSpeed = this.video ? this.video.playbackRate : 1;
-        menuHTML += `<div class="settings-option" data-action="speed">
-            <span class="settings-option-label">${speedLabel}</span>
-            <span class="settings-option-value">${currentSpeed}x</span>
-            <div class="settings-submenu speed-submenu">
-                <div class="settings-suboption ${currentSpeed === 0.5 ? 'active' : ''}" data-speed="0.5">0.5x</div>
-                <div class="settings-suboption ${currentSpeed === 0.75 ? 'active' : ''}" data-speed="0.75">0.75x</div>
-                <div class="settings-suboption ${currentSpeed === 1 ? 'active' : ''}" data-speed="1">1x</div>
-                <div class="settings-suboption ${currentSpeed === 1.25 ? 'active' : ''}" data-speed="1.25">1.25x</div>
-                <div class="settings-suboption ${currentSpeed === 1.5 ? 'active' : ''}" data-speed="1.5">1.5x</div>
-                <div class="settings-suboption ${currentSpeed === 2 ? 'active' : ''}" data-speed="2">2x</div>
-            </div>
-        </div>`;
+
+        menuHTML += `
+            <div class="settings-expandable-wrapper">
+                <div class="settings-option expandable-trigger" data-action="speed-expand">
+                    <span class="settings-option-label">${speedLabel}: ${currentSpeed}x</span>
+                    <span class="expand-arrow">▼</span>
+                </div>
+                <div class="settings-expandable-content" style="display: none;">`;
+
+        const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+        speeds.forEach(speed => {
+            const isActive = Math.abs(speed - currentSpeed) < 0.01;
+            menuHTML += `<div class="settings-suboption ${isActive ? 'active' : ''}" data-speed="${speed}">${speed}x</div>`;
+        });
+
+        menuHTML += `</div></div>`;
     }
 
-    // Subtitles submenu
+    // Subtitles - expandable
     if (this.options.showSubtitles && this.textTracks && this.textTracks.length > 0) {
         const subtitlesLabel = this.t('subtitles') || 'Subtitles';
         const currentTrack = this.currentSubtitleTrack;
-        const currentLabel = this.subtitlesEnabled && currentTrack
-            ? (currentTrack.label || 'Track')
-            : (this.t('subtitlesoff') || 'Off');
+        const currentLabel = this.subtitlesEnabled && currentTrack ? currentTrack.label : (this.t('subtitlesoff') || 'Off');
 
-        menuHTML += `<div class="settings-option" data-action="subtitles">
-            <span class="settings-option-label">${subtitlesLabel}</span>
-            <span class="settings-option-value">${currentLabel}</span>
-            <div class="settings-submenu subtitles-submenu">
-                <div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">
-                    ${this.t('subtitlesoff') || 'Off'}
-                </div>`;
+        menuHTML += `
+            <div class="settings-expandable-wrapper">
+                <div class="settings-option expandable-trigger" data-action="subtitles-expand">
+                    <span class="settings-option-label">${subtitlesLabel}: ${currentLabel}</span>
+                    <span class="expand-arrow">▼</span>
+                </div>
+                <div class="settings-expandable-content" style="display: none;">`;
 
+        // Off option
+        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitlesoff') || 'Off'}</div>`;
+
+        // Subtitle tracks
         this.textTracks.forEach((trackData, index) => {
             const isActive = this.currentSubtitleTrack === trackData.track;
-            menuHTML += `<div class="settings-suboption ${isActive ? 'active' : ''}" data-track="${index}">
-                ${trackData.label}
-            </div>`;
+            menuHTML += `<div class="settings-suboption ${isActive ? 'active' : ''}" data-track="${index}">${trackData.label}</div>`;
         });
 
-        menuHTML += '</div></div>';
+        menuHTML += `</div></div>`;
     }
 
     settingsMenu.innerHTML = menuHTML;
+
+    // Add scrollbar if needed
+    this.addSettingsMenuScrollbar();
 }
 
-/* Bind settings menu events */
+/**
+ * Add scrollbar to settings menu on mobile
+ */
+addSettingsMenuScrollbar() {
+    const settingsMenu = this.controls?.querySelector('.settings-menu');
+    if (!settingsMenu) return;
+
+    const playerHeight = this.container.offsetHeight;
+    const maxMenuHeight = playerHeight - 100;
+
+    settingsMenu.style.maxHeight = `${maxMenuHeight}px`;
+    settingsMenu.style.overflowY = 'auto';
+    settingsMenu.style.overflowX = 'hidden';
+
+    // Add scrollbar styling
+    if (!document.getElementById('player-settings-scrollbar-style')) {
+        const scrollbarStyle = document.createElement('style');
+        scrollbarStyle.id = 'player-settings-scrollbar-style';
+        scrollbarStyle.textContent = `
+            .settings-menu::-webkit-scrollbar {
+                width: 6px;
+            }
+            .settings-menu::-webkit-scrollbar-track {
+                background: rgba(255,255,255,0.05);
+                border-radius: 3px;
+            }
+            .settings-menu::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,0.3);
+                border-radius: 3px;
+            }
+            .settings-menu::-webkit-scrollbar-thumb:hover {
+                background: rgba(255,255,255,0.5);
+            }
+        `;
+        document.head.appendChild(scrollbarStyle);
+    }
+
+    settingsMenu.style.scrollbarWidth = 'thin';
+    settingsMenu.style.scrollbarColor = 'rgba(255,255,255,0.3) transparent';
+}
+
+/**
+ * Bind settings menu events
+ */
 bindSettingsMenuEvents() {
     const settingsMenu = this.controls?.querySelector('.settings-menu');
     if (!settingsMenu) return;
@@ -670,7 +722,26 @@ bindSettingsMenuEvents() {
     settingsMenu.addEventListener('click', (e) => {
         e.stopPropagation();
 
-        // Handle direct actions
+        // Handle expandable triggers
+        if (e.target.classList.contains('expandable-trigger') || e.target.closest('.expandable-trigger')) {
+            const trigger = e.target.classList.contains('expandable-trigger') ? e.target : e.target.closest('.expandable-trigger');
+            const wrapper = trigger.closest('.settings-expandable-wrapper');
+            const content = wrapper.querySelector('.settings-expandable-content');
+            const arrow = trigger.querySelector('.expand-arrow');
+
+            const isExpanded = content.style.display !== 'none';
+
+            if (isExpanded) {
+                content.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            }
+            return;
+        }
+
+        // Handle direct actions (like PiP)
         if (e.target.classList.contains('settings-option') || e.target.closest('.settings-option')) {
             const option = e.target.classList.contains('settings-option') ? e.target : e.target.closest('.settings-option');
             const action = option.getAttribute('data-action');
@@ -683,32 +754,31 @@ bindSettingsMenuEvents() {
 
         // Handle submenu actions
         if (e.target.classList.contains('settings-suboption')) {
-            const parent = e.target.closest('.settings-option');
-            const action = parent?.getAttribute('data-action');
+            const wrapper = e.target.closest('.settings-expandable-wrapper');
+            const trigger = wrapper.querySelector('.expandable-trigger');
+            const action = trigger.getAttribute('data-action');
 
-            if (action === 'speed') {
+            if (action === 'speed-expand') {
                 const speed = parseFloat(e.target.getAttribute('data-speed'));
                 if (speed && speed > 0 && this.video && !this.isChangingQuality) {
                     this.video.playbackRate = speed;
 
                     // Update active states
-                    parent.querySelectorAll('.settings-suboption').forEach(opt => {
-                        opt.classList.remove('active');
-                    });
+                    wrapper.querySelectorAll('.settings-suboption').forEach(opt => opt.classList.remove('active'));
                     e.target.classList.add('active');
 
-                    // Update value display
-                    const valueEl = parent.querySelector('.settings-option-value');
-                    if (valueEl) valueEl.textContent = speed + 'x';
+                    // Update trigger text
+                    const label = trigger.querySelector('.settings-option-label');
+                    if (label) {
+                        const speedLabel = this.t('playback_speed') || 'Playback Speed';
+                        label.textContent = `${speedLabel}: ${speed}x`;
+                    }
 
                     // Trigger event
                     this.triggerEvent('speedchange', { speed, previousSpeed: this.video.playbackRate });
                 }
-            }
-
-            else if (action === 'subtitles') {
+            } else if (action === 'subtitles-expand') {
                 const trackData = e.target.getAttribute('data-track');
-
                 if (trackData === 'off') {
                     this.disableSubtitles();
                 } else {
@@ -717,14 +787,15 @@ bindSettingsMenuEvents() {
                 }
 
                 // Update active states
-                parent.querySelectorAll('.settings-suboption').forEach(opt => {
-                    opt.classList.remove('active');
-                });
+                wrapper.querySelectorAll('.settings-suboption').forEach(opt => opt.classList.remove('active'));
                 e.target.classList.add('active');
 
-                // Update value display
-                const valueEl = parent.querySelector('.settings-option-value');
-                if (valueEl) valueEl.textContent = e.target.textContent;
+                // Update trigger text
+                const label = trigger.querySelector('.settings-option-label');
+                if (label) {
+                    const subtitlesLabel = this.t('subtitles') || 'Subtitles';
+                    label.textContent = `${subtitlesLabel}: ${e.target.textContent}`;
+                }
             }
         }
     });

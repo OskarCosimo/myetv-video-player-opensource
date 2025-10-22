@@ -2686,10 +2686,6 @@ addEventListener(eventType, callback) {
             this.pipBtn.addEventListener('click', () => this.togglePictureInPicture());
         }
 
-        if (this.subtitlesBtn) {
-            this.subtitlesBtn.addEventListener('click', () => this.toggleSubtitles());
-        }
-
         if (this.volumeSlider) {
             this.volumeSlider.addEventListener('input', (e) => {
                 this.updateVolume(e.target.value);
@@ -4827,10 +4823,10 @@ createCustomSubtitleOverlay() {
         'bottom: 80px;' +
         'left: 50%;' +
         'transform: translateX(-50%);' +
-        'z-index: 5;' +
+        'z-index: 999;' +
         'color: white;' +
         'font-family: Arial, sans-serif;' +
-        'font-size: clamp(12px, 4vw, 18px);' +  // RESPONSIVE font-size
+        'font-size: clamp(12px, 4vw, 18px);' +
         'font-weight: bold;' +
         'text-align: center;' +
         'text-shadow: 2px 2px 4px rgba(0, 0, 0, 1);' +
@@ -4857,52 +4853,29 @@ createCustomSubtitleOverlay() {
     if (this.options.debug) console.log('✅ Custom subtitle overlay created with responsive settings');
 }
 
-loadCustomSubtitleTracks() {
-    var self = this;
-    var trackElements = document.querySelectorAll('track[kind="subtitles"], track[kind="captions"]');
-    var loadPromises = [];
+customTimeToSeconds(timeString) {
+    if (!timeString) return 0;
 
-    if (this.options.debug) console.log('📥 Loading ' + trackElements.length + ' subtitle files...');
+    var parts = timeString.split(',');
+    if (parts.length !== 2) return 0;
 
-    for (var i = 0; i < trackElements.length; i++) {
-        var track = trackElements[i];
+    var time = parts[0];
+    var millis = parts[1];
 
-        (function (trackElement, index) {
-            var promise = fetch(trackElement.src)
-                .then(function (response) {
-                    return response.text();
-                })
-                .then(function (srtText) {
-                    var subtitles = self.parseCustomSRT(srtText);
-                    self.customSubtitles.push({
-                        label: trackElement.label || 'Track ' + (index + 1),
-                        language: trackElement.srclang || 'unknown',
-                        subtitles: subtitles
-                    });
+    var timeParts = time.split(':');
+    if (timeParts.length !== 3) return 0;
 
-                    if (self.options.debug) {
-                        console.log('✅ Loaded: ' + trackElement.label + ' (' + subtitles.length + ' subtitles)');
-                    }
-                })
-                .catch(function (error) {
-                    if (self.options.debug) {
-                        console.error('❌ Error loading ' + trackElement.src + ':', error);
-                    }
-                });
+    var hours = parseInt(timeParts[0], 10);
+    var minutes = parseInt(timeParts[1], 10);
+    var seconds = parseInt(timeParts[2], 10);
+    var milliseconds = parseInt(millis, 10);
 
-            loadPromises.push(promise);
-        })(track, i);
+    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds) || isNaN(milliseconds)) {
+        console.error('❌ customTimeToSeconds failed for:', timeString);
+        return 0;
     }
 
-    Promise.all(loadPromises).then(function () {
-        if (self.options.debug && self.customSubtitles.length > 0) {
-            console.log('✅ All custom subtitle tracks loaded');
-        }
-
-        if (self.options.debug) {
-            console.log('📝 Subtitles loaded but NOT auto-enabled - user must activate manually');
-        }
-    });
+    return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
 }
 
 parseCustomSRT(srtText) {
@@ -4921,9 +4894,9 @@ parseCustomSRT(srtText) {
             if (timeMatch) {
                 var startTime = this.customTimeToSeconds(timeMatch[1]);
                 var endTime = this.customTimeToSeconds(timeMatch[2]);
-                var text = this.sanitizeSubtitleText(lines.slice(2).join('\n').trim());
+                var text = lines.slice(2).join('\n').trim().replace(/<[^>]*>/g, '');
 
-                if (text.length > 0 && startTime < endTime) {
+                if (text && text.length > 0 && startTime < endTime) {
                     subtitles.push({
                         start: startTime,
                         end: endTime,
@@ -4934,20 +4907,97 @@ parseCustomSRT(srtText) {
         }
     }
 
+    if (this.options.debug) console.log('✅ Parsed ' + subtitles.length + ' subtitles');
     return subtitles;
 }
 
-customTimeToSeconds(timeString) {
-    var parts = timeString.split(',');
-    var time = parts[0];
-    var millis = parts[1];
-    var timeParts = time.split(':');
-    var hours = parseInt(timeParts[0], 10);
-    var minutes = parseInt(timeParts[1], 10);
-    var seconds = parseInt(timeParts[2], 10);
-    var milliseconds = parseInt(millis, 10);
+loadCustomSubtitleTracks() {
+    var self = this;
+    var tracks = this.video.querySelectorAll('track[kind="subtitles"]');
+    if (tracks.length === 0) return;
 
-    return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+    tracks.forEach(function (track, index) {
+        var src = track.getAttribute('src');
+        var label = track.getAttribute('label') || 'Unknown';
+        var srclang = track.getAttribute('srclang') || '';
+
+        // CREA L'OGGETTO PRIMA E AGGIUNGILO SUBITO
+        var trackObj = {
+            label: label,
+            language: srclang,
+            subtitles: [],
+            trackIndex: index
+        };
+        self.customSubtitles.push(trackObj);
+
+        fetch(src)
+            .then(function (response) {
+                return response.text();
+            })
+            .then(function (srtText) {
+                var normalizedText = srtText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                var blocks = normalizedText.trim().split('\n\n');
+
+                for (var i = 0; i < blocks.length; i++) {
+                    var block = blocks[i].trim();
+                    if (!block) continue;
+                    var lines = block.split('\n');
+
+                    if (lines.length >= 3) {
+                        var timeLine = lines[1].trim();
+                        var timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+
+                        if (timeMatch) {
+                            var startParts = timeMatch[1].split(',');
+                            var startTimeParts = startParts[0].split(':');
+                            var startTime = parseInt(startTimeParts[0], 10) * 3600 + parseInt(startTimeParts[1], 10) * 60 + parseInt(startTimeParts[2], 10) + parseInt(startParts[1], 10) / 1000;
+
+                            var endParts = timeMatch[2].split(',');
+                            var endTimeParts = endParts[0].split(':');
+                            var endTime = parseInt(endTimeParts[0], 10) * 3600 + parseInt(endTimeParts[1], 10) * 60 + parseInt(endTimeParts[2], 10) + parseInt(endParts[1], 10) / 1000;
+
+                            var text = lines.slice(2).join('\n').trim().replace(/<[^>]*>/g, '');
+
+                            if (text && text.length > 0 && !isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
+                                trackObj.subtitles.push({
+                                    start: startTime,
+                                    end: endTime,
+                                    text: text
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (self.options.debug) {
+                    console.log('✅ Loaded ' + trackObj.subtitles.length + ' subtitles for ' + label);
+                }
+            })
+            .catch(function (error) {
+                console.error('❌ Error loading ' + label + ':', error);
+            });
+    });
+}
+
+sanitizeSubtitleText(text) {
+    if (!text) return '';
+
+    // Remove HTML tags
+    var sanitized = text.replace(/<[^>]*>/g, '');
+
+    // Remove styling tags common in SRT files
+    sanitized = sanitized.replace(/{\\.*?}/g, '');
+    sanitized = sanitized.replace(/\\N/g, '\n');
+
+    // Clean up multiple spaces
+    sanitized = sanitized.replace(/\s+/g, ' ').trim();
+
+    // Decode HTML entities if present
+    var tempDiv = document.createElement('div');
+    tempDiv.innerHTML = sanitized;
+    sanitized = tempDiv.textContent || tempDiv.innerText || sanitized;
+
+    return sanitized;
 }
 
 enableCustomSubtitleTrack(trackIndex) {
@@ -5040,28 +5090,39 @@ detectTextTracks() {
 enableSubtitleTrack(trackIndex) {
     if (trackIndex < 0 || trackIndex >= this.textTracks.length) return;
 
+    // Disable all tracks first
     this.disableAllTracks();
 
+    // Enable ONLY the custom subtitle system (not native browser)
     var success = this.enableCustomSubtitleTrack(trackIndex);
 
     if (success) {
         this.currentSubtitleTrack = this.textTracks[trackIndex].track;
         this.subtitlesEnabled = true;
 
+        // Make sure native tracks stay DISABLED
+        if (this.video.textTracks && this.video.textTracks[trackIndex]) {
+            this.video.textTracks[trackIndex].mode = 'disabled'; // Keep native disabled
+        }
+
         this.updateSubtitlesButton();
         this.populateSubtitlesMenu();
 
         if (this.options.debug) {
-            console.log('✅ Subtitles enabled: ' + this.textTracks[trackIndex].label);
+            console.log('✅ Custom subtitles enabled:', this.textTracks[trackIndex].label);
         }
 
-        // Trigger evento
+        // Trigger subtitle change event
         this.triggerEvent('subtitlechange', {
             enabled: true,
             trackIndex: trackIndex,
             trackLabel: this.textTracks[trackIndex].label,
             trackLanguage: this.textTracks[trackIndex].language
         });
+    } else {
+        if (this.options.debug) {
+            console.error('❌ Failed to enable custom subtitles for track', trackIndex);
+        }
     }
 }
 
@@ -5084,11 +5145,15 @@ disableSubtitles() {
 }
 
 disableAllTracks() {
-    if (this.video.textTracks) {
-        for (var i = 0; i < this.video.textTracks.length; i++) {
-            this.video.textTracks[i].mode = 'hidden';
-        }
+    if (!this.video || !this.video.textTracks) return;
+
+    // Disable all native tracks
+    for (var i = 0; i < this.video.textTracks.length; i++) {
+        this.video.textTracks[i].mode = 'hidden';
     }
+
+    // Also disable custom subtitles
+    this.disableCustomSubtitles();
 }
 
 getAvailableSubtitles() {
@@ -5169,25 +5234,61 @@ updateSubtitlesUI() {
 bindSubtitleEvents() {
     var self = this;
 
+    if (this.video.textTracks) {
+        this.isChangingSubtitles = false; // flag to prevent loops
+
+        this.video.textTracks.addEventListener('change', function () {
+            // ignore changes initiated by the player itself
+            if (self.isChangingSubtitles) {
+                return;
+            }
+
+            // only update ui
+            self.updateSubtitlesUI();
+        });
+    }
+
+    // Add timeupdate listener for custom subtitle display
+    this.video.addEventListener('timeupdate', () => {
+        if (this.customSubtitlesEnabled) {
+            this.updateCustomSubtitleDisplay();
+        }
+    });
+
+    // Menu click events
     var subtitlesMenu = this.controls && this.controls.querySelector('.subtitles-menu');
     if (subtitlesMenu) {
         subtitlesMenu.addEventListener('click', function (e) {
-            self.handleSubtitlesMenuClick(e);
+            var option = e.target.closest('.subtitles-option');
+            if (!option) return;
+
+            self.isChangingSubtitles = true; // active flag
+
+            var trackIndex = option.getAttribute('data-track');
+            if (trackIndex === 'off') {
+                self.disableSubtitles();
+            } else {
+                self.enableSubtitleTrack(parseInt(trackIndex));
+            }
+
+            setTimeout(function () {
+                self.isChangingSubtitles = false; // disable flag
+            }, 100);
         });
     }
 }
 
-
 handleSubtitlesMenuClick(e) {
-    if (!e.target.classList.contains('subtitles-option')) return;
+    var option = e.target.closest('.subtitles-option');
+    if (!option) return; // This prevents button clicks from toggling
 
-    var trackData = e.target.getAttribute('data-track');
+    var trackIndex = option.getAttribute('data-track');
 
-    if (trackData === 'off') {
+    if (trackIndex === 'off') {
         this.disableSubtitles();
     } else {
-        var trackIndex = parseInt(trackData, 10);
-        this.enableSubtitleTrack(trackIndex);
+        // Don't check for 'toggle' - just enable the track
+        this.enableSubtitleTrack(parseInt(trackIndex));
     }
 
     this.updateSubtitlesButton();

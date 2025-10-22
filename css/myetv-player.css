@@ -1430,6 +1430,50 @@ body {
     display: none !important;
   }
 }
+.settings-expandable-wrapper {
+  position: relative;
+  display: block;
+}
+
+.settings-option.expandable-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 10px !important;
+}
+.settings-option.expandable-trigger .settings-option-label {
+  font-size: 10px !important;
+}
+.settings-option.expandable-trigger .expand-arrow {
+  font-size: 8px;
+  transition: transform 0.2s ease;
+  margin-left: 8px;
+}
+
+.settings-expandable-content {
+  padding-left: 15px;
+  margin-top: 4px;
+}
+.settings-expandable-content .settings-suboption {
+  padding: 6px 12px;
+  cursor: pointer;
+  color: white;
+  font-size: 10px;
+  white-space: normal;
+  word-wrap: break-word;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.settings-expandable-content .settings-suboption.active {
+  opacity: 1;
+  font-weight: bold;
+}
+.settings-expandable-content .settings-suboption:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .audio-player {
   width: 320px;
   height: 80px;

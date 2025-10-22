@@ -367,9 +367,19 @@
 
                 // Hide original speed menu option from settings (if exists)
                 if (settingsMenu) {
+                    // Hide old non-expandable speed option
                     const originalSpeedOption = settingsMenu.querySelector('[data-action="speed"]');
                     if (originalSpeedOption) {
                         originalSpeedOption.style.display = 'none';
+                    }
+
+                    // Hide new expandable speed option
+                    const expandableSpeedWrapper = settingsMenu.querySelector('[data-action="speed-expand"]');
+                    if (expandableSpeedWrapper) {
+                        const wrapper = expandableSpeedWrapper.closest('.settings-expandable-wrapper');
+                        if (wrapper) {
+                            wrapper.style.display = 'none';
+                        }
                     }
                 }
 
@@ -646,6 +656,15 @@
                     const originalSpeedOption = settingsMenu.querySelector('[data-action="speed"]');
                     if (originalSpeedOption) {
                         originalSpeedOption.style.display = '';
+                    }
+
+                    // Show expandable speed option again
+                    const expandableSpeedWrapper = settingsMenu.querySelector('[data-action="speed-expand"]');
+                    if (expandableSpeedWrapper) {
+                        const wrapper = expandableSpeedWrapper.closest('.settings-expandable-wrapper');
+                        if (wrapper) {
+                            wrapper.style.display = '';
+                        }
                     }
                 }
 

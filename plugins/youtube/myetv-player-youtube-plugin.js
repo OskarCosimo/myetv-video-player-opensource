@@ -271,42 +271,46 @@
          * Set auto caption language on player initialization
          */
         setAutoCaptionLanguage() {
-            if (!this.options.autoCaptionLanguage || !this.ytPlayer) {
-                return;
-            }
+            if (!this.options.autoCaptionLanguage || !this.ytPlayer) return;
 
             try {
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Setting auto caption language to', this.options.autoCaptionLanguage);
+                    console.log('YT Plugin: Setting auto caption language to', this.options.autoCaptionLanguage);
                 }
 
                 this.ytPlayer.setOption('captions', 'reload', true);
                 this.ytPlayer.loadModule('captions');
-
                 this.ytPlayer.setOption('captions', 'track', {
-                    'translationLanguage': this.options.autoCaptionLanguage
+                    translationLanguage: { languageCode: this.options.autoCaptionLanguage }
                 });
 
                 this.captionsEnabled = true;
+                this.currentTranslation = this.options.autoCaptionLanguage;
 
                 const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
                 if (subtitlesBtn) {
                     subtitlesBtn.classList.add('active');
                 }
 
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Auto caption language set successfully');
-                }
+                // update menu selection after a short delay
+                setTimeout(() => {
+                    this.updateMenuSelection(`translate-${this.options.autoCaptionLanguage}`);
+                }, 500);
 
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: Auto caption language set successfully');
+                }
             } catch (error) {
                 if (this.api.player.options.debug) {
-                    console.error('[YT Plugin] Error setting auto caption language', error);
+                    console.error('YT Plugin: Error setting auto caption language', error);
                 }
             }
         }
 
+        /**
+         * Handle responsive layout for mobile settings
+         */
         handleResponsiveLayout() {
-
             const containerWidth = this.api.container.offsetWidth;
             const pipBtn = this.api.container.querySelector('.pip-btn');
             const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
@@ -319,9 +323,54 @@
 
             // Breakpoint at 600px
             if (containerWidth < 600) {
+                // Add max-height and scroll to settings menu on mobile
+                if (settingsMenu) {
+                    const playerHeight = this.api.container.offsetHeight;
+                    const maxMenuHeight = playerHeight - 100; // Leave 100px margin from top/bottom
+
+                    settingsMenu.style.maxHeight = `${maxMenuHeight}px`;
+                    settingsMenu.style.overflowY = 'auto';
+                    settingsMenu.style.overflowX = 'hidden';
+
+                    // Add scrollbar styling
+                    if (!document.getElementById('yt-settings-scrollbar-style')) {
+                        const scrollbarStyle = document.createElement('style');
+                        scrollbarStyle.id = 'yt-settings-scrollbar-style';
+                        scrollbarStyle.textContent = `
+                    .settings-menu::-webkit-scrollbar {
+                        width: 6px;
+                    }
+                    .settings-menu::-webkit-scrollbar-track {
+                        background: rgba(255,255,255,0.05);
+                        border-radius: 3px;
+                    }
+                    .settings-menu::-webkit-scrollbar-thumb {
+                        background: rgba(255,255,255,0.3);
+                        border-radius: 3px;
+                    }
+                    .settings-menu::-webkit-scrollbar-thumb:hover {
+                        background: rgba(255,255,255,0.5);
+                    }
+                `;
+                        document.head.appendChild(scrollbarStyle);
+                    }
+
+                    // Firefox scrollbar
+                    settingsMenu.style.scrollbarWidth = 'thin';
+                    settingsMenu.style.scrollbarColor = 'rgba(255,255,255,0.3) transparent';
+                }
+
                 // Hide subtitles button
                 if (subtitlesBtn) {
                     subtitlesBtn.style.display = 'none';
+                }
+
+                // Hide original speed menu option from settings (if exists)
+                if (settingsMenu) {
+                    const originalSpeedOption = settingsMenu.querySelector('[data-action="speed"]');
+                    if (originalSpeedOption) {
+                        originalSpeedOption.style.display = 'none';
+                    }
                 }
 
                 // Add subtitles option to settings menu
@@ -345,121 +394,236 @@
                         // Create trigger
                         const trigger = document.createElement('div');
                         trigger.className = 'quality-option';
+                        trigger.style.fontSize = '10px';
                         trigger.textContent = subtitlesText;
 
-                        // Create submenu
-                        const submenu = document.createElement('div');
-                        submenu.className = 'yt-subtitles-submenu';
-                        submenu.style.cssText = `
+                        // Add arrow indicator
+                        const arrow = document.createElement('span');
+                        arrow.textContent = ' ▼';
+                        arrow.style.cssText = 'font-size: 8px; transition: transform 0.2s;';
+                        trigger.appendChild(arrow);
+
+                        // Container for expanded options
+                        const optionsContainer = document.createElement('div');
+                        optionsContainer.className = 'yt-subtitles-options';
+                        optionsContainer.style.cssText = `
                     display: none;
-                    position: absolute;
-                    right: 100%;
-                    top: 0;
-                    margin-right: 5px;
-                    background: #1c1c1c;
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 4px;
-                    padding: 8px 0;
-                    z-index: 999999;
-                    color: white;
-width: fit-content;
-                    max-width: 180px;
-                    max-height: 250px;
-                    overflow-y: auto;
-                    overflow-x: hidden;`;
+                    padding-left: 15px;
+                    margin-top: 4px;
+                `;
 
-                        // Hover state tracking
-                        let isHoveringTrigger = false;
-                        let isHoveringSubmenu = false;
-                        let hideTimeout = null;
+                        // Function to rebuild options from main menu
+                        const rebuildOptions = () => {
+                            const mainSubtitlesMenu = this.api.container.querySelector('.subtitles-menu');
+                            if (!mainSubtitlesMenu) return;
 
-                        const checkAndHide = () => {
-                            if (hideTimeout) clearTimeout(hideTimeout);
-                            hideTimeout = setTimeout(() => {
-                                if (!isHoveringTrigger && !isHoveringSubmenu) {
-                                    submenu.style.display = 'none';
+                            // Clone all options from main menu
+                            optionsContainer.innerHTML = '';
+                            const options = mainSubtitlesMenu.querySelectorAll('.subtitles-option');
+
+                            options.forEach(option => {
+                                const clonedOption = option.cloneNode(true);
+                                clonedOption.style.cssText = `
+                            padding: 6px 12px;
+                            cursor: pointer;
+                            color: white;
+                            font-size: 10px;
+                            white-space: normal;
+                            word-wrap: break-word;
+                            opacity: 0.8;
+                            transition: opacity 0.2s;
+                        `;
+
+                                // Highlight selected option
+                                if (option.classList.contains('selected')) {
+                                    clonedOption.style.opacity = '1';
+                                    clonedOption.style.fontWeight = 'bold';
                                 }
-                            }, 200);
+
+                                // Hover effect
+                                clonedOption.addEventListener('mouseenter', () => {
+                                    clonedOption.style.opacity = '1';
+                                });
+                                clonedOption.addEventListener('mouseleave', () => {
+                                    if (!option.classList.contains('selected')) {
+                                        clonedOption.style.opacity = '0.8';
+                                    }
+                                });
+
+                                // Add click handler
+                                clonedOption.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+
+                                    // Trigger click on original option
+                                    option.click();
+
+                                    // Rebuild to update selection
+                                    setTimeout(() => {
+                                        rebuildOptions();
+                                    }, 50);
+                                });
+
+                                optionsContainer.appendChild(clonedOption);
+                            });
                         };
 
-                        // Add OFF option
-                        const offOption = document.createElement('div');
-                        offOption.className = 'quality-option';
-                        offOption.textContent = 'Off';
-                        offOption.style.cssText = 'padding: 8px 16px; cursor: pointer; color: white;';
-                        offOption.addEventListener('click', () => {
-                            if (this.disableCaptions) this.disableCaptions();
-                            submenu.style.display = 'none';
-                            settingsMenu.classList.remove('show');
-                        });
-                        submenu.appendChild(offOption);
-
-                        // Add caption options
-                        if (this.availableCaptions && this.availableCaptions.length > 0) {
-                            this.availableCaptions.forEach((caption, index) => {
-                                const option = document.createElement('div');
-                                option.className = 'quality-option';
-                                option.textContent = caption.label || caption.languageName;
-                                option.style.cssText = 'padding: 8px 16px; cursor: pointer; color: white;';
-                                option.addEventListener('click', () => {
-                                    if (this.setCaptions) this.setCaptions(index);
-                                    submenu.style.display = 'none';
-                                    settingsMenu.classList.remove('show');
-                                });
-                                submenu.appendChild(option);
-                            });
-                        } else {
-                            // Add Auto option
-                            const autoOption = document.createElement('div');
-                            autoOption.className = 'quality-option';
-                            autoOption.textContent = 'On (Auto)';
-                            autoOption.style.cssText = 'padding: 8px 16px; cursor: pointer; color: white;';
-                            autoOption.addEventListener('click', () => {
-                                if (this.enableAutoCaptions) this.enableAutoCaptions();
-                                submenu.style.display = 'none';
-                                settingsMenu.classList.remove('show');
-                            });
-                            submenu.appendChild(autoOption);
-                        }
-
-                        // Trigger events
-                        trigger.addEventListener('mouseenter', () => {
-                            isHoveringTrigger = true;
-                            if (hideTimeout) clearTimeout(hideTimeout);
-                            submenu.style.display = 'block';
-                        });
-
-                        trigger.addEventListener('mouseleave', () => {
-                            isHoveringTrigger = false;
-                            checkAndHide();
-                        });
-
-                        // Submenu events
-                        submenu.addEventListener('mouseenter', () => {
-                            isHoveringSubmenu = true;
-                            if (hideTimeout) clearTimeout(hideTimeout);
-                            submenu.style.display = 'block';
-                        });
-
-                        submenu.addEventListener('mouseleave', () => {
-                            isHoveringSubmenu = false;
-                            checkAndHide();
-                        });
-
-                        // Click alternative
+                        // Toggle expanded/collapsed state
+                        let isExpanded = false;
                         trigger.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            if (submenu.style.display === 'none' || !submenu.style.display) {
-                                submenu.style.display = 'block';
+
+                            isExpanded = !isExpanded;
+
+                            if (isExpanded) {
+                                rebuildOptions();
+                                optionsContainer.style.display = 'block';
+                                arrow.style.transform = 'rotate(180deg)';
                             } else {
-                                submenu.style.display = 'none';
+                                optionsContainer.style.display = 'none';
+                                arrow.style.transform = 'rotate(0deg)';
                             }
                         });
 
                         // Assemble
                         subtitlesWrapper.appendChild(trigger);
-                        subtitlesWrapper.appendChild(submenu);
+                        subtitlesWrapper.appendChild(optionsContainer);
                         settingsMenu.insertBefore(subtitlesWrapper, settingsMenu.firstChild);
+                    }
+
+                    // Add speed option to settings menu
+                    let speedWrapper = settingsMenu.querySelector('.yt-speed-wrapper');
+
+                    if (!speedWrapper) {
+                        // Get i18n text - use 'playback_speed' key
+                        let speedText = 'Playback speed';
+                        if (this.api.player && this.api.player.t) {
+                            speedText = this.api.player.t('playback_speed');
+                        } else if (this.player && this.player.t) {
+                            speedText = this.player.t('playback_speed');
+                        }
+
+                        // Create wrapper
+                        speedWrapper = document.createElement('div');
+                        speedWrapper.className = 'yt-speed-wrapper';
+                        speedWrapper.style.cssText = 'position: relative; display: block;';
+
+                        // Create trigger
+                        const trigger = document.createElement('div');
+                        trigger.className = 'quality-option';
+                        trigger.style.fontSize = '10px';
+
+                        // Get current speed
+                        const getCurrentSpeed = () => {
+                            if (this.ytPlayer && this.ytPlayer.getPlaybackRate) {
+                                return this.ytPlayer.getPlaybackRate();
+                            }
+                            return 1;
+                        };
+
+                        trigger.textContent = `${speedText}: ${getCurrentSpeed()}x`;
+
+                        // Add arrow indicator
+                        const arrow = document.createElement('span');
+                        arrow.textContent = ' ▼';
+                        arrow.style.cssText = 'font-size: 8px; transition: transform 0.2s;';
+                        trigger.appendChild(arrow);
+
+                        // Container for expanded options
+                        const optionsContainer = document.createElement('div');
+                        optionsContainer.className = 'yt-speed-options';
+                        optionsContainer.style.cssText = `
+                    display: none;
+                    padding-left: 15px;
+                    margin-top: 4px;
+                `;
+
+                        // Available speeds
+                        const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+                        // Function to rebuild options
+                        const rebuildOptions = () => {
+                            optionsContainer.innerHTML = '';
+                            const currentSpeed = getCurrentSpeed();
+
+                            speeds.forEach(speed => {
+                                const option = document.createElement('div');
+                                option.style.cssText = `
+                            padding: 6px 12px;
+                            cursor: pointer;
+                            color: white;
+                            font-size: 10px;
+                            white-space: normal;
+                            word-wrap: break-word;
+                            opacity: 0.8;
+                            transition: opacity 0.2s;
+                        `;
+                                option.textContent = `${speed}x`;
+
+                                // Highlight selected option
+                                if (Math.abs(speed - currentSpeed) < 0.01) {
+                                    option.style.opacity = '1';
+                                    option.style.fontWeight = 'bold';
+                                }
+
+                                // Hover effect
+                                option.addEventListener('mouseenter', () => {
+                                    option.style.opacity = '1';
+                                });
+                                option.addEventListener('mouseleave', () => {
+                                    if (Math.abs(speed - getCurrentSpeed()) >= 0.01) {
+                                        option.style.opacity = '0.8';
+                                    }
+                                });
+
+                                // Add click handler
+                                option.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+
+                                    if (this.ytPlayer && this.ytPlayer.setPlaybackRate) {
+                                        this.ytPlayer.setPlaybackRate(speed);
+                                    }
+
+                                    // Update trigger text
+                                    trigger.childNodes[0].textContent = `${speedText}: ${speed}x`;
+
+                                    // Rebuild to update selection
+                                    setTimeout(() => {
+                                        rebuildOptions();
+                                    }, 50);
+                                });
+
+                                optionsContainer.appendChild(option);
+                            });
+                        };
+
+                        // Toggle expanded/collapsed state
+                        let isExpanded = false;
+                        trigger.addEventListener('click', (e) => {
+                            e.stopPropagation();
+
+                            isExpanded = !isExpanded;
+
+                            if (isExpanded) {
+                                rebuildOptions();
+                                optionsContainer.style.display = 'block';
+                                arrow.style.transform = 'rotate(180deg)';
+                            } else {
+                                optionsContainer.style.display = 'none';
+                                arrow.style.transform = 'rotate(0deg)';
+                            }
+                        });
+
+                        // Assemble
+                        speedWrapper.appendChild(trigger);
+                        speedWrapper.appendChild(optionsContainer);
+
+                        // Insert after subtitles wrapper
+                        const subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
+                        if (subtitlesWrapper) {
+                            subtitlesWrapper.insertAdjacentElement('afterend', speedWrapper);
+                        } else {
+                            settingsMenu.insertBefore(speedWrapper, settingsMenu.firstChild);
+                        }
                     }
                 }
             } else {
@@ -468,11 +632,33 @@ width: fit-content;
                     subtitlesBtn.style.display = '';
                 }
 
+                // Reset settings menu styles
+                if (settingsMenu) {
+                    settingsMenu.style.maxHeight = '';
+                    settingsMenu.style.overflowY = '';
+                    settingsMenu.style.overflowX = '';
+                    settingsMenu.style.scrollbarWidth = '';
+                    settingsMenu.style.scrollbarColor = '';
+                }
+
+                // Show original speed option again
+                if (settingsMenu) {
+                    const originalSpeedOption = settingsMenu.querySelector('[data-action="speed"]');
+                    if (originalSpeedOption) {
+                        originalSpeedOption.style.display = '';
+                    }
+                }
+
                 // Remove from settings
                 if (settingsMenu) {
                     const subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
                     if (subtitlesWrapper) {
                         subtitlesWrapper.remove();
+                    }
+
+                    const speedWrapper = settingsMenu.querySelector('.yt-speed-wrapper');
+                    if (speedWrapper) {
+                        speedWrapper.remove();
                     }
                 }
             }
@@ -1210,15 +1396,20 @@ startBufferMonitoring() {
                 setTimeout(() => this.setQuality(this.options.quality), 1000);
             }
 
-            // NEW: Update player watermark with channel data
+            // Update player watermark with channel data
             if (this.options.enableChannelWatermark) {
                 this.updatePlayerWatermark();
             }
 
-            // NEW: Set auto caption language
+            // Set auto caption language
             if (this.options.autoCaptionLanguage) {
                 setTimeout(() => this.setAutoCaptionLanguage(), 1500);
             }
+
+            // Check initial caption state AFTER captions are loaded and menu is built
+            setTimeout(() => {
+                this.checkInitialCaptionState();
+            }, 2500); // Dopo che tutto è stato inizializzato
 
             this.api.triggerEvent('youtubeplugin:playerready', {});
 
@@ -2177,13 +2368,13 @@ startBufferMonitoring() {
             if (this.api.player.options.debug) console.log('[YT Plugin] Subtitles control created');
             this.buildSubtitlesMenu();
             this.bindSubtitlesButton();
-            this.checkInitialCaptionState();
+            //this.checkInitialCaptionState();
             this.startCaptionStateMonitoring();
         }
 
         /**
-         * Build the subtitles menu
-         */
+ * Build the subtitles menu
+ */
         buildSubtitlesMenu() {
             const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
             if (!subtitlesMenu) return;
@@ -2219,22 +2410,22 @@ startBufferMonitoring() {
                     });
                     subtitlesMenu.appendChild(option);
                 });
-            } else {
-                // Auto-caption only (without tracklist)
-                const autoOption = document.createElement('div');
-                autoOption.className = 'subtitles-option';
-                autoOption.textContent = 'Auto-generated';
-                autoOption.dataset.id = 'auto';
-                autoOption.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.enableAutoCaptions();
-                    this.updateMenuSelection('auto');
-                    subtitlesMenu.classList.remove('show');
-                });
-                subtitlesMenu.appendChild(autoOption);
             }
 
-            // Always add "Auto-translate" (both with and without tracklist)
+            // SEMPRE aggiungi l'opzione Auto-generated (sia con che senza tracklist)
+            const autoOption = document.createElement('div');
+            autoOption.className = 'subtitles-option';
+            autoOption.textContent = 'Auto-generated';
+            autoOption.dataset.id = 'auto';
+            autoOption.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.enableAutoCaptions();
+                this.updateMenuSelection('auto');
+                subtitlesMenu.classList.remove('show');
+            });
+            subtitlesMenu.appendChild(autoOption);
+
+            // Always add Auto-translate (both with and without tracklist)
             const translateOption = document.createElement('div');
             translateOption.className = 'subtitles-option translate-option';
             translateOption.textContent = 'Auto-translate';
@@ -2524,27 +2715,69 @@ startBufferMonitoring() {
         }
 
         /**
-         * Check initial caption state
-         */
+        * Check initial caption state
+        */
         checkInitialCaptionState() {
             setTimeout(() => {
                 try {
                     const currentTrack = this.ytPlayer.getOption('captions', 'track');
+
                     if (currentTrack && currentTrack.languageCode) {
                         this.captionsEnabled = true;
-                        this.updateMenuSelection('caption-0');
+
+                        // erify if translation is active
+                        if (currentTrack.translationLanguage) {
+                            this.currentTranslation = currentTrack.translationLanguage.languageCode;
+
+                            // when translation is active, set currentCaption to null
+                            this.updateMenuSelection('auto');
+
+                            // specify translation submenu selection after a short delay
+                            setTimeout(() => {
+                                const translationMenu = this.api.container.querySelector('.translation-menu');
+                                if (translationMenu) {
+                                    translationMenu.querySelectorAll('.subtitles-option').forEach(option => {
+                                        option.classList.remove('selected');
+                                    });
+
+                                    const selectedTranslation = translationMenu.querySelector(`[data-id="translate-${this.currentTranslation}"]`);
+                                    if (selectedTranslation) {
+                                        selectedTranslation.classList.add('selected');
+                                    }
+                                }
+                            }, 100);
+                        } else {
+                            // find current caption track index
+                            const captionIndex = this.availableCaptions.findIndex(
+                                cap => cap.languageCode === currentTrack.languageCode
+                            );
+
+                            if (captionIndex >= 0) {
+                                this.currentCaption = currentTrack.languageCode;
+                                this.updateMenuSelection(`caption-${captionIndex}`);
+                            } else {
+                                // Se non trovato nella lista, è auto-generated
+                                this.updateMenuSelection('auto');
+                            }
+                        }
+
+                        // activate button
+                        const subtitlesBtn = this.api.container.querySelector('.subtitles-btn');
+                        if (subtitlesBtn) {
+                            subtitlesBtn.classList.add('active');
+                        }
                     } else {
                         this.updateMenuSelection('off');
                     }
                 } catch (e) {
                     this.updateMenuSelection('off');
                 }
-            }, 1500);
+            }, 2000);
         }
 
-        /**
-         * Monitor caption state
-         */
+/**
+ * Monitor caption state
+ */
         startCaptionStateMonitoring() {
             if (this.captionStateCheckInterval) {
                 clearInterval(this.captionStateCheckInterval);
@@ -2554,7 +2787,6 @@ startBufferMonitoring() {
                 try {
                     const currentTrack = this.ytPlayer.getOption('captions', 'track');
                     const wasEnabled = this.captionsEnabled;
-
                     this.captionsEnabled = !!(currentTrack && currentTrack.languageCode);
 
                     if (wasEnabled !== this.captionsEnabled) {
@@ -2562,8 +2794,24 @@ startBufferMonitoring() {
                         if (subtitlesBtn) {
                             if (this.captionsEnabled) {
                                 subtitlesBtn.classList.add('active');
+
+                                // update current caption/translation
+                                if (currentTrack.translationLanguage) {
+                                    this.currentTranslation = currentTrack.translationLanguage.languageCode;
+                                    this.updateMenuSelection(`translate-${this.currentTranslation}`);
+                                } else {
+                                    const captionIndex = this.availableCaptions.findIndex(
+                                        cap => cap.languageCode === currentTrack.languageCode
+                                    );
+                                    if (captionIndex >= 0) {
+                                        this.updateMenuSelection(`caption-${captionIndex}`);
+                                    } else {
+                                        this.updateMenuSelection('auto');
+                                    }
+                                }
                             } else {
                                 subtitlesBtn.classList.remove('active');
+                                this.updateMenuSelection('off');
                             }
                         }
                     }

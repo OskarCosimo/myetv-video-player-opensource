@@ -147,14 +147,20 @@ function buildJavaScript() {
 function minifyJSNative() {
     const jsFile = './dist/myetv-player.js';
     const minFile = './dist/myetv-player.min.js';
+    
     try {
         let code = fs.readFileSync(jsFile, 'utf8');
+        
         code = code.replace(/\/\*[\s\S]*?\*\//g, '');
-        code = code.replace(/(^|\s)\/\/.*$/gm, '');
-        code = code.split('\\n').map(line => line.trim()).filter(line => line.length > 0).join(' ');
+        code = code.replace(/^\s*\/\/.*$/gm, '');
+        
+        code = code.replace(/\n\s*\n\s*\n/g, '\n\n');
+        
+        code = code.replace(/  +/g, ' ');
+        
         fs.writeFileSync(minFile, code);
         console.log(`✓ JS (minified native) created: ${minFile}`);
-        console.log(`  File size: ${(code.length / 1024).toFixed(2)} KB`);
+        console.log(` File size: ${(code.length / 1024).toFixed(2)} KB`);
     } catch (err) {
         console.log('✗ Native JS minification failed:', err.message);
     }

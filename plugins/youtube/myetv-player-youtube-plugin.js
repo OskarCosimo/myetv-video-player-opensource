@@ -3150,7 +3150,7 @@ startBufferMonitoring() {
                 }
             };
 
-            // Override pause method  
+            // Override pause method
             const originalPause = this.player.pause;
             this.player.pause = () => {
                 if (this.ytPlayer && this.ytPlayer.pauseVideo) {
@@ -3222,15 +3222,13 @@ startBufferMonitoring() {
             // Override mute toggle
             const originalToggleMute = this.player.toggleMute;
             this.player.toggleMute = () => {
-                if (this.ytPlayer && this.ytPlayer.isMuted && this.ytPlayer.mute && this.ytPlayer.unMute) {
+                if (this.ytPlayer && this.ytPlayer.isMuted) {
                     const isMuted = this.ytPlayer.isMuted();
-
                     if (isMuted) {
                         this.ytPlayer.unMute();
                     } else {
                         this.ytPlayer.mute();
                     }
-
                     this.updateMuteButtonState(!isMuted);
 
                     if (!isMuted) {
@@ -3243,97 +3241,6 @@ startBufferMonitoring() {
                     originalToggleMute.call(this.player);
                 }
             };
-
-            // Volume tooltip events for YouTube
-            if (this.api.player.volumeSlider) {
-                const volumeSlider = this.api.player.volumeSlider;
-                const volumeContainer = this.api.container.querySelector('.volume-container');
-
-                // Remove existing listeners to avoid duplicates
-                const newVolumeSlider = volumeSlider.cloneNode(true);
-                volumeSlider.parentNode.replaceChild(newVolumeSlider, volumeSlider);
-                this.api.player.volumeSlider = newVolumeSlider;
-
-                // Update tooltip on input (slider drag)
-                newVolumeSlider.addEventListener('input', (e) => {
-                    const value = parseFloat(e.target.value);
-                    this.player.updateVolume(value);
-
-                    // Update tooltip position and text during drag
-                    if (this.api.player.updateVolumeTooltipPosition) {
-                        this.api.player.updateVolumeTooltipPosition(value / 100);
-                    }
-                    if (this.api.player.updateVolumeTooltip) {
-                        this.api.player.updateVolumeTooltip();
-                    }
-                });
-
-                // Update tooltip position on mousemove over slider
-                newVolumeSlider.addEventListener('mousemove', (e) => {
-                    const rect = newVolumeSlider.getBoundingClientRect();
-                    const mouseX = e.clientX - rect.left;
-                    const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
-
-                    // Update tooltip position as mouse moves
-                    if (this.api.player.updateVolumeTooltipPosition) {
-                        this.api.player.updateVolumeTooltipPosition(percentage);
-                    }
-
-                    // Update tooltip text to show value under mouse
-                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
-                    if (volumeTooltip) {
-                        volumeTooltip.textContent = Math.round(percentage * 100) + '%';
-                    }
-                });
-
-                // Show/hide tooltip on hover
-                if (volumeContainer) {
-                    volumeContainer.addEventListener('mouseenter', () => {
-                        const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
-                        if (volumeTooltip) {
-                            volumeTooltip.classList.add('visible');
-                        }
-                    });
-
-                    volumeContainer.addEventListener('mouseleave', () => {
-                        const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
-                        if (volumeTooltip) {
-                            volumeTooltip.classList.remove('visible');
-                        }
-                    });
-                }
-
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Volume tooltip events bound');
-                }
-            }
-
-            // Override playback speed
-            const originalChangeSpeed = this.player.changeSpeed;
-            if (originalChangeSpeed) {
-                this.player.changeSpeed = (e) => {
-                    if (!e.target.classList.contains('speed-option')) return;
-
-                    const speed = parseFloat(e.target.getAttribute('data-speed'));
-
-                    if (this.ytPlayer && this.ytPlayer.setPlaybackRate && speed > 0) {
-                        this.ytPlayer.setPlaybackRate(speed);
-
-                        const speedBtn = this.api.container.querySelector('.speed-btn');
-                        if (speedBtn) speedBtn.textContent = `${speed}x`;
-
-                        const speedMenu = this.api.container.querySelector('.speed-menu');
-                        if (speedMenu) {
-                            speedMenu.querySelectorAll('.speed-option').forEach(option => {
-                                option.classList.remove('active');
-                            });
-                            e.target.classList.add('active');
-                        }
-                    } else {
-                        originalChangeSpeed.call(this.player, e);
-                    }
-                };
-            }
 
             // Override progress bar seeking
             if (this.api.player.progressContainer) {
@@ -3349,7 +3256,22 @@ startBufferMonitoring() {
                 // Create tooltip for seek preview
                 const seekTooltip = document.createElement('div');
                 seekTooltip.className = 'yt-seek-tooltip';
-                seekTooltip.style.cssText = 'position:absolute;bottom:calc(100% + 10px);left:0;background:rgba(28,28,28,0.95);color:#fff;padding:6px 10px;border-radius:3px;font-size:13px;font-weight:500;white-space:nowrap;pointer-events:none;visibility:hidden;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+                seekTooltip.style.cssText = `
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 0;
+            background: rgba(28,28,28,0.95);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            pointer-events: none;
+            visibility: hidden;
+            z-index: 99999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        `;
                 newProgressContainer.appendChild(seekTooltip);
 
                 // Format time function for tooltip
@@ -3367,25 +3289,32 @@ startBufferMonitoring() {
                 let isSeeking = false;
 
                 const handleSeek = (e) => {
-                    if (!this.ytPlayer || !this.ytPlayer.getDuration) return;
+                    if (!this.ytPlayer || !this.ytPlayer.getDuration()) return;
 
                     const rect = newProgressContainer.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
+
+                    // Support both mouse and touch events
+                    const clientX = e.clientX !== undefined ? e.clientX :
+                        (e.touches && e.touches[0] ? e.touches[0].clientX :
+                            (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0));
+
+                    const clickX = clientX - rect.left;
                     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
                     const duration = this.ytPlayer.getDuration();
                     const targetTime = percentage * duration;
 
                     this.ytPlayer.seekTo(targetTime, true);
 
-                    const progress = percentage * 100 + '%';
+                    const progress = percentage * 100;
                     if (this.api.player.progressFilled) {
-                        this.api.player.progressFilled.style.width = progress;
+                        this.api.player.progressFilled.style.width = `${progress}%`;
                     }
                     if (this.api.player.progressHandle) {
-                        this.api.player.progressHandle.style.left = progress;
+                        this.api.player.progressHandle.style.left = `${progress}%`;
                     }
                 };
 
+                // MOUSE EVENTS
                 newProgressContainer.addEventListener('mousedown', (e) => {
                     isSeeking = true;
                     handleSeek(e);
@@ -3397,7 +3326,7 @@ startBufferMonitoring() {
                     }
 
                     // Show tooltip with timestamp
-                    if (!isSeeking && this.ytPlayer && this.ytPlayer.getDuration) {
+                    if (!isSeeking && this.ytPlayer && this.ytPlayer.getDuration()) {
                         const rect = newProgressContainer.getBoundingClientRect();
                         const mouseX = e.clientX - rect.left;
                         const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
@@ -3405,7 +3334,7 @@ startBufferMonitoring() {
                         const time = percentage * duration;
 
                         seekTooltip.textContent = formatTimeForTooltip(time);
-                        seekTooltip.style.left = mouseX + 'px';
+                        seekTooltip.style.left = `${mouseX}px`;
                         seekTooltip.style.visibility = 'visible';
                     }
                 });
@@ -3418,10 +3347,50 @@ startBufferMonitoring() {
                     isSeeking = false;
                 });
 
-                newProgressContainer.addEventListener('click', handleSeek);
-            }
+                // TOUCH EVENTS - AGGIUNTI QUI!
+                newProgressContainer.addEventListener('touchstart', (e) => {
+                    e.preventDefault(); // scroll prevention during drag
+                    isSeeking = true;
+                    handleSeek(e);
+                }, { passive: false });
 
-            this.bindVolumeSlider();
+                newProgressContainer.addEventListener('touchmove', (e) => {
+                    e.preventDefault(); // scroll prevention during drag
+
+                    if (isSeeking) {
+                        handleSeek(e);
+                    }
+
+                    // Show tooltip with timestamp during touch
+                    if (!isSeeking && this.ytPlayer && this.ytPlayer.getDuration()) {
+                        const rect = newProgressContainer.getBoundingClientRect();
+                        const touch = e.touches[0];
+                        const touchX = touch.clientX - rect.left;
+                        const percentage = Math.max(0, Math.min(1, touchX / rect.width));
+                        const duration = this.ytPlayer.getDuration();
+                        const time = percentage * duration;
+
+                        seekTooltip.textContent = formatTimeForTooltip(time);
+                        seekTooltip.style.left = `${touchX}px`;
+                        seekTooltip.style.visibility = 'visible';
+                    }
+                }, { passive: false });
+
+                newProgressContainer.addEventListener('touchend', () => {
+                    isSeeking = false;
+                    seekTooltip.style.visibility = 'hidden';
+                });
+
+                newProgressContainer.addEventListener('touchcancel', () => {
+                    isSeeking = false;
+                    seekTooltip.style.visibility = 'hidden';
+                });
+
+                // CLICK EVENT
+                newProgressContainer.addEventListener('click', handleSeek);
+
+                this.bindVolumeSlider();
+            }
 
             // Time update interval
             if (this.timeUpdateInterval) {
@@ -3442,14 +3411,13 @@ startBufferMonitoring() {
                         } else {
                             // For regular videos, calculate normally
                             progress = (currentTime / duration) * 100;
-                        }
 
-                        // Check if live badge exists = it's a live stream
-                        const liveBadge = this.api.container.querySelector('.live-badge');
-
-                        if (liveBadge) {
-                            // Force 100% for live streams
-                            progress = 100;
+                            // Check if live badge exists = it's a live stream
+                            const liveBadge = this.api.container.querySelector('.live-badge');
+                            if (liveBadge) {
+                                // Force 100% for live streams
+                                progress = 100;
+                            }
                         }
 
                         this.api.player.progressFilled.style.width = `${progress}%`;
@@ -3461,8 +3429,13 @@ startBufferMonitoring() {
                     const currentTimeEl = this.api.container.querySelector('.current-time');
                     const durationEl = this.api.container.querySelector('.duration');
 
-                    if (currentTimeEl) currentTimeEl.textContent = this.formatTime(currentTime);
-                    if (durationEl && duration) durationEl.textContent = this.formatTime(duration);
+                    if (currentTimeEl) {
+                        currentTimeEl.textContent = this.formatTime(currentTime);
+                    }
+
+                    if (durationEl && duration) {
+                        durationEl.textContent = this.formatTime(duration);
+                    }
                 }
             }, 250);
         }

@@ -264,6 +264,9 @@
             // Setup event listeners
             this.setupEventListeners();
 
+            //create overlay for mouse detection
+            this.createMouseMoveOverlay();
+
             // Load available qualities
             this.loadQualities();
 
@@ -427,6 +430,224 @@
                 console.error('🎬 Vimeo error:', data);
                 this.player.triggerEvent('error', data);
             });
+        }
+
+        /**
+ * Create transparent overlay for click detection
+ */
+        createMouseMoveOverlay() {
+            if (this.mouseMoveOverlay) return;
+
+            this.mouseMoveOverlay = document.createElement('div');
+            this.mouseMoveOverlay.className = 'vimeo-mousemove-overlay';
+            this.mouseMoveOverlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        background: transparent;
+        pointer-events: auto;
+        cursor: pointer;
+    `;
+
+            // Insert before controls
+            this.player.container.insertBefore(this.mouseMoveOverlay, this.player.controls);
+
+            // Setup mouse detection
+            this.setupMouseMoveDetection();
+
+            // Click handler for play/pause
+            this.mouseMoveOverlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const doubleTap = this.player.options.doubleTapPause;
+                const pauseClick = this.player.options.pauseClick;
+
+                if (doubleTap) {
+                    // Check if controls are hidden
+                    let controlsHidden = false;
+                    if (this.player.controls) {
+                        controlsHidden = this.player.controls.classList.contains('hide');
+                    }
+
+                    if (!controlsHidden) {
+                        const controls = this.player.container.querySelector('.controls');
+                        if (controls) {
+                            controlsHidden = controls.classList.contains('hide');
+                        }
+                    }
+
+                    if (!controlsHidden && this.player.controls) {
+                        const style = window.getComputedStyle(this.player.controls);
+                        controlsHidden = (style.opacity === '0' || style.visibility === 'hidden');
+                    }
+
+                    if (controlsHidden) {
+                        // Show controls
+                        if (this.player.showControlsNow) {
+                            this.player.showControlsNow();
+                        }
+                        if (this.player.resetAutoHideTimer) {
+                            this.player.resetAutoHideTimer();
+                        }
+                        return;
+                    }
+
+                    this.togglePlayPause();
+                } else if (pauseClick) {
+                    this.togglePlayPause();
+                }
+            });
+
+            // Mouse move handler
+            this.mouseMoveOverlay.addEventListener('mousemove', (e) => {
+                if (this.player.onMouseMove) {
+                    this.player.onMouseMove(e);
+                }
+                if (this.player.resetAutoHideTimer) {
+                    this.player.resetAutoHideTimer();
+                }
+            });
+
+            if (this.options.debug) {
+                console.log('[Vimeo] Mouse overlay created');
+            }
+        }
+
+        /**
+         * Setup mouse move detection
+         */
+        setupMouseMoveDetection() {
+            // Track last mouse position
+            this.lastMouseX = null;
+            this.lastMouseY = null;
+            this.mouseCheckInterval = null;
+
+            // Mouse enter
+            this.player.container.addEventListener('mouseenter', () => {
+                if (this.options.debug) {
+                    console.log('[Vimeo] Mouse entered - show controls');
+                }
+                if (this.player.showControlsNow) {
+                    this.player.showControlsNow();
+                }
+                if (this.player.resetAutoHideTimer) {
+                    this.player.resetAutoHideTimer();
+                }
+                this.startMousePositionTracking();
+            });
+
+            // Mouse leave
+            this.player.container.addEventListener('mouseleave', () => {
+                if (this.options.debug) {
+                    console.log('[Vimeo] Mouse left');
+                }
+                this.stopMousePositionTracking();
+            });
+
+            // Mouse move
+            this.player.container.addEventListener('mousemove', (e) => {
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+                if (this.player.onMouseMove) {
+                    this.player.onMouseMove(e);
+                }
+                if (this.player.resetAutoHideTimer) {
+                    this.player.resetAutoHideTimer();
+                }
+            });
+        }
+
+        /**
+         * Start mouse position tracking
+         */
+        startMousePositionTracking() {
+            if (this.mouseCheckInterval) return;
+
+            this.mouseCheckInterval = setInterval(() => {
+                // Track mouse position over iframe
+                const handleGlobalMove = (e) => {
+                    const newX = e.clientX;
+                    const newY = e.clientY;
+
+                    if (this.lastMouseX !== newX || this.lastMouseY !== newY) {
+                        this.lastMouseX = newX;
+                        this.lastMouseY = newY;
+
+                        const rect = this.player.container.getBoundingClientRect();
+                        const isInside = (
+                            newX >= rect.left &&
+                            newX <= rect.right &&
+                            newY >= rect.top &&
+                            newY <= rect.bottom
+                        );
+
+                        if (isInside) {
+                            if (this.player.showControlsNow) {
+                                this.player.showControlsNow();
+                            }
+                            if (this.player.resetAutoHideTimer) {
+                                this.player.resetAutoHideTimer();
+                            }
+                        }
+                    }
+                };
+
+                document.addEventListener('mousemove', handleGlobalMove, { once: true, passive: true });
+            }, 100);
+        }
+
+        /**
+         * Stop mouse position tracking
+         */
+        stopMousePositionTracking() {
+            if (this.mouseCheckInterval) {
+                clearInterval(this.mouseCheckInterval);
+                this.mouseCheckInterval = null;
+            }
+        }
+
+        /**
+        * Toggle play/pause
+        */
+        togglePlayPause() {
+            if (!this.vimeoPlayer) return;
+
+            this.vimeoPlayer.getPaused().then(paused => {
+                if (paused) {
+                    // Use player's play method to trigger UI update
+                    if (this.player.play) {
+                        this.player.play();
+                    } else if (this.player.video && this.player.video.play) {
+                        this.player.video.play();
+                    }
+                } else {
+                    // Use player's pause method to trigger UI update
+                    if (this.player.pause) {
+                        this.player.pause();
+                    } else if (this.player.video && this.player.video.pause) {
+                        this.player.video.pause();
+                    }
+                }
+            }).catch(err => {
+                if (this.options.debug) {
+                    console.error('[Vimeo] GetPaused error:', err);
+                }
+            });
+        }
+
+        /**
+         * Remove mouse overlay
+         */
+        removeMouseMoveOverlay() {
+            if (this.mouseMoveOverlay) {
+                this.mouseMoveOverlay.remove();
+                this.mouseMoveOverlay = null;
+            }
+            this.stopMousePositionTracking();
         }
 
         /**
@@ -912,6 +1133,8 @@
          * Dispose plugin
          */
         dispose() {
+            this.removeMouseMoveOverlay();
+
             // Cleanup PIP observers and listeners
             if (this.pipObserver) {
                 this.pipObserver.disconnect();

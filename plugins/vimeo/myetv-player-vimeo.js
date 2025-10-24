@@ -449,7 +449,7 @@
         z-index: 2;
         background: transparent;
         pointer-events: auto;
-        cursor: pointer;
+        cursor: default;
     `;
 
             // Insert before controls

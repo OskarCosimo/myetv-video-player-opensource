@@ -266,6 +266,19 @@ console.log(player.getSeekHandleShape()); // "heart"
 console.log(player.getAvailableSeekHandleShapes());
 // ["none", "circle", "square", "diamond", "arrow", "triangle", "heart", "star"]
 ```
+### Auto-hide mouse cursor (works only when autohide controlbar is true)
+```
+// Disable auto-hide mouse
+player.disableCursorHiding();
+
+// Enable auto-hide mouse
+player.enableCursorHiding();
+
+// Check the current state
+if (player.isCursorHidingEnabled()) {
+    console.log('Cursor hiding is active');
+}
+```
 ### Playlist Controls
 ```
 player.nextVideo();                    // Next Video

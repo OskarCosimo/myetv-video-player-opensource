@@ -165,3 +165,24 @@
 .controls-right .brand-logo-link .brand-logo {
     margin-right: 0;
 }
+
+/* Hide cursor when controlbar is hidden */
+.video-wrapper.hide-cursor {
+    cursor: none !important;
+}
+
+/* Ensure cursor is visible on controls even when hide-cursor is active */
+.video-wrapper.hide-cursor .controls {
+    cursor: default !important;
+}
+
+/* Ensure cursor is visible on buttons */
+.video-wrapper.hide-cursor .control-btn {
+    cursor: pointer !important;
+}
+
+/* do not hide mouse on iframes */
+.video-wrapper.hide-cursor iframe {
+    cursor: auto !important;
+    pointer-events: auto !important;
+}

@@ -12,22 +12,23 @@ constructor(videoElement, options = {}) {
     }
 
     this.options = {
-        showQualitySelector: true,
-        showSpeedControl: true,
-        showFullscreen: true,
-        showPictureInPicture: true,
-        showSubtitles: true,
-        subtitlesEnabled: false,
-        autoHide: true,
-        autoHideDelay: 3000,
+        showQualitySelector: true,   // Enable quality selector button
+        showSpeedControl: true,      // Enable speed control button
+        showFullscreen: true,        // Enable fullscreen button
+        showPictureInPicture: true,  // Enable PiP button
+        showSubtitles: true,         // Enable subtitles button
+        subtitlesEnabled: false,     // Enable subtitles by default if available
+        autoHide: true,              // auto-hide controls when idle
+        autoHideDelay: 3000,         // hide controls after ... seconds of inactivity (specificed in milliseconds)
+        hideCursor: true,            // hide mouse cursor when idle
         poster: null,                // URL of poster image
         showPosterOnEnd: false,      // Show poster again when video ends
-        keyboardControls: true,
-        showSeekTooltip: true,
-        showTitleOverlay: false,
-        videoTitle: '',
-        videoSubtitle: '',
-        persistentTitle: false,
+        keyboardControls: true,      // Enable keyboard controls
+        showSeekTooltip: true,       // Show tooltip on seek bar at mouse hover
+        showTitleOverlay: false,     // Show video title overlay
+        videoTitle: '',              // Title text to show in overlay
+        videoSubtitle: '',           // Subtitle text to show in overlay
+        persistentTitle: false,   // If true, title overlay stays visible
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
         defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
@@ -57,8 +58,8 @@ constructor(videoElement, options = {}) {
         //seek shape
         seekHandleShape: 'circle', // Available shape: none, circle, square, diamond, arrow, triangle, heart, star
         // AUDIO PLAYER
-        audiofile: false,
-        audiowave: false,
+        audiofile: false,       // if true, adapt player to audio file (hide video element)
+        audiowave: false,       // if true, show audio wave visualization (Web Audio API)
         // RESOLUTION CONTROL
         resolution: "normal", // "normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"
         ...options

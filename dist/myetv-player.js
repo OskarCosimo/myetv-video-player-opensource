@@ -2841,6 +2841,7 @@ initAutoHide() {
 
 onMouseMoveInPlayer(e) {
     this.showControlsNow();
+    this.showCursor();
     this.resetAutoHideTimer();
 }
 
@@ -2898,66 +2899,69 @@ resetAutoHideTimer() {
 showControlsNow() {
     if (this.controls) {
         this.controls.classList.add('show');
-    }
 
-    // Add has-controls class to container for watermark visibility
-    if (this.container) {
-        this.container.classList.add('has-controls');
+        // Add has-controls class to container (for watermark visibility)
+        if (this.container) {
+            this.container.classList.add('has-controls');
+        }
+
         this.updateControlbarHeight();
+
         // Update watermark position
         if (this.updateWatermarkPosition) {
             this.updateWatermarkPosition();
         }
-    }
 
-    // Show title overlay with controls if not persistent
-    if (this.options.showTitleOverlay && !this.options.persistentTitle && this.options.videoTitle) {
-        this.showTitleOverlay();
-    }
+        // Show title overlay with controls (if not persistent)
+        if (this.options.showTitleOverlay && !this.options.persistentTitle && this.options.videoTitle) {
+            this.showTitleOverlay();
+        }
 
-    if (this.autoHideDebug && this.options.debug) console.log('✅ Controls shown');
+        // *show cursor when controls are shown*
+        this.showCursor();
+
+        if (this.autoHideDebug && this.options.debug) console.log('✅ Controls shown');
+    }
 }
 
 hideControlsNow() {
-    // Don't hide if mouse is still over controls (allow hiding on touch devices)
+    // Dont hide if mouse is still over controls (allow hiding on touch devices)
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
     if (this.mouseOverControls && !isTouchDevice) {
-        if (this.autoHideDebug && this.options.debug) {
-            console.log('🚫 Not hiding - mouse still over controls');
-        }
+        if (this.autoHideDebug && this.options.debug) console.log('❌ Not hiding - mouse still over controls');
         return;
     }
 
-    // Don't hide if video is paused
+    // Dont hide if video is paused
     if (this.video && this.video.paused) {
-        if (this.autoHideDebug && this.options.debug) {
-            console.log('🚫 Not hiding - video is paused');
-        }
+        if (this.autoHideDebug && this.options.debug) console.log('❌ Not hiding - video is paused');
         return;
     }
 
     if (this.controls) {
         this.controls.classList.remove('show');
 
-        // Remove has-controls class from container for watermark visibility
+        // Remove has-controls class from container (for watermark visibility)
         if (this.container) {
             this.container.classList.remove('has-controls');
-            this.updateControlbarHeight();
-            // Update watermark position
-            if (this.updateWatermarkPosition) {
-                this.updateWatermarkPosition();
-            }
         }
-    }
 
-    // Hide title overlay with controls (if not persistent)
-    if (this.options.showTitleOverlay && !this.options.persistentTitle) {
-        this.hideTitleOverlay();
-    }
+        this.updateControlbarHeight();
 
-    if (this.autoHideDebug && this.options.debug) {
-        console.log('👁️ Controls hidden');
+        // Update watermark position
+        if (this.updateWatermarkPosition) {
+            this.updateWatermarkPosition();
+        }
+
+        // Hide title overlay with controls (if not persistent)
+        if (this.options.showTitleOverlay && !this.options.persistentTitle) {
+            this.hideTitleOverlay();
+        }
+
+        // *hide cursor after controls are hidden*
+        this.hideCursor();
+
+        if (this.autoHideDebug && this.options.debug) console.log('✅ Controls hidden');
     }
 }
 
@@ -3821,6 +3825,27 @@ isAutoHideEnabled() {
 
 isAutoHideInitialized() {
     return this.autoHideInitialized;
+}
+
+/**
+ * Hide mouse cursor in player container
+ * Only hides cursor in main container, not in plugin iframes
+ */
+hideCursor() {
+    if (this.container) {
+        this.container.classList.add('hide-cursor');
+        if (this.options.debug) console.log('🖱️ Cursor hidden');
+    }
+}
+
+/**
+ * Show mouse cursor in player container
+ */
+showCursor() {
+    if (this.container) {
+        this.container.classList.remove('hide-cursor');
+        if (this.options.debug) console.log('🖱️ Cursor shown');
+    }
 }
 
 /* PLAYLIST CONTROLS */

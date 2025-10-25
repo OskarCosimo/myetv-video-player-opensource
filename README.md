@@ -107,6 +107,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `resolution` | string | `normal` | resolution type: "normal" same resolution of the native video; "4:3"; "16:9"; "stretched" the video will be stretched in all the container; "fit-to-screen" the video will fit the screen but can be cutted; "scale-to-fit" fit the screen but preserve aspect ration and not cut |
 | `autoHide` | boolean | `true` | Auto-hide controls |
 | `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |
+| `hideCursor	` | boolean | `true` | Auto-hide the mouse cursor with the controlbar |
 | `pauseClick` | boolean | `true` | Enable or disable the click on the video to pause/resume |
 | `doubleTapPause` | boolean | `true` | First touch shows controls, second touch pauses (usefull on touch devices) |
 | `keyboardControls` | boolean | `true` | Enable keyboard controls |

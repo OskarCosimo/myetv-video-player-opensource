@@ -1428,8 +1428,17 @@ startBufferMonitoring() {
             // Check initial caption state AFTER captions are loaded and menu is built
             setTimeout(() => {
                 this.checkInitialCaptionState();
-            }, 2500); // Dopo che tutto è stato inizializzato
+            }, 2500); // after 2.5s
 
+            // Initialize cursor state based on controls visibility
+            if (!this.options.showYouTubeUI && this.api.player.options.hideCursor) {
+                // Check if controls are visible
+                const controlsVisible = this.api.controls && this.api.controls.classList.contains('show');
+                if (!controlsVisible) {
+                    this.hideCursor();
+                }
+            }
+            if (this.api.player.options.debug) console.log('YT Plugin: Setup completed');
             this.api.triggerEvent('youtubeplugin:playerready', {});
 
         }
@@ -1984,7 +1993,7 @@ startBufferMonitoring() {
             visibility: visible !important;
             opacity: 1 !important;
         }
-        
+
         /* Make watermark circular */
         .video-wrapper .watermark,
         .video-wrapper .watermark-image,
@@ -1992,12 +2001,36 @@ startBufferMonitoring() {
             border-radius: 50% !important;
             overflow: hidden !important;
         }
+
+        /* Hide cursor */
+        .video-wrapper.hide-cursor,
+        .video-wrapper.hide-cursor * {
+            cursor: none !important;
+        }
+
+        /* Ensure cursor is visible on controls */
+        .video-wrapper.hide-cursor .controls,
+        .video-wrapper.hide-cursor .controls * {
+            cursor: default !important;
+        }
+
+        /* Ensure cursor is visible on buttons */
+        .video-wrapper.hide-cursor .control-btn,
+        .video-wrapper.hide-cursor .control-btn * {
+            cursor: pointer !important;
+        }
+
+        /* Ensure iframe doesn't override */
+        .video-wrapper.hide-cursor iframe {
+            cursor: auto !important;
+        }
     `;
+
             document.head.appendChild(style);
             this.api.container.classList.add('youtube-active');
 
             if (this.api.player.options.debug) {
-                console.log('[YT Plugin] CSS override injected (ToS compliant)');
+                console.log('YT Plugin: CSS override injected');
             }
         }
 
@@ -3438,6 +3471,73 @@ startBufferMonitoring() {
                     }
                 }
             }, 250);
+
+            // **Cursor sync interval - only if the option is true**
+            if (!this.options.showYouTubeUI && this.api.player.options.hideCursor) {
+                if (this.cursorSyncInterval) {
+                    clearInterval(this.cursorSyncInterval);
+                }
+
+                this.cursorSyncInterval = setInterval(() => {
+                    if (this.api.controls) {
+                        const controlsVisible = this.api.controls.classList.contains('show');
+
+                        if (controlsVisible) {
+                            // Controls are visible, show cursor
+                            this.showCursor();
+                        } else {
+                            // Controls are hidden, hide cursor
+                            this.hideCursor();
+                        }
+                    }
+                }, 100); // Check every 100ms
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Cursor sync enabled');
+                }
+            } else {
+                // if cursor sync was previously enabled, clear it
+                if (this.cursorSyncInterval) {
+                    clearInterval(this.cursorSyncInterval);
+                    this.cursorSyncInterval = null;
+                    this.showCursor(); // Assicurati che il cursore sia visibile
+                }
+            }
+        }
+
+        /**
+         * Hide mouse cursor in YouTube player
+         * Only works when showYouTubeUI is false (custom controls)
+         */
+        hideCursor() {
+            // Don't hide cursor if YouTube native UI is active
+            if (this.options.showYouTubeUI) {
+                return;
+            }
+
+            // Add hide-cursor class to MAIN PLAYER CONTAINER
+            // This ensures cursor is hidden everywhere in the player
+            if (this.api.container) {
+                this.api.container.classList.add('hide-cursor');
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Cursor hidden on main container');
+            }
+        }
+
+        /**
+         * Show mouse cursor in YouTube player
+         */
+        showCursor() {
+            // Remove hide-cursor class from MAIN PLAYER CONTAINER
+            if (this.api.container) {
+                this.api.container.classList.remove('hide-cursor');
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Cursor shown on main container');
+            }
         }
 
         bindVolumeSlider() {
@@ -3567,6 +3667,18 @@ startBufferMonitoring() {
 
         dispose() {
             if (this.api.player.options.debug) console.log('[YT Plugin] Disposing');
+
+            // Stop cursor sync interval
+            if (this.cursorSyncInterval) {
+                clearInterval(this.cursorSyncInterval);
+                this.cursorSyncInterval = null;
+            }
+
+            // Remove cursor hide styles
+            const cursorStyleEl = document.getElementById('youtube-cursor-hide-styles');
+            if (cursorStyleEl) {
+                cursorStyleEl.remove();
+            }
 
             // Cleanup timeout
             if (this.playAttemptTimeout) {

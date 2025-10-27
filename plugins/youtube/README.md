@@ -110,6 +110,9 @@ const player = new MYETVPlayer('myVideo', {
             // Show YouTube native controls (true) or use player controls (false)
             showYouTubeUI: false,
 
+            // Show the button on the controlbar to enable the YouTube native controls temporarily
+            showNativeControlsButton: true
+
             // enable or disable the mouse click over the Youtube player also if showYouTubeUI is false
             mouseClick: false,
 

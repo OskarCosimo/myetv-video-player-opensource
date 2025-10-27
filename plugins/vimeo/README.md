@@ -136,8 +136,8 @@ const player = new MYETVPlayer('myVideo', {
 
             // ========== Plugin Options ==========
             showNativeControlsButton: true, // Show the button on the controlbar to enable the Vimeo native controls temporarily
-            controlBarOpacity: 0.5,     // The controlbar opacity or semi-transparency or transparency - values: from 0 to 1
-            titleOverlayOpacity: 0.5    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1
+            controlBarOpacity: 0.95,     // The controlbar opacity or semi-transparency or transparency - values: from 0 to 1
+            titleOverlayOpacity: 0.95,    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1
             debug: false,               // Enable debug logging
             replaceNativePlayer: true,  // Replace native video element
             syncControls: true         // Sync with custom controls

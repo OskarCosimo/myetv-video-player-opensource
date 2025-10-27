@@ -121,7 +121,7 @@ const player = new MYETVPlayer('myVideo', {
             // ========== Plugin Options ==========
             showNativeControlsButton: true, // Show the button on the controlbar to enable the Facebook native controls temporarily
             controlBarOpacity: 0.95,     // The controlbar opacity or semi-transparency or transparency - values: from 0 to 1
-            titleOverlayOpacity: 0.95    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1
+            titleOverlayOpacity: 0.95,    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1
             debug: false,                  // Enable debug logging
             replaceNativePlayer: true,     // Replace native video element
             autoLoadFromData: true         // Auto-detect from data attributes

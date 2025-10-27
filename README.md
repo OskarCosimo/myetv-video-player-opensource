@@ -116,6 +116,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `videoTitle` | string | `''` | Title to show in overlay |
 | `videoSubtitle` | string | `''` | Sub-Title to show in overlay |
 | `persistentTitle` | boolean | `false` | Keep title always visible |
+| `titleOverlayOpacity` | number | `'0.95'` | Overlay title opacity, values are from 0.00 to 1.00 |
+| `controlBarOpacity ` | number | `'0.95'` | Controlbar opacity, values are from 0.00 to 1.00 |
 | `language` | string | `en` | Interface language code |
 | `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
 | `brandLogoUrl` | string | `''` | Brand logo url in the controlbar (png, jpg, gif) - image height 44px - image width 120px |

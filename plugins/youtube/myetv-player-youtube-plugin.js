@@ -3517,54 +3517,12 @@
                 if (this.api.container) {
                     this.api.container.classList.add('video-paused');
                 }
-
-                // controlbar and title overlay management
-                if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
-                    // show controls
-                    if (this.api.controls) {
-                        this.api.controls.classList.add('show');
-                    }
-
-                    // show title overlay if enabled
-                    if (this.api.player.options.showTitleOverlay &&
-                        !this.api.player.options.persistentTitle &&
-                        this.api.player.titleOverlay) {
-                        this.api.player.titleOverlay.classList.add('show');
-                    }
-
-                    // delete auto-hide timer
-                    if (this.api.player.autoHideTimer) {
-                        clearTimeout(this.api.player.autoHideTimer);
-                        this.api.player.autoHideTimer = null;
-                    }
-
-                    // delete title timeout
-                    if (this.api.player.titleTimeout) {
-                        clearTimeout(this.api.player.titleTimeout);
-                        this.api.player.titleTimeout = null;
-                    }
-
-                    if (this.api.player.options.debug) {
-                        console.log('YT Plugin: Video paused - controls and title locked visible');
-                    }
-                }
             }
 
             if (event.data === YT.PlayerState.PLAYING) {
                 // remove pause class
                 if (this.api.container) {
                     this.api.container.classList.remove('video-paused');
-                }
-
-                // reenable auto-hide if enabled
-                if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
-                    if (this.api.player.resetAutoHideTimer) {
-                        this.api.player.resetAutoHideTimer();
-                    }
-
-                    if (this.api.player.options.debug) {
-                        console.log('YT Plugin: Video playing - auto-hide reactivated');
-                    }
                 }
             }
         }

@@ -43,8 +43,12 @@
 
                 // Plugin options
                 showNativeControlsButton: options.showNativeControlsButton !== undefined ? options.showNativeControlsButton : true,
-                controlBarOpacity: options.controlBarOpacity !== undefined ? options.controlBarOpacity : 0.95,
-                titleOverlayOpacity: options.titleOverlayOpacity !== undefined ? options.titleOverlayOpacity : 0.95,
+                controlBarOpacity: options.controlBarOpacity !== undefined
+                    ? options.controlBarOpacity
+                    : (player.options.controlBarOpacity !== undefined ? player.options.controlBarOpacity : 0.95),
+                titleOverlayOpacity: options.titleOverlayOpacity !== undefined
+                    ? options.titleOverlayOpacity
+                    : (player.options.titleOverlayOpacity !== undefined ? player.options.titleOverlayOpacity : 0.95),
                 debug: options.debug || false,
                 replaceNativePlayer: options.replaceNativePlayer !== false,
                 syncControls: options.syncControls !== false,
@@ -737,62 +741,77 @@
             this.stopMousePositionTracking();
         }
 
-        // inject controlbar gradient styles
+        /**
+    * Inject CSS styles for controlbar and title overlay gradients
+    * Uses Vimeo-specific selectors to avoid conflicts with other plugins
+        */
         injectControlbarGradientStyles() {
+            // Check if styles are already injected
             if (document.getElementById('vimeo-controlbar-gradient-styles')) {
                 return;
             }
 
-            // validation for opacity values
+            // Validate opacity values (must be between 0 and 1)
             const controlBarOpacity = Math.max(0, Math.min(1, this.options.controlBarOpacity));
             const titleOverlayOpacity = Math.max(0, Math.min(1, this.options.titleOverlayOpacity));
 
+            // Create style element
             const style = document.createElement('style');
             style.id = 'vimeo-controlbar-gradient-styles';
+
+            // CSS with Vimeo-specific selectors to avoid conflicts
             style.textContent = `
-        .video-wrapper .controls {
+        /* Controlbar gradient - dark opaque at bottom, semi-transparent at top */
+        /* ONLY applied when Vimeo plugin is active */
+        .video-wrapper.vimeo-active .controls {
             background: linear-gradient(
                 to top,
-                rgba(0, 0, 0, ${controlBarOpacity}) 0%,
-                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,
-                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,
-                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,
-                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,
-                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%
+                rgba(0, 0, 0, ${controlBarOpacity}) 0%,           /* Maximum opacity at bottom */
+                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,   /* 89% of max opacity */
+                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,   /* 74% */
+                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,   /* 53% */
+                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,   /* 32% */
+                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%   /* 21% at top */
             ) !important;
             backdrop-filter: blur(3px);
             min-height: 60px;
             padding-bottom: 10px;
         }
         
-        .video-wrapper .title-overlay {
+        /* Title overlay gradient - dark opaque at top, semi-transparent at bottom */
+        /* ONLY applied when Vimeo plugin is active */
+        .video-wrapper.vimeo-active .title-overlay {
             background: linear-gradient(
                 to bottom,
-                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%
+                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,           /* Maximum opacity at top */
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,   /* 89% of max opacity */
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,   /* 74% */
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,   /* 53% */
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,   /* 32% */
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%   /* 21% at bottom */
             ) !important;
             backdrop-filter: blur(3px);
             min-height: 80px;
             padding-top: 20px;
         }
         
-        .video-wrapper.video-paused .controls.show {
+        /* Keep controlbar visible when video is paused */
+        .video-wrapper.vimeo-active.video-paused .controls.show {
             opacity: 1 !important;
             visibility: visible !important;
         }
         
-        .video-wrapper.video-paused .title-overlay.show {
+        /* Keep title overlay visible when video is paused */
+        .video-wrapper.vimeo-active.video-paused .title-overlay.show {
             opacity: 1 !important;
             visibility: visible !important;
         }
     `;
 
+            // Append style to document head
             document.head.appendChild(style);
 
+            // Debug logging
             if (this.options.debug) {
                 console.log('🎬 Vimeo Plugin: Controlbar and title overlay gradient styles injected');
                 console.log(`🎬 Vimeo Plugin: ControlBar opacity: ${controlBarOpacity}, TitleOverlay opacity: ${titleOverlayOpacity}`);

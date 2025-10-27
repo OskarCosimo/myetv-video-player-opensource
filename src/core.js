@@ -29,6 +29,8 @@ constructor(videoElement, options = {}) {
         videoTitle: '',              // Title text to show in overlay
         videoSubtitle: '',           // Subtitle text to show in overlay
         persistentTitle: false,   // If true, title overlay stays visible
+        controlBarOpacity: options.controlBarOpacity !== undefined ? options.controlBarOpacity : 0.95, // Opacity of control bar (0.0 to 1.0)
+        titleOverlayOpacity: options.titleOverlayOpacity !== undefined ? options.titleOverlayOpacity : 0.95, // Opacity of title overlay (0.0 to 1.0)
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
         defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
@@ -169,7 +171,9 @@ constructor(videoElement, options = {}) {
     };
 
     this.lastTimeUpdate = 0; // For throttling timeupdate events
-
+    // Inject default styles
+    this.injectDefaultControlbarStyles();
+    // Set language if specified
     if (this.options.language && this.isI18nAvailable()) {
         VideoPlayerTranslations.setLanguage(this.options.language);
     }

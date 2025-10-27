@@ -135,6 +135,7 @@ const player = new MYETVPlayer('myVideo', {
             transparent: true,  // Transparent background
 
             // ========== Plugin Options ==========
+            showNativeControlsButton: true // Show the button on the controlbar to enable the Vimeo native controls temporarily
             debug: false,               // Enable debug logging
             replaceNativePlayer: true,  // Replace native video element
             syncControls: true         // Sync with custom controls

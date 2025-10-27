@@ -24,6 +24,9 @@
                 showText: options.showText !== false,
                 showCaptions: options.showCaptions !== false,
                 // Plugin options
+                showNativeControlsButton: options.showNativeControlsButton !== undefined ? options.showNativeControlsButton : true,
+                controlBarOpacity: options.controlBarOpacity !== undefined ? options.controlBarOpacity : 0.95,
+                titleOverlayOpacity: options.titleOverlayOpacity !== undefined ? options.titleOverlayOpacity : 0.95,
                 debug: options.debug || false,
                 replaceNativePlayer: options.replaceNativePlayer !== false,
                 autoLoadFromData: options.autoLoadFromData !== false,
@@ -456,8 +459,14 @@
                 }
             }
 
+            // Create Facebook controls button
+            this.createFacebookControlsButton();
+
             // Setup event listeners
             this.setupEventListeners();
+
+            // inject controlbar gradient styles
+            this.injectControlbarGradientStyles();
 
             // Start time update
             this.startTimeUpdate();
@@ -724,11 +733,28 @@
             // Started playing - marks successful user interaction
             this.fbPlayer.subscribe('startedPlaying', () => {
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Video started playing');
+                    console.log('🎬 FB Plugin: Video started playing');
                 }
+
                 this.isPlaying = true;
                 this.userHasInteracted = true; // Video playing = user clicked FB player
                 this.waitingForUserClick = false;
+
+                // Rimuovi classe paused
+                if (this.player.container) {
+                    this.player.container.classList.remove('video-paused');
+                }
+
+                // Riattiva l'auto-hide quando riprende la riproduzione
+                if (this.player.options.autoHide && this.player.autoHideInitialized) {
+                    if (this.player.resetAutoHideTimer) {
+                        this.player.resetAutoHideTimer();
+                    }
+
+                    if (this.options.debug) {
+                        console.log('🎬 FB Plugin: Video playing - auto-hide reactivated');
+                    }
+                }
 
                 // Update play/pause icons
                 const playIcon = this.api.container.querySelector('.play-icon');
@@ -740,7 +766,6 @@
                     currentTime: this.getCurrentTime(),
                     duration: this.getDuration()
                 });
-
                 this.api.triggerEvent('play', {});
                 this.api.triggerEvent('playing', {});
                 this.hideLoadingOverlay();
@@ -749,9 +774,46 @@
             // Paused
             this.fbPlayer.subscribe('paused', () => {
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Video paused');
+                    console.log('🎬 FB Plugin: Video paused');
                 }
+
                 this.isPlaying = false;
+
+                // Aggiungi classe per identificare lo stato di pausa
+                if (this.player.container) {
+                    this.player.container.classList.add('video-paused');
+                }
+
+                // Mantieni la controlbar visibile SOLO se autoHide è abilitato
+                if (this.player.options.autoHide && this.player.autoHideInitialized) {
+                    // Mostra controlli
+                    if (this.player.controls) {
+                        this.player.controls.classList.add('show');
+                    }
+
+                    // Mostra anche il title overlay se è abilitato e non è persistent
+                    if (this.player.options.showTitleOverlay &&
+                        !this.player.options.persistentTitle &&
+                        this.player.titleOverlay) {
+                        this.player.titleOverlay.classList.add('show');
+                    }
+
+                    // Cancella il timer di auto-hide
+                    if (this.player.autoHideTimer) {
+                        clearTimeout(this.player.autoHideTimer);
+                        this.player.autoHideTimer = null;
+                    }
+
+                    // Cancella anche il timer del title overlay
+                    if (this.player.titleTimeout) {
+                        clearTimeout(this.player.titleTimeout);
+                        this.player.titleTimeout = null;
+                    }
+
+                    if (this.options.debug) {
+                        console.log('🎬 FB Plugin: Video paused - controls and title locked visible');
+                    }
+                }
 
                 // Update play/pause icons
                 const playIcon = this.api.container.querySelector('.play-icon');
@@ -763,15 +825,15 @@
                     currentTime: this.getCurrentTime(),
                     duration: this.getDuration()
                 });
-
                 this.api.triggerEvent('pause', {});
             });
 
             // Finished playing
             this.fbPlayer.subscribe('finishedPlaying', () => {
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Video finished');
+                    console.log('🎬 FB Plugin: Video finished');
                 }
+
                 this.isPlaying = false;
 
                 // Update play/pause icons
@@ -789,7 +851,7 @@
             // Started buffering
             this.fbPlayer.subscribe('startedBuffering', () => {
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Video buffering started');
+                    console.log('🎬 FB Plugin: Video buffering started');
                 }
                 this.api.triggerEvent('waiting', {});
                 this.showLoadingOverlay();
@@ -798,7 +860,7 @@
             // Finished buffering
             this.fbPlayer.subscribe('finishedBuffering', () => {
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Video buffering finished');
+                    console.log('🎬 FB Plugin: Video buffering finished');
                 }
                 this.api.triggerEvent('canplay', {});
                 this.hideLoadingOverlay();
@@ -806,13 +868,13 @@
 
             // Error
             this.fbPlayer.subscribe('error', (error) => {
-                console.error('FB Plugin: Facebook player error:', error);
+                console.error('🎬 FB Plugin: Facebook player error:', error);
                 this.api.triggerEvent('error', error);
                 this.api.triggerEvent('facebookplugin:error', error);
             });
 
             if (this.api.player.options.debug) {
-                console.log('FB Plugin: Event listeners setup completed');
+                console.log('🎬 FB Plugin: Event listeners setup completed');
             }
         }
 
@@ -824,7 +886,6 @@
             this.timeUpdateInterval = setInterval(() => {
                 if (this.fbPlayer && this.fbPlayer.getCurrentPosition !== undefined && this.fbPlayer.getDuration !== undefined) {
                     try {
-                        // CRITICAL FIX: These are properties, not methods
                         const currentTime = this.fbPlayer.getCurrentPosition();
                         const duration = this.fbPlayer.getDuration();
 
@@ -852,12 +913,9 @@
                             // Create tooltip if it doesn't exist
                             this.createProgressTooltip();
 
-                            // CRITICAL: Update progress bar tooltip with current duration
+                            // Update progress bar tooltip with current duration
                             this.updateProgressTooltip(duration);
                         }
-
-                        // REMOVED: Volume monitoring - Facebook API doesn't have volume events
-                        // Volume is only updated via setupVolumeSlider() when user changes it
 
                     } catch (error) {
                         // Ignore timing errors
@@ -866,8 +924,70 @@
             }, 250);
         }
 
+        // inject controlbar gradient styles
+        injectControlbarGradientStyles() {
+            if (document.getElementById('facebook-controlbar-gradient-styles')) {
+                return;
+            }
+
+            // Validation of opacity values between 0 and 1
+            const controlBarOpacity = Math.max(0, Math.min(1, this.options.controlBarOpacity));
+            const titleOverlayOpacity = Math.max(0, Math.min(1, this.options.titleOverlayOpacity));
+
+            const style = document.createElement('style');
+            style.id = 'facebook-controlbar-gradient-styles';
+            style.textContent = `
+        .video-wrapper .controls {
+            background: linear-gradient(
+                to top,
+                rgba(0, 0, 0, ${controlBarOpacity}) 0%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%
+            ) !important;
+            backdrop-filter: blur(3px);
+            min-height: 60px;
+            padding-bottom: 10px;
+        }
+        
+        .video-wrapper .title-overlay {
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%
+            ) !important;
+            backdrop-filter: blur(3px);
+            min-height: 80px;
+            padding-top: 20px;
+        }
+        
+        .video-wrapper.video-paused .controls.show {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        
+        .video-wrapper.video-paused .title-overlay.show {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+    `;
+
+            document.head.appendChild(style);
+
+            if (this.options.debug) {
+                console.log('🎬 Facebook Plugin: Controlbar and title overlay gradient styles injected');
+                console.log(`🎬 Facebook Plugin: ControlBar opacity: ${controlBarOpacity}, TitleOverlay opacity: ${titleOverlayOpacity}`);
+            }
+        }
+
         /**
-         * CRITICAL: Update progress bar tooltip with correct time
+         * Update progress bar tooltip with correct time
          */
         updateProgressTooltip() {
             const progContainer = this.api.container.querySelector('.progress-container');
@@ -908,8 +1028,8 @@
         }
 
         /**
- * Create progress tooltip element if it doesn't exist
- */
+    * Create progress tooltip element if it doesn't exist
+        */
         createProgressTooltip() {
             const progContainer = this.api.container.querySelector('.progress-container');
             if (!progContainer) return;
@@ -1259,6 +1379,127 @@
 
         }
 
+        // Create button to show Facebook native controls
+        createFacebookControlsButton() {
+            // Verify option enabled
+            if (!this.options.showNativeControlsButton) {
+                if (this.options.debug) {
+                    console.log('🎬 FB Plugin: Native controls button disabled by option');
+                }
+                return;
+            }
+
+            // Check if button already exists
+            if (this.player.container.querySelector('.facebook-controls-btn')) {
+                return;
+            }
+
+            const controlsRight = this.player.container.querySelector('.controls-right');
+            if (!controlsRight) return;
+
+            const buttonHTML = `
+        <button class="control-btn facebook-controls-btn" title="Show Facebook Controls">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+        </button>
+    `;
+
+            // Insert before quality control
+            const qualityControl = controlsRight.querySelector('.quality-control');
+            if (qualityControl) {
+                qualityControl.insertAdjacentHTML('beforebegin', buttonHTML);
+            } else {
+                const fullscreenBtn = controlsRight.querySelector('.fullscreen-btn');
+                if (fullscreenBtn) {
+                    fullscreenBtn.insertAdjacentHTML('beforebegin', buttonHTML);
+                } else {
+                    controlsRight.insertAdjacentHTML('beforeend', buttonHTML);
+                }
+            }
+
+            // Add click listener
+            const btn = this.player.container.querySelector('.facebook-controls-btn');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (this.options.debug) {
+                        console.log('🎬 FB Plugin: Native controls button clicked');
+                    }
+                    this.showFacebookControls();
+                });
+
+                // Add custom styling (Facebook blue color)
+                btn.style.color = '#1877f2';
+
+                if (this.options.debug) {
+                    console.log('🎬 FB Plugin: Native controls button created');
+                }
+            }
+        }
+
+        // Show Facebook native controls
+        showFacebookControls() {
+            if (this.options.debug) {
+                console.log('🎬 FB Plugin: Showing Facebook native controls');
+            }
+
+            const iframe = this.player.container.querySelector('iframe');
+            const controlbar = this.player.container.querySelector('.controls');
+            const titleOverlay = this.player.container.querySelector('.title-overlay');
+
+            if (iframe) {
+                // Bring iframe to front
+                iframe.style.pointerEvents = 'auto';
+                iframe.style.zIndex = '9999';
+
+                // Hide controlbar and title
+                if (controlbar) controlbar.style.display = 'none';
+                if (titleOverlay) titleOverlay.style.display = 'none';
+
+                // Auto-restore after 10 seconds
+                this.facebookControlsTimeout = setTimeout(() => {
+                    if (this.options.debug) {
+                        console.log('🎬 FB Plugin: Restoring custom controls after 10 seconds');
+                    }
+                    this.hideFacebookControls();
+                }, 10000);
+            }
+        }
+
+        // Hide Facebook native controls
+        hideFacebookControls() {
+            if (this.options.debug) {
+                console.log('🎬 FB Plugin: Hiding Facebook native controls');
+            }
+
+            // Clear timeout if exists
+            if (this.facebookControlsTimeout) {
+                clearTimeout(this.facebookControlsTimeout);
+                this.facebookControlsTimeout = null;
+            }
+
+            const iframe = this.player.container.querySelector('iframe');
+            const controlbar = this.player.container.querySelector('.controls');
+            const titleOverlay = this.player.container.querySelector('.title-overlay');
+
+            if (iframe) {
+                // Disable clicks on Facebook controls
+                iframe.style.pointerEvents = 'none';
+                iframe.style.zIndex = '1';
+
+                // Restore controlbar and title
+                if (controlbar) {
+                    controlbar.style.display = '';
+                    controlbar.style.zIndex = '10';
+                }
+                if (titleOverlay) titleOverlay.style.display = '';
+
+                if (this.options.debug) {
+                    console.log('🎬 FB Plugin: Custom controls restored');
+                }
+            }
+        }
+
         /**
          * CRITICAL: Setup volume slider event listeners
          */
@@ -1535,6 +1776,12 @@
             if (this.styleObserver) {
                 this.styleObserver.disconnect();
                 this.styleObserver = null;
+            }
+
+            // Clear Facebook controls timeout
+            if (this.facebookControlsTimeout) {
+                clearTimeout(this.facebookControlsTimeout);
+                this.facebookControlsTimeout = null;
             }
 
             if (this.fbPlayer) {

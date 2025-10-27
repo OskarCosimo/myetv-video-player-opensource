@@ -408,22 +408,25 @@ constructor(videoElement, options = {}) {
     }
 
     this.options = {
-        showQualitySelector: true,
-        showSpeedControl: true,
-        showFullscreen: true,
-        showPictureInPicture: true,
-        showSubtitles: true,
-        subtitlesEnabled: false,
-        autoHide: true,
-        autoHideDelay: 3000,
+        showQualitySelector: true,   // Enable quality selector button
+        showSpeedControl: true,      // Enable speed control button
+        showFullscreen: true,        // Enable fullscreen button
+        showPictureInPicture: true,  // Enable PiP button
+        showSubtitles: true,         // Enable subtitles button
+        subtitlesEnabled: false,     // Enable subtitles by default if available
+        autoHide: true,              // auto-hide controls when idle
+        autoHideDelay: 3000,         // hide controls after ... seconds of inactivity (specificed in milliseconds)
+        hideCursor: true,            // hide mouse cursor when idle
         poster: null,                // URL of poster image
         showPosterOnEnd: false,      // Show poster again when video ends
-        keyboardControls: true,
-        showSeekTooltip: true,
-        showTitleOverlay: false,
-        videoTitle: '',
-        videoSubtitle: '',
-        persistentTitle: false,
+        keyboardControls: true,      // Enable keyboard controls
+        showSeekTooltip: true,       // Show tooltip on seek bar at mouse hover
+        showTitleOverlay: false,     // Show video title overlay
+        videoTitle: '',              // Title text to show in overlay
+        videoSubtitle: '',           // Subtitle text to show in overlay
+        persistentTitle: false,   // If true, title overlay stays visible
+        controlBarOpacity: options.controlBarOpacity !== undefined ? options.controlBarOpacity : 0.95, // Opacity of control bar (0.0 to 1.0)
+        titleOverlayOpacity: options.titleOverlayOpacity !== undefined ? options.titleOverlayOpacity : 0.95, // Opacity of title overlay (0.0 to 1.0)
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
         defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
@@ -453,8 +456,8 @@ constructor(videoElement, options = {}) {
         //seek shape
         seekHandleShape: 'circle', // Available shape: none, circle, square, diamond, arrow, triangle, heart, star
         // AUDIO PLAYER
-        audiofile: false,
-        audiowave: false,
+        audiofile: false,       // if true, adapt player to audio file (hide video element)
+        audiowave: false,       // if true, show audio wave visualization (Web Audio API)
         // RESOLUTION CONTROL
         resolution: "normal", // "normal", "4:3", "16:9", "stretched", "fit-to-screen", "scale-to-fit"
         ...options
@@ -564,7 +567,9 @@ constructor(videoElement, options = {}) {
     };
 
     this.lastTimeUpdate = 0; // For throttling timeupdate events
-
+    // Inject default styles
+    this.injectDefaultControlbarStyles();
+    // Set language if specified
     if (this.options.language && this.isI18nAvailable()) {
         VideoPlayerTranslations.setLanguage(this.options.language);
     }
@@ -2985,6 +2990,52 @@ clearControlsTimeout() {
     }
 }
 
+// Default controlbar styles injection
+injectDefaultControlbarStyles() {
+    if (document.getElementById('default-controlbar-styles')) {
+        return;
+    }
+
+    const controlBarOpacity = Math.max(0, Math.min(1, this.options.controlBarOpacity));
+    const titleOverlayOpacity = Math.max(0, Math.min(1, this.options.titleOverlayOpacity));
+
+    const style = document.createElement('style');
+    style.id = 'default-controlbar-styles';
+    style.textContent = `
+        .video-wrapper:not(.youtube-active):not(.vimeo-active):not(.facebook-active) .controls {
+            background: linear-gradient(
+                to top,
+                rgba(0, 0, 0, ${controlBarOpacity}) 0%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%
+            );
+            backdrop-filter: blur(3px);
+            min-height: 60px;
+            padding-bottom: 10px;
+        }
+        
+        .video-wrapper:not(.youtube-active):not(.vimeo-active):not(.facebook-active) .title-overlay {
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%
+            );
+            backdrop-filter: blur(3px);
+            min-height: 80px;
+            padding-top: 20px;
+        }
+    `;
+
+    document.head.appendChild(style);
+}
+
 // Debug methods
 enableAutoHideDebug() {
     this.autoHideDebug = true;
@@ -3832,6 +3883,10 @@ isAutoHideInitialized() {
  * Only hides cursor in main container, not in plugin iframes
  */
 hideCursor() {
+    if (!this.options.hideCursor) {
+        return; // Do not hide cursor if option is disabled
+    }
+
     if (this.container) {
         this.container.classList.add('hide-cursor');
         if (this.options.debug) console.log('🖱️ Cursor hidden');
@@ -3846,6 +3901,35 @@ showCursor() {
         this.container.classList.remove('hide-cursor');
         if (this.options.debug) console.log('🖱️ Cursor shown');
     }
+}
+
+/**
+ * Enable cursor hiding when controlbar is hidden
+ * @returns {Object} this
+ */
+enableCursorHiding() {
+    this.options.hideCursor = true;
+    if (this.options.debug) console.log('Cursor hiding enabled');
+    return this;
+}
+
+/**
+ * Disable cursor hiding - cursor will always be visible
+ * @returns {Object} this
+ */
+disableCursorHiding() {
+    this.options.hideCursor = false;
+    this.showCursor(); // Ensure cursor is shown immediately
+    if (this.options.debug) console.log('Cursor hiding disabled');
+    return this;
+}
+
+/**
+ * Check if cursor hiding is enabled
+ * @returns {Boolean} True if cursor hiding is enabled
+ */
+isCursorHidingEnabled() {
+    return this.options.hideCursor;
 }
 
 /* PLAYLIST CONTROLS */

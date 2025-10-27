@@ -119,6 +119,7 @@ const player = new MYETVPlayer('myVideo', {
             showCaptions: true,            // Show captions if available
 
             // ========== Plugin Options ==========
+            showNativeControlsButton: true, // Show the button on the controlbar to enable the Facebook native controls temporarily
             debug: false,                  // Enable debug logging
             replaceNativePlayer: true,     // Replace native video element
             autoLoadFromData: true         // Auto-detect from data attributes

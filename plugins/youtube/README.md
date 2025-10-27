@@ -114,7 +114,8 @@ const player = new MYETVPlayer('myVideo', {
             showNativeControlsButton: true,
 
             controlBarOpacity: 0.95,     // The controlbar opacity or semi-transparency or transparency - values: from 0 to 1
-            titleOverlayOpacity: 0.95    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1
+
+            titleOverlayOpacity: 0.95,    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1
 
             // enable or disable the mouse click over the Youtube player also if showYouTubeUI is false
             mouseClick: false,

@@ -171,6 +171,13 @@
         this.video.addEventListener('playing', () => {
             this.hideLoading();
             this.closeAllMenus();
+
+            // Update play/pause button when video actually starts playing
+            if (this.playIcon && this.pauseIcon) {
+                this.playIcon.classList.add('hidden');
+                this.pauseIcon.classList.remove('hidden');
+            }
+
             // Trigger playing event - video is now actually playing
             this.triggerEvent('playing', {
                 currentTime: this.getCurrentTime(),
@@ -379,17 +386,91 @@
             this.pipBtn.addEventListener('click', () => this.togglePictureInPicture());
         }
 
-        if (this.subtitlesBtn) {
-            this.subtitlesBtn.addEventListener('click', () => this.toggleSubtitles());
-        }
+    if (this.volumeSlider) {
+        let isDraggingVolume = false;
 
-        if (this.volumeSlider) {
-            this.volumeSlider.addEventListener('input', (e) => {
-                this.updateVolume(e.target.value);
+        // Input event
+        this.volumeSlider.addEventListener('input', (e) => {
+            this.updateVolume(e.target.value);
+            this.updateVolumeSliderVisual();
+            this.initVolumeTooltip();
+        });
+
+        // MOUSE DRAG - Start
+        this.volumeSlider.addEventListener('mousedown', (e) => {
+            isDraggingVolume = true;
+            if (this.volumeTooltip) {
+                this.volumeTooltip.classList.add('visible');
+            }
+        });
+
+        // MOUSE DRAG - Move
+        document.addEventListener('mousemove', (e) => {
+            if (isDraggingVolume && this.volumeSlider) {
+                const rect = this.volumeSlider.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+                const value = Math.round(percentage * 100);
+
+                this.volumeSlider.value = value;
+                this.updateVolume(value);
                 this.updateVolumeSliderVisual();
-                this.initVolumeTooltip();
-            });
-        }
+                if (this.volumeTooltip) {
+                    this.updateVolumeTooltipPosition(value / 100);
+                }
+            }
+        });
+
+        // MOUSE DRAG - End
+        document.addEventListener('mouseup', () => {
+            if (isDraggingVolume) {
+                isDraggingVolume = false;
+                if (this.volumeTooltip) {
+                    setTimeout(() => {
+                        this.volumeTooltip.classList.remove('visible');
+                    }, 300);
+                }
+            }
+        });
+
+        // TOUCH DRAG - Start
+        this.volumeSlider.addEventListener('touchstart', (e) => {
+            isDraggingVolume = true;
+            if (this.volumeTooltip) {
+                this.volumeTooltip.classList.add('visible');
+            }
+        }, { passive: true });
+
+        // TOUCH DRAG - Move
+        this.volumeSlider.addEventListener('touchmove', (e) => {
+            if (isDraggingVolume) {
+                const touch = e.touches[0];
+                const rect = this.volumeSlider.getBoundingClientRect();
+                const touchX = touch.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, touchX / rect.width));
+                const value = Math.round(percentage * 100);
+
+                this.volumeSlider.value = value;
+                this.updateVolume(value);
+                this.updateVolumeSliderVisual();
+                if (this.volumeTooltip) {
+                    this.updateVolumeTooltipPosition(value / 100);
+                }
+            }
+        }, { passive: true });
+
+        // TOUCH DRAG - End
+        this.volumeSlider.addEventListener('touchend', () => {
+            if (isDraggingVolume) {
+                isDraggingVolume = false;
+                if (this.volumeTooltip) {
+                    setTimeout(() => {
+                        this.volumeTooltip.classList.remove('visible');
+                    }, 300);
+                }
+            }
+        }, { passive: true });
+    }
 
     if (this.progressContainer) {
         // Mouse events (desktop)

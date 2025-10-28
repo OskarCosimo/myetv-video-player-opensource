@@ -422,20 +422,20 @@ createControls() {
         <div class="progress-buffer"></div>
         <div class="progress-filled"></div>
     </div>
-    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>  <!-- ✅ Fuori da progress-bar -->
+    <div class="progress-handle progress-handle-${this.options.seekHandleShape}"></div>
     ${this.options.showSeekTooltip ? '<div class="seek-tooltip">0:00</div>' : ''}
 </div>
 
             <div class="controls-main">
                 <div class="controls-left">
                     <button class="control-btn play-pause-btn" data-tooltip="play_pause">
-                        <span class="icon play-icon">▶</span>
-                        <span class="icon pause-icon hidden">⏸</span>
+                        <span class="icon play-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+                        <span class="icon pause-icon hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></span>
                     </button>
 
                     <button class="control-btn mute-btn" data-tooltip="mute_unmute">
-    <span class="icon volume-icon">🔊</span>
-    <span class="icon mute-icon hidden">🔇</span>
+    <span class="icon volume-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z"/><path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8M7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12z"/></svg></span>
+    <span class="icon mute-icon hidden"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/></svg></span>
                     </button>
 
                     <div class="volume-container" data-mobile-slider="${this.options.volumeSlider}">
@@ -450,18 +450,17 @@ createControls() {
                 </div>
 
                 <div class="controls-right">
-                    <button class="control-btn playlist-prev-btn" data-tooltip="prevvideo" style="display: none;">
-                        <span class="icon">⏮</span>
-                    </button>
-
-                    <button class="control-btn playlist-next-btn" data-tooltip="nextvideo" style="display: none;">
-                        <span class="icon">⏭</span>
-                    </button>
+<button class="control-btn playlist-prev-btn" data-tooltip="prevvideo" style="display: none;">
+    <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.5 12V4l7 4zm8-8v8l-7-4z"/></svg></span>
+</button>
+<button class="control-btn playlist-next-btn" data-tooltip="nextvideo" style="display: none;">
+    <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M12.5 4v8l-7-4zm-8 0v8l7-4z"/></svg></span>
+</button>
 
                     ${this.options.showSubtitles ? `
                     <div class="subtitles-control" style="display: none;">
                         <button class="control-btn subtitles-btn" data-tooltip="subtitles">
-                            <span class="icon">CC</span>
+    <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z"/><path d="M6.096 4.972c.234 0 .44.05.617.152.177.1.312.235.405.403.093.169.14.36.14.577 0 .216-.047.406-.14.572a1.03 1.03 0 0 1-.405.403 1.2 1.2 0 0 1-.617.152 1.2 1.2 0 0 1-.615-.152 1.03 1.03 0 0 1-.406-.403 1.28 1.28 0 0 1-.14-.572c0-.216.046-.408.14-.577.093-.168.228-.303.406-.403.177-.101.383-.152.615-.152m4.915 0c.234 0 .44.05.617.152.177.1.312.235.405.403.093.169.14.36.14.577 0 .216-.047.406-.14.572a1.03 1.03 0 0 1-.405.403 1.2 1.2 0 0 1-.617.152 1.2 1.2 0 0 1-.615-.152 1.03 1.03 0 0 1-.406-.403 1.28 1.28 0 0 1-.14-.572c0-.216.046-.408.14-.577.093-.168.228-.303.406-.403.177-.101.383-.152.615-.152M6.096 9.972c.234 0 .44.05.617.152.177.1.312.235.405.403.093.169.14.36.14.577 0 .216-.047.406-.14.572a1.03 1.03 0 0 1-.405.403 1.2 1.2 0 0 1-.617.152 1.2 1.2 0 0 1-.615-.152 1.03 1.03 0 0 1-.406-.403 1.28 1.28 0 0 1-.14-.572c0-.216.046-.408.14-.577.093-.168.228-.303.406-.403.177-.101.383-.152.615-.152m4.915 0c.234 0 .44.05.617.152.177.1.312.235.405.403.093.169.14.36.14.577 0 .216-.047.406-.14.572a1.03 1.03 0 0 1-.405.403 1.2 1.2 0 0 1-.617.152 1.2 1.2 0 0 1-.615-.152 1.03 1.03 0 0 1-.406-.403 1.28 1.28 0 0 1-.14-.572c0-.216.046-.408.14-.577.093-.168.228-.303.406-.403.177-.101.383-.152.615-.152"/></svg></span>
                         </button>
                         <div class="subtitles-menu">
                             <div class="subtitles-option active" data-track="off">Off</div>

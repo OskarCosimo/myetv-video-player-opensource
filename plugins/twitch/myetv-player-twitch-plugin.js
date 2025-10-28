@@ -199,12 +199,10 @@
             this.twitchContainer = document.createElement('div');
             this.twitchContainer.id = 'twitch-player-' + Date.now();
             this.twitchContainer.style.cssText = `
-position: fixed;
-top: 0;
-left: 0;
-width: 100vw;
-height: 100vh;
-z-index: 1;
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 1 !important;
 `;
 
             this.api.container.appendChild(this.twitchContainer);
@@ -436,6 +434,7 @@ bottom: 35px !important;
 right: 20px !important;
 z-index: 2000 !important;
 pointer-events: auto !important;
+cursor: pointer !important;
 display: block !important;
 opacity: 0 !important;
 transition: opacity 0.3s ease !important;

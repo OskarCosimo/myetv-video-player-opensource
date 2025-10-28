@@ -1,8 +1,36 @@
 {
   "name": "myetv-player",
   "version": "1.2.0",
-  "description": "MYETV Video Player - Modular JavaScript and SCSS Build System",
+  "description": "MYETV Video Player - Modular HTML5 video player with plugin support for YouTube, Vimeo, Twitch, Facebook, and streaming protocols (HLS/DASH)",
   "main": "dist/myetv-player.js",
+  "files": [
+    "dist/",
+    "css/",
+    "plugins/",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "video",
+    "player",
+    "html5",
+    "video-player",
+    "media-player",
+    "streaming",
+    "hls",
+    "dash",
+    "plugin",
+    "youtube",
+    "vimeo",
+    "twitch",
+    "facebook",
+    "cloudflare-stream",
+    "subtitles",
+    "webvtt",
+    "picture-in-picture",
+    "responsive",
+    "open-source"
+  ],
   "scripts": {
     "build": "node build.js",
     "build:js": "node build.js",
@@ -23,20 +51,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/OskarCosimo/myetv-video-player-opensource"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/OskarCosimo/myetv-video-player-opensource/issues"
+  },
+  "homepage": "https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html"
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -504,6 +504,22 @@ body {
   z-index: 20 !important;
 }
 
+.play-icon svg,
+.pause-icon svg,
+.volume-icon svg,
+.mute-icon svg,
+.playlist-prev-btn .icon svg,
+.playlist-next-btn .icon svg,
+.subtitles-btn .icon svg,
+.fullscreen-icon svg,
+.exit-fullscreen-icon svg,
+.pip-icon svg,
+.pip-exit-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 /* MAIN CONTROLS - IMPROVED RESPONSIVE LAYOUT */
 .controls-main {
   display: flex;
@@ -1703,6 +1719,12 @@ body {
   .controls-left,
   .controls-right {
     gap: 6px;
+  }
+  .progress-container {
+    margin-bottom: 10px;
+  }
+  .controls-main {
+    padding-top: 6px;
   }
   .volume-container {
     /* Reduce volume slider width further instead of hiding */

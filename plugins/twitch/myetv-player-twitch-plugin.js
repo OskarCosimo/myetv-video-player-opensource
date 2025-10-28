@@ -196,14 +196,33 @@
                 this.api.video.style.display = 'none';
             }
 
+            // Detect if we're inside an iframe
+            const isInIframe = window.self !== window.top;
+
             this.twitchContainer = document.createElement('div');
             this.twitchContainer.id = 'twitch-player-' + Date.now();
-            this.twitchContainer.style.cssText = `
-    position: relative !important;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 1 !important;
-`;
+
+            if (isInIframe) {
+                // In iframe: use absolute positioning
+                this.api.container.style.position = 'relative';
+                this.twitchContainer.style.cssText = `
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        `;
+            } else {
+                // Not in iframe: use relative positioning
+                this.twitchContainer.style.cssText = `
+            position: relative !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 500px !important;
+            z-index: 1 !important;
+        `;
+            }
 
             this.api.container.appendChild(this.twitchContainer);
 
@@ -231,7 +250,7 @@
             this.twitchPlayer = new Twitch.Player(this.twitchContainer.id, playerOptions);
             this.setupEventListeners();
 
-            if (this.api.player.options.debug) console.log('🎮 Twitch Plugin: Player created');
+            if (this.api.player.options.debug) console.log('🎮 Twitch Plugin: Player created (iframe: ' + isInIframe + ')');
 
             this.api.triggerEvent('twitchplugin:playerready', {
                 channel: this.options.channel,

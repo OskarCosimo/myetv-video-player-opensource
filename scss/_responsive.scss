@@ -74,6 +74,14 @@
         gap: 6px;
     }
 
+    .progress-container {
+        margin-bottom: 10px;
+    }
+
+    .controls-main {
+        padding-top: 6px;
+    }
+
     .volume-container {
         /* Reduce volume slider width further instead of hiding */
         flex-shrink: 3;

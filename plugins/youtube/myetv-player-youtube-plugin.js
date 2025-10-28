@@ -3980,12 +3980,15 @@
             }
 
             // Handle volume changes with proper unmute logic
+            // VOLUME SLIDER DRAG SUPPORT
+            let isDraggingVolume = false;
+
+            // Handle volume changes with proper unmute logic
             newVolumeSlider.addEventListener('input', (e) => {
                 const volume = parseFloat(e.target.value);
-
                 if (this.ytPlayer && this.ytPlayer.setVolume) {
                     this.ytPlayer.setVolume(volume);
-                    this.api.container.style.setProperty('--player-volume-fill', `${volume}%`);
+                    this.api.container.style.setProperty('--player-volume-fill', volume + '%');
 
                     // Always update mute button state correctly
                     if (volume > 0 && this.ytPlayer.isMuted && this.ytPlayer.isMuted()) {
@@ -4004,19 +4007,133 @@
                         this.api.player.updateVolumeTooltipPosition(volume / 100);
                     }
 
-                    // Update tooltip position during drag
-                    if (this.api.player.updateVolumeTooltipPosition) {
-                        this.api.player.updateVolumeTooltipPosition(volume / 100);
-                    }
-
-                    // Update tooltip text manually instead of using updateVolumeTooltip
+                    // Update tooltip text manually
                     const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
                     if (volumeTooltip) {
                         volumeTooltip.textContent = Math.round(volume) + '%';
                     }
-
                 }
             });
+
+            // MOUSE DRAG - Start
+            newVolumeSlider.addEventListener('mousedown', (e) => {
+                isDraggingVolume = true;
+                const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                if (volumeTooltip) {
+                    volumeTooltip.classList.add('visible');
+                }
+            });
+
+            // MOUSE DRAG - Move
+            document.addEventListener('mousemove', (e) => {
+                if (isDraggingVolume && newVolumeSlider) {
+                    const rect = newVolumeSlider.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+                    const volume = Math.round(percentage * 100);
+
+                    newVolumeSlider.value = volume;
+
+                    if (this.ytPlayer && this.ytPlayer.setVolume) {
+                        this.ytPlayer.setVolume(volume);
+                        this.api.container.style.setProperty('--player-volume-fill', volume + '%');
+
+                        // Update mute state
+                        if (volume > 0 && this.ytPlayer.isMuted && this.ytPlayer.isMuted()) {
+                            this.ytPlayer.unMute();
+                            this.updateMuteButtonState(false);
+                        } else if (volume === 0) {
+                            if (this.ytPlayer.isMuted && !this.ytPlayer.isMuted()) {
+                                this.ytPlayer.mute();
+                            }
+                            this.updateMuteButtonState(true);
+                        }
+
+                        // Update tooltip
+                        if (this.api.player.updateVolumeTooltipPosition) {
+                            this.api.player.updateVolumeTooltipPosition(volume / 100);
+                        }
+                        const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                        if (volumeTooltip) {
+                            volumeTooltip.textContent = volume + '%';
+                        }
+                    }
+                }
+            });
+
+            // MOUSE DRAG - End
+            document.addEventListener('mouseup', () => {
+                if (isDraggingVolume) {
+                    isDraggingVolume = false;
+                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                    if (volumeTooltip) {
+                        setTimeout(() => {
+                            volumeTooltip.classList.remove('visible');
+                        }, 300);
+                    }
+                }
+            });
+
+            // TOUCH DRAG - Start
+            newVolumeSlider.addEventListener('touchstart', (e) => {
+                isDraggingVolume = true;
+                const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                if (volumeTooltip) {
+                    volumeTooltip.classList.add('visible');
+                }
+            }, { passive: true });
+
+            // TOUCH DRAG - Move
+            newVolumeSlider.addEventListener('touchmove', (e) => {
+                if (isDraggingVolume) {
+                    const touch = e.touches[0];
+                    const rect = newVolumeSlider.getBoundingClientRect();
+                    const touchX = touch.clientX - rect.left;
+                    const percentage = Math.max(0, Math.min(1, touchX / rect.width));
+                    const volume = Math.round(percentage * 100);
+
+                    newVolumeSlider.value = volume;
+
+                    if (this.ytPlayer && this.ytPlayer.setVolume) {
+                        this.ytPlayer.setVolume(volume);
+                        this.api.container.style.setProperty('--player-volume-fill', volume + '%');
+
+                        // Update mute state
+                        if (volume > 0 && this.ytPlayer.isMuted && this.ytPlayer.isMuted()) {
+                            this.ytPlayer.unMute();
+                            this.updateMuteButtonState(false);
+                        } else if (volume === 0) {
+                            if (this.ytPlayer.isMuted && !this.ytPlayer.isMuted()) {
+                                this.ytPlayer.mute();
+                            }
+                            this.updateMuteButtonState(true);
+                        }
+
+                        // Update tooltip
+                        if (this.api.player.updateVolumeTooltipPosition) {
+                            this.api.player.updateVolumeTooltipPosition(volume / 100);
+                        }
+                        const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                        if (volumeTooltip) {
+                            volumeTooltip.textContent = volume + '%';
+                        }
+                    }
+                }
+            }, { passive: true });
+
+            // TOUCH DRAG - End
+            newVolumeSlider.addEventListener('touchend', () => {
+                if (isDraggingVolume) {
+                    isDraggingVolume = false;
+                    const volumeTooltip = this.api.container.querySelector('.volume-tooltip');
+                    if (volumeTooltip) {
+                        setTimeout(() => {
+                            volumeTooltip.classList.remove('visible');
+                        }, 300);
+                    }
+                }
+            }, { passive: true });
+
 
             // Update tooltip position on mousemove
             newVolumeSlider.addEventListener('mousemove', (e) => {

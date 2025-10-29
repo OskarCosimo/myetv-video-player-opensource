@@ -36,6 +36,7 @@
             this.isPausedState = true; // Track state manually
             this.extractedBrandLogo = null; // Store reference to extracted brand logo
             this.brandLogoHideTimer = null; // Timer for auto-hide
+            this.containerHeightObserver = null; // MutationObserver for container height
 
             this.api = player.getPluginAPI ? player.getPluginAPI() : {
                 player: player,
@@ -199,12 +200,14 @@
             // Detect if we're inside an iframe
             const isInIframe = window.self !== window.top;
 
-            this.twitchContainer = document.createElement('div');
-            this.twitchContainer.id = 'twitch-player-' + Date.now();
+            // Set position: relative to container
+            this.api.container.style.position = 'relative';
 
             if (isInIframe) {
-                // In iframe: use absolute positioning
-                this.api.container.style.position = 'relative';
+                // Inside iframe: use original system (no MutationObserver needed)
+                this.twitchContainer = document.createElement('div');
+                this.twitchContainer.id = `twitch-player-${Date.now()}`;
+
                 this.twitchContainer.style.cssText = `
             position: absolute !important;
             top: 0 !important;
@@ -213,13 +216,82 @@
             height: 100% !important;
             z-index: 1 !important;
         `;
+
+                if (this.api.player.options.debug) {
+                    console.log('🎮 Twitch Plugin: Inside iframe - using absolute positioning');
+                }
+
             } else {
-                // Not in iframe: use relative positioning
+                // Outside iframe: lock height with MutationObserver
+                const containerHeight = this.api.container.offsetHeight;
+                if (containerHeight > 0) {
+                    this.api.container.style.height = containerHeight + 'px';
+                    if (this.api.player.options.debug) {
+                        console.log('🎮 Twitch Plugin: Container height locked to', containerHeight + 'px');
+                    }
+                } else {
+                    // Fallback if offsetHeight is 0
+                    this.api.container.style.height = '500px';
+                    if (this.api.player.options.debug) {
+                        console.log('🎮 Twitch Plugin: Container height fallback to 500px');
+                    }
+                }
+
+                // MutationObserver to protect container height from being reset
+                const lockedHeight = this.api.container.style.height; // Save locked height
+
+                this.containerHeightObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            const currentHeight = this.api.container.style.height;
+
+                            // Check if we're in fullscreen
+                            const isFullscreen = document.fullscreenElement ||
+                                document.webkitFullscreenElement ||
+                                document.mozFullScreenElement ||
+                                document.msFullscreenElement;
+
+                            // If in fullscreen, allow height: 100%
+                            if (isFullscreen) {
+                                if (currentHeight !== '100%') {
+                                    this.api.container.style.height = '100%';
+                                    if (this.api.player.options.debug) {
+                                        console.log('🎮 Twitch Plugin: Fullscreen mode - height set to 100%');
+                                    }
+                                }
+                            } else {
+                                // If NOT in fullscreen and height was changed to 100% or removed, restore locked height
+                                if (currentHeight !== lockedHeight && (currentHeight === '100%' || currentHeight === '' || currentHeight === 'auto')) {
+                                    this.api.container.style.height = lockedHeight;
+
+                                    if (this.api.player.options.debug) {
+                                        console.log('🎮 Twitch Plugin: Container height restored to', lockedHeight);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // Observe changes to container's style attribute
+                this.containerHeightObserver.observe(this.api.container, {
+                    attributes: true,
+                    attributeFilter: ['style']
+                });
+
+                if (this.api.player.options.debug) {
+                    console.log('🎮 Twitch Plugin: MutationObserver active on container');
+                }
+
+                this.twitchContainer = document.createElement('div');
+                this.twitchContainer.id = `twitch-player-${Date.now()}`;
+
                 this.twitchContainer.style.cssText = `
-            position: relative !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             width: 100% !important;
             height: 100% !important;
-            min-height: 500px !important;
             z-index: 1 !important;
         `;
             }
@@ -248,6 +320,23 @@
             }
 
             this.twitchPlayer = new Twitch.Player(this.twitchContainer.id, playerOptions);
+
+            setTimeout(() => {
+                const twitchIframe = this.twitchContainer.querySelector('iframe');
+                if (twitchIframe) {
+                    twitchIframe.style.cssText = `
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+            `;
+                    if (this.api.player.options.debug) {
+                        console.log('🎮 Twitch Plugin: Iframe dimensions forced to 100%');
+                    }
+                }
+            }, 200);
+
             this.setupEventListeners();
 
             if (this.api.player.options.debug) console.log('🎮 Twitch Plugin: Player created (iframe: ' + isInIframe + ')');
@@ -776,6 +865,13 @@ transition: opacity 0.3s ease !important;
             if (this.brandLogoHideTimer) {
                 clearTimeout(this.brandLogoHideTimer);
                 this.brandLogoHideTimer = null;
+            }
+
+            // Disconnect MutationObserver
+            if (this.containerHeightObserver) {
+                this.containerHeightObserver.disconnect();
+                this.containerHeightObserver = null;
+                if (this.api.player.options.debug) console.log('🎮 Twitch Plugin: MutationObserver disconnected');
             }
 
             // Remove mouse event listeners for brand logo auto-hide

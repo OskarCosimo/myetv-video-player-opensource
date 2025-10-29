@@ -65,6 +65,8 @@
                 console.error('🎬 Vimeo Plugin: videoId or videoUrl is required');
                 return;
             }
+            // Ensure video wrapper has 100% height for proper fullscreen positioning
+            this.player.container.style.height = '100%';
         }
 
         /**
@@ -764,43 +766,52 @@
         /* Controlbar gradient - dark opaque at bottom, semi-transparent at top */
         /* ONLY applied when Vimeo plugin is active */
         .video-wrapper.vimeo-active .controls {
-            background: linear-gradient(
-                to top,
-                rgba(0, 0, 0, ${controlBarOpacity}) 0%,           /* Maximum opacity at bottom */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,   /* 89% of max opacity */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,   /* 74% */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,   /* 53% */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,   /* 32% */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%   /* 21% at top */
+            background: linear-gradient(to top,
+                rgba(0, 0, 0, ${controlBarOpacity * 0}) 0%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%
             ) !important;
             backdrop-filter: blur(3px);
             min-height: 60px;
             padding-bottom: 10px;
         }
-        
+
+        /* FIX: Ensure controlbar stays at bottom in fullscreen */
+        .video-wrapper.vimeo-active:-webkit-full-screen .controls,
+        .video-wrapper.vimeo-active:-moz-full-screen .controls,
+        .video-wrapper.vimeo-active:fullscreen .controls {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 999999 !important;
+        }
+
         /* Title overlay gradient - dark opaque at top, semi-transparent at bottom */
         /* ONLY applied when Vimeo plugin is active */
         .video-wrapper.vimeo-active .title-overlay {
-            background: linear-gradient(
-                to bottom,
-                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,           /* Maximum opacity at top */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,   /* 89% of max opacity */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,   /* 74% */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,   /* 53% */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,   /* 32% */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%   /* 21% at bottom */
+            background: linear-gradient(to bottom,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0}) 0%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%
             ) !important;
             backdrop-filter: blur(3px);
             min-height: 80px;
             padding-top: 20px;
         }
-        
+
         /* Keep controlbar visible when video is paused */
         .video-wrapper.vimeo-active.video-paused .controls.show {
             opacity: 1 !important;
             visibility: visible !important;
         }
-        
+
         /* Keep title overlay visible when video is paused */
         .video-wrapper.vimeo-active.video-paused .title-overlay.show {
             opacity: 1 !important;
@@ -945,26 +956,40 @@
                 console.log('🎬 Vimeo Plugin: Showing Vimeo native controls');
             }
 
-            const iframe = this.player.container.querySelector('iframe');
             const controlbar = this.player.container.querySelector('.controls');
             const titleOverlay = this.player.container.querySelector('.title-overlay');
+            const mouseMoveOverlay = this.player.container.querySelector('.vimeo-mousemove-overlay');
+            const vimeoContainer = this.player.container.querySelector('.vimeo-player-container');
 
-            if (iframe) {
-                // Bring iframe to front
-                iframe.style.pointerEvents = 'auto';
-                iframe.style.zIndex = '9999';
+            // Remove inline styles from mousemove overlay
+            if (mouseMoveOverlay) {
+                this.savedMouseMoveStyle = mouseMoveOverlay.getAttribute('style');
+                mouseMoveOverlay.removeAttribute('style');
+            }
 
-                // Hide controlbar and title
-                if (controlbar) controlbar.style.display = 'none';
-                if (titleOverlay) titleOverlay.style.display = 'none';
+            // Remove "vimeo-container-no-controls" class from vimeo container
+            if (vimeoContainer) {
+                vimeoContainer.classList.remove('vimeo-container-no-controls');
+            }
 
-                // Auto-restore after 10 seconds
-                this.vimeoControlsTimeout = setTimeout(() => {
-                    if (this.options.debug) {
-                        console.log('🎬 Vimeo Plugin: Restoring custom controls after 10 seconds');
-                    }
-                    this.hideVimeoControls();
-                }, 10000);
+            // Hide MYETV controls
+            if (controlbar) {
+                controlbar.style.display = 'none';
+            }
+            if (titleOverlay) {
+                titleOverlay.style.display = 'none';
+            }
+
+            // Auto-restore after 10 seconds
+            this.vimeoControlsTimeout = setTimeout(() => {
+                if (this.options.debug) {
+                    console.log('🎬 Vimeo Plugin: Restoring custom controls after 10 seconds');
+                }
+                this.hideVimeoControls();
+            }, 10000);
+
+            if (this.options.debug) {
+                console.log('🎬 Vimeo Plugin: Vimeo native controls enabled');
             }
         }
 
@@ -974,31 +999,37 @@
                 console.log('🎬 Vimeo Plugin: Hiding Vimeo native controls');
             }
 
-            // Clear timeout if exists
             if (this.vimeoControlsTimeout) {
                 clearTimeout(this.vimeoControlsTimeout);
                 this.vimeoControlsTimeout = null;
             }
 
-            const iframe = this.player.container.querySelector('iframe');
             const controlbar = this.player.container.querySelector('.controls');
             const titleOverlay = this.player.container.querySelector('.title-overlay');
+            const mouseMoveOverlay = this.player.container.querySelector('.vimeo-mousemove-overlay');
+            const vimeoContainer = this.player.container.querySelector('.vimeo-player-container');
 
-            if (iframe) {
-                // Disable clicks on Vimeo controls
-                iframe.style.pointerEvents = 'none';
-                iframe.style.zIndex = '1';
+            // Restore inline styles to mousemove overlay
+            if (mouseMoveOverlay && this.savedMouseMoveStyle) {
+                mouseMoveOverlay.setAttribute('style', this.savedMouseMoveStyle);
+                this.savedMouseMoveStyle = null;
+            }
 
-                // Restore controlbar and title
-                if (controlbar) {
-                    controlbar.style.display = '';
-                    controlbar.style.zIndex = '10';
-                }
-                if (titleOverlay) titleOverlay.style.display = '';
+            // Add back "vimeo-container-no-controls" class
+            if (vimeoContainer) {
+                vimeoContainer.classList.add('vimeo-container-no-controls');
+            }
 
-                if (this.options.debug) {
-                    console.log('🎬 Vimeo Plugin: Custom controls restored');
-                }
+            // Show MYETV controls
+            if (controlbar) {
+                controlbar.style.display = '';
+            }
+            if (titleOverlay) {
+                titleOverlay.style.display = '';
+            }
+
+            if (this.options.debug) {
+                console.log('🎬 Vimeo Plugin: Custom controls restored');
             }
         }
 

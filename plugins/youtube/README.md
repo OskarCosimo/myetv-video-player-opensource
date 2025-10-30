@@ -101,7 +101,7 @@ const player = new MYETVPlayer('myVideo', {
             // YouTube video ID (required if not using auto-detection)
             videoId: 'dQw4w9WgXcQ',
 
-            // YouTube Data API key (optional, for future features)
+            // YouTube Data API key (optional, for improved features)
             apiKey: null,
 
             // Auto-play video on load
@@ -112,6 +112,9 @@ const player = new MYETVPlayer('myVideo', {
 
             // Show the button on the controlbar to enable the YouTube native controls temporarily
             showNativeControlsButton: true,
+
+            // Extract and show the Youtube chapters (API Key is required)
+            showYoutubeChapters : true,
 
             controlBarOpacity: 0.95,     // The controlbar opacity or semi-transparency or transparency - values: from 0 to 1
 
@@ -129,7 +132,7 @@ const player = new MYETVPlayer('myVideo', {
             // Enable quality control in player UI
             enableQualityControl: true,
 
-            // enable channel information retrieval (NEED THE APIKEY TO WORK)
+            // enable channel information retrieval (API key is required)
             enableChannelWatermark: false,
 
             // Set the default language for auto subtitles

@@ -35,6 +35,9 @@
                 // Enable or disable click over youtube player
                 mouseClick: options.mouseClick !== undefined ? options.mouseClick : false,
 
+                // Show YouTube chapters in the timeline
+                showYoutubeChapters: options.showYoutubeChapters !== undefined ? options.showYoutubeChapters : true,
+
                 debug: true,
                 ...options
             };
@@ -67,6 +70,9 @@
             this.resizeListenerAdded = false;
             // Channel data cache
             this.channelData = null;
+            // Chapters cache in localStorage
+            this.cacheExpiration = 21600000; // 6 hour in milliseconds
+            this.cachePrefix = 'myetv_yt_chapters_'; // prefix for localStorage keys
             //live streaming
             this.isLiveStream = false;
             this.liveCheckInterval = null;
@@ -1388,6 +1394,18 @@
                 this.updatePlayerWatermark();
             }
 
+            // Load and display chapters if API key is available
+            if (this.options.apiKey) {
+                this.fetchVideoChapters(this.videoId).then(chapters => {
+                    if (chapters) {
+                        this.displayChaptersOnProgressBar(chapters);
+                    }
+                });
+            }
+
+            // Clear expired cache entries on player ready
+            this.clearExpiredCache();
+
             // Set auto caption language
             if (this.options.autoCaptionLanguage) {
                 setTimeout(() => this.setAutoCaptionLanguage(), 1500);
@@ -2077,15 +2095,58 @@
             document.head.appendChild(style);
             this.api.container.classList.add('youtube-active');
 
+            // Add chapter styles
+            const chapterStyles = `
+        /* Chapter segments styling */
+        .chapter-segment {
+            box-sizing: border-box;
+        }
+        
+        /* Make progress fill respect chapter segments */
+        .progress-filled {
+            z-index: 5 !important;
+            pointer-events: none;
+        }
+        
+        /* Ensure chapter markers are visible */
+        .chapter-marker {
+            z-index: 6 !important;
+        }
+        
+        /* Enhanced tooltip */
+        .yt-seek-tooltip {
+            animation: fadeIn 0.15s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        /* Hover effect on progress container */
+        .progress-container:hover .chapter-segment {
+            background: rgba(255, 255, 255, 0.4) !important;
+        }
+    `;
+
+            style.textContent = chapterStyles;
+            document.head.appendChild(style);
+
             if (this.api.player.options.debug) {
                 console.log('YT Plugin: CSS override injected');
             }
         }
 
         /**
- * Inject CSS styles for controlbar and title overlay gradients
- * Uses YouTube-specific selectors to avoid conflicts with other plugins
- */
+     * Inject CSS styles for controlbar and title overlay gradients
+     * Uses YouTube-specific selectors to avoid conflicts with other plugins
+        */
         injectControlbarGradientStyles() {
             // Check if styles are already injected
             if (document.getElementById('yt-controlbar-gradient-styles')) {
@@ -4205,6 +4266,706 @@
             }
         }
 
+        /**
+     * Fetch video chapters from description using YouTube Data API v3
+     * Uses localStorage for persistent caching
+        */
+        async fetchVideoChapters(videoId) {
+
+            // Check if chapters display is enabled
+            if (!this.options.showYoutubeChapters) {
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: YouTube chapters display disabled by option');
+                }
+                return null;
+            }
+
+            // Check if API key is available
+            if (!this.options.apiKey) {
+                if (this.api.player.options.debug) {
+                    console.warn('YT Plugin: API Key required to fetch chapters');
+                }
+                return null;
+            }
+
+            // Check cache first (localStorage)
+            const cached = this.getCachedChapters(videoId);
+            if (cached) {
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: Using cached chapters for', videoId);
+                }
+                return cached;
+            }
+
+            try {
+                const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${this.options.apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data.items || data.items.length === 0) {
+                    // Cache null result too to avoid repeated calls
+                    this.setCachedChapters(videoId, null);
+                    return null;
+                }
+
+                const description = data.items[0].snippet.description;
+                const chapters = this.parseChaptersFromDescription(description);
+
+                // Cache the result (even if null)
+                this.setCachedChapters(videoId, chapters);
+
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: Chapters fetched and cached:', chapters);
+                }
+
+                return chapters;
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('YT Plugin: Error fetching chapters', error);
+                }
+                return null;
+            }
+        }
+
+        /**
+         * Get cached chapters from localStorage
+         */
+        getCachedChapters(videoId) {
+            try {
+                const key = this.cachePrefix + videoId;
+                const cached = localStorage.getItem(key);
+
+                if (!cached) return null;
+
+                const data = JSON.parse(cached);
+                const now = Date.now();
+
+                // Check if cache is expired
+                if (now - data.timestamp >= this.cacheExpiration) {
+                    localStorage.removeItem(key);
+                    if (this.api.player.options.debug) {
+                        console.log('YT Plugin: Cache expired for', videoId);
+                    }
+                    return null;
+                }
+
+                return data.chapters;
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('YT Plugin: Error reading cache', error);
+                }
+                return null;
+            }
+        }
+
+        /**
+         * Set cached chapters in localStorage
+         */
+        setCachedChapters(videoId, chapters) {
+            try {
+                const key = this.cachePrefix + videoId;
+                const data = {
+                    chapters: chapters,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(key, JSON.stringify(data));
+
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: Chapters cached for', videoId);
+                }
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('YT Plugin: Error writing cache', error);
+                }
+            }
+        }
+
+        /**
+         * Parse chapters from video description
+         * Validates YouTube chapter requirements: 3+ chapters, starts at 0:00, 10+ seconds each
+         */
+        parseChaptersFromDescription(description) {
+            if (!description) return null;
+
+            const chapters = [];
+            // Regex for timestamps: 0:00, 00:00, 0:00:00
+            // Matches both "0:00 Title" and "0:00 - Title"
+            const timestampRegex = /(?:^|\n)(\d{1,2}:?\d{0,2}:?\d{2})\s*[-–—]?\s*(.+?)(?=\n|$)/gm;
+            let match;
+
+            while ((match = timestampRegex.exec(description)) !== null) {
+                const timeString = match[1].trim();
+                const title = match[2].trim();
+
+                // Skip if title is too short or empty
+                if (!title || title.length < 2) continue;
+
+                const seconds = this.parseTimeToSeconds(timeString);
+
+                if (seconds !== null) {
+                    chapters.push({
+                        time: seconds,
+                        title: title,
+                        timeString: timeString
+                    });
+                }
+            }
+
+            // Sort by time
+            chapters.sort((a, b) => a.time - b.time);
+
+            // Validate: at least 3 chapters and first starts at 0:00
+            if (chapters.length >= 3 && chapters[0].time === 0) {
+                // Validate minimum duration (10 seconds)
+                let valid = true;
+                for (let i = 0; i < chapters.length - 1; i++) {
+                    if (chapters[i + 1].time - chapters[i].time < 10) {
+                        valid = false;
+                        break;
+                    }
+                }
+
+                if (valid) {
+                    if (this.api.player.options.debug) {
+                        console.log(`YT Plugin: Found ${chapters.length} valid chapters`);
+                    }
+                    return chapters;
+                }
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('YT Plugin: No valid chapters found (requires 3+ chapters, starting at 0:00, each 10+ seconds)');
+            }
+
+            return null;
+        }
+
+        /**
+         * Parse time string to seconds
+         */
+        parseTimeToSeconds(timeString) {
+            const parts = timeString.split(':').map(p => parseInt(p, 10));
+
+            if (parts.some(p => isNaN(p))) return null;
+
+            if (parts.length === 2) {
+                // mm:ss
+                return parts[0] * 60 + parts[1];
+            } else if (parts.length === 3) {
+                // hh:mm:ss
+                return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            }
+
+            return null;
+        }
+
+        /**
+        * Display chapter markers on progress bar with YouTube-style segments
+        */
+        displayChaptersOnProgressBar(chapters) {
+
+            // Check if chapters display is enabled
+            if (!this.options.showYoutubeChapters) {
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: YouTube chapters display disabled');
+                }
+                return;
+            }
+
+            if (!chapters || chapters.length === 0) return;
+
+            const progressContainer = this.api.container.querySelector('.progress-container');
+            if (!progressContainer) return;
+
+            const duration = this.ytPlayer.getDuration();
+            if (!duration || duration === 0) return;
+
+            // Store chapters for tooltip display
+            this.chapters = chapters;
+
+            // Remove existing chapter markers and segments
+            progressContainer.querySelectorAll('.chapter-marker, .chapter-segment').forEach(m => m.remove());
+
+            // Create segments for each chapter (physically divided)
+            chapters.forEach((chapter, index) => {
+                const nextChapter = chapters[index + 1];
+                const startPercent = (chapter.time / duration) * 100;
+                const endPercent = nextChapter ? (nextChapter.time / duration) * 100 : 100;
+
+                // Calculate segment width minus the gap
+                const gapSize = nextChapter ? 6 : 0; // 6px gap between segments
+                const widthPercent = endPercent - startPercent;
+
+                // Create segment container
+                const segment = document.createElement('div');
+                segment.className = 'chapter-segment';
+                segment.style.cssText = `
+            position: absolute;
+            left: ${startPercent}%;
+            top: 0;
+            width: calc(${widthPercent}% - ${gapSize}px);
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            z-index: 3;
+            transition: background 0.2s;
+            pointer-events: none;
+        `;
+
+                segment.dataset.chapterIndex = index;
+                segment.dataset.time = chapter.time;
+                segment.dataset.title = chapter.title;
+
+                progressContainer.appendChild(segment);
+
+                // Add marker at the START of next segment (not between)
+                if (nextChapter) {
+                    const marker = document.createElement('div');
+                    marker.className = 'chapter-marker';
+                    marker.style.cssText = `
+                position: absolute !important;
+                left: ${endPercent}% !important;
+                top: 0 !important;
+                width: 6px !important;
+                height: 100% !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin-left: -3px !important;
+                cursor: pointer !important;
+                z-index: 10 !important;
+            `;
+
+                    marker.dataset.chapterTime = nextChapter.time;
+                    marker.dataset.chapterTitle = nextChapter.title;
+
+                    // Click on marker to jump to chapter start
+                    marker.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.ytPlayer.seekTo(nextChapter.time, true);
+
+                        if (this.api.player.options.debug) {
+                            console.log(`YT Plugin: Jumped to chapter "${nextChapter.title}" at ${nextChapter.timeString}`);
+                        }
+                    });
+
+                    progressContainer.appendChild(marker);
+                }
+            });
+
+            if (this.api.player.options.debug) {
+                console.log(`YT Plugin: ${chapters.length} chapter segments displayed with gaps`);
+            }
+
+            // Initialize chapter display in title overlay
+            this.initChapterDisplayInOverlay();
+
+            // Add chapter title tooltip
+            this.addChapterTooltip();
+        }
+
+        /**
+         * Add chapter title tooltip with edge detection
+         */
+        addChapterTooltip() {
+
+            // Check if chapters display is enabled
+            if (!this.options.showYoutubeChapters) {
+                if (this.api.player.options.debug) {
+                    console.log('YT Plugin: Chapter tooltip display disabled');
+                }
+                return;
+            }
+
+            if (!this.chapters || this.chapters.length === 0) return;
+
+            const progressContainer = this.api.container.querySelector('.progress-container');
+            if (!progressContainer) return;
+
+            // Remove existing chapter tooltip
+            let chapterTooltip = progressContainer.querySelector('.yt-chapter-tooltip');
+            if (chapterTooltip) {
+                chapterTooltip.remove();
+            }
+
+            // Create chapter tooltip
+            chapterTooltip = document.createElement('div');
+            chapterTooltip.className = 'yt-chapter-tooltip';
+            chapterTooltip.style.cssText = `
+        position: absolute;
+        bottom: calc(100% + 35px);
+        left: 0;
+        background: rgba(28, 28, 28, 0.95);
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        pointer-events: none;
+        visibility: hidden;
+        opacity: 0;
+        z-index: 100001;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transform: translateX(-50%);
+        transition: opacity 0.15s, visibility 0.15s;
+    `;
+            progressContainer.appendChild(chapterTooltip);
+
+            // Get player container bounds for edge detection
+            const getPlayerBounds = () => {
+                return this.api.container.getBoundingClientRect();
+            };
+
+            // Show/hide chapter tooltip with edge detection
+            progressContainer.addEventListener('mousemove', (e) => {
+                if (!this.ytPlayer || !this.ytPlayer.getDuration) return;
+
+                const rect = progressContainer.getBoundingClientRect();
+                const playerRect = getPlayerBounds();
+                const mouseX = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+                const duration = this.ytPlayer.getDuration();
+                const time = percentage * duration;
+
+                // Find current chapter
+                let currentChapter = null;
+                for (let i = this.chapters.length - 1; i >= 0; i--) {
+                    if (time >= this.chapters[i].time) {
+                        currentChapter = this.chapters[i];
+                        break;
+                    }
+                }
+
+                if (currentChapter) {
+                    chapterTooltip.textContent = currentChapter.title;
+                    chapterTooltip.style.visibility = 'visible';
+                    chapterTooltip.style.opacity = '1';
+
+                    // Wait for tooltip to render to get its width
+                    setTimeout(() => {
+                        const tooltipWidth = chapterTooltip.offsetWidth;
+                        const tooltipHalfWidth = tooltipWidth / 2;
+
+                        // Calculate absolute position
+                        const absoluteX = e.clientX;
+
+                        // Check left edge
+                        if (absoluteX - tooltipHalfWidth < playerRect.left) {
+                            // Stick to left edge
+                            const leftOffset = playerRect.left - rect.left;
+                            chapterTooltip.style.left = `${leftOffset + tooltipHalfWidth}px`;
+                            chapterTooltip.style.transform = 'translateX(-50%)';
+                        }
+                        // Check right edge
+                        else if (absoluteX + tooltipHalfWidth > playerRect.right) {
+                            // Stick to right edge
+                            const rightOffset = playerRect.right - rect.left;
+                            chapterTooltip.style.left = `${rightOffset - tooltipHalfWidth}px`;
+                            chapterTooltip.style.transform = 'translateX(-50%)';
+                        }
+                        // Normal centering
+                        else {
+                            chapterTooltip.style.left = `${mouseX}px`;
+                            chapterTooltip.style.transform = 'translateX(-50%)';
+                        }
+                    }, 0);
+                } else {
+                    chapterTooltip.style.visibility = 'hidden';
+                    chapterTooltip.style.opacity = '0';
+                }
+            });
+
+            progressContainer.addEventListener('mouseleave', () => {
+                chapterTooltip.style.visibility = 'hidden';
+                chapterTooltip.style.opacity = '0';
+            });
+
+            if (this.api.player.options.debug) {
+                console.log('YT Plugin: Chapter tooltip added with edge detection');
+            }
+        }
+
+        /**
+ * Initialize chapter display in title overlay
+ */
+        initChapterDisplayInOverlay() {
+            if (!this.chapters || this.chapters.length === 0) return;
+
+            const titleOverlay = this.api.container.querySelector('.title-overlay');
+            if (!titleOverlay) return;
+
+            // Remove existing chapter element if present
+            let chapterElement = titleOverlay.querySelector('.chapter-name');
+            if (chapterElement) {
+                chapterElement.remove();
+            }
+
+            // Create chapter name element
+            chapterElement = document.createElement('div');
+            chapterElement.className = 'chapter-name';
+            chapterElement.style.cssText = `
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        margin-top: 6px;
+        max-width: 400px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    `;
+
+            // Append to title overlay
+            titleOverlay.appendChild(chapterElement);
+
+            // Start monitoring playback to update chapter name
+            this.startChapterNameMonitoring();
+
+            if (this.api.player.options.debug) {
+                console.log('YT Plugin: Chapter name display initialized in title overlay');
+            }
+        }
+
+        /**
+         * Monitor playback and update chapter name dynamically
+         */
+        startChapterNameMonitoring() {
+            if (this.chapterMonitorInterval) {
+                clearInterval(this.chapterMonitorInterval);
+            }
+
+            // Update every 500ms to catch chapter changes
+            this.chapterMonitorInterval = setInterval(() => {
+                if (!this.ytPlayer || !this.chapters || this.chapters.length === 0) {
+                    return;
+                }
+
+                try {
+                    const currentTime = this.ytPlayer.getCurrentTime();
+                    this.updateChapterNameDisplay(currentTime);
+                } catch (error) {
+                    if (this.api.player.options.debug) {
+                        console.error('YT Plugin: Error updating chapter name', error);
+                    }
+                }
+            }, 500);
+        }
+
+        /**
+         * Update chapter name in overlay based on current time
+         */
+        updateChapterNameDisplay(currentTime) {
+            const chapterElement = this.api.container.querySelector('.title-overlay .chapter-name');
+            if (!chapterElement) return;
+
+            // Find current chapter
+            let currentChapter = null;
+            for (let i = this.chapters.length - 1; i >= 0; i--) {
+                if (currentTime >= this.chapters[i].time) {
+                    currentChapter = this.chapters[i];
+                    break;
+                }
+            }
+
+            // Update or clear chapter name
+            if (currentChapter) {
+                chapterElement.textContent = currentChapter.title;
+                chapterElement.style.display = 'block';
+            } else {
+                chapterElement.style.display = 'none';
+            }
+        }
+
+        /**
+         * Stop chapter name monitoring
+         */
+        stopChapterNameMonitoring() {
+            if (this.chapterMonitorInterval) {
+                clearInterval(this.chapterMonitorInterval);
+                this.chapterMonitorInterval = null;
+            }
+        }
+
+        /**
+         * Enhance progress bar tooltip to show chapter title
+         */
+        enhanceProgressTooltipWithChapters() {
+            if (!this.chapters || this.chapters.length === 0) return;
+
+            const progressContainer = this.api.container.querySelector('.progress-container');
+            if (!progressContainer) return;
+
+            // Find existing tooltip
+            let tooltip = progressContainer.querySelector('.yt-seek-tooltip');
+
+            if (!tooltip) {
+                // Create tooltip if it doesn't exist
+                tooltip = document.createElement('div');
+                tooltip.className = 'yt-seek-tooltip';
+                tooltip.style.cssText = `
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 0;
+            background: rgba(28, 28, 28, 0.95);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            pointer-events: none;
+            visibility: hidden;
+            z-index: 99999;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 80px;
+        `;
+                progressContainer.appendChild(tooltip);
+            }
+
+            // Add chapter title element to tooltip
+            let chapterTitle = tooltip.querySelector('.chapter-title');
+            if (!chapterTitle) {
+                chapterTitle = document.createElement('div');
+                chapterTitle.className = 'chapter-title';
+                chapterTitle.style.cssText = `
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 4px;
+            margin-bottom: 2px;
+        `;
+                tooltip.insertBefore(chapterTitle, tooltip.firstChild);
+            }
+
+            // Time display element
+            let timeDisplay = tooltip.querySelector('.time-display');
+            if (!timeDisplay) {
+                timeDisplay = document.createElement('div');
+                timeDisplay.className = 'time-display';
+                timeDisplay.style.cssText = `
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+        `;
+                tooltip.appendChild(timeDisplay);
+            }
+
+            // Update tooltip on mousemove
+            progressContainer.addEventListener('mousemove', (e) => {
+                if (!this.ytPlayer || !this.ytPlayer.getDuration) return;
+
+                const rect = progressContainer.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+                const duration = this.ytPlayer.getDuration();
+                const time = percentage * duration;
+
+                // Find current chapter at this time
+                let currentChapter = null;
+                for (let i = this.chapters.length - 1; i >= 0; i--) {
+                    if (time >= this.chapters[i].time) {
+                        currentChapter = this.chapters[i];
+                        break;
+                    }
+                }
+
+                // Update chapter title
+                if (currentChapter) {
+                    chapterTitle.textContent = currentChapter.title;
+                    chapterTitle.style.display = 'block';
+                } else {
+                    chapterTitle.style.display = 'none';
+                }
+
+                // Update time display
+                timeDisplay.textContent = this.formatTime(time);
+
+                // Position tooltip
+                tooltip.style.left = `${mouseX}px`;
+                tooltip.style.visibility = 'visible';
+                tooltip.style.transform = 'translateX(-50%)';
+            });
+
+            progressContainer.addEventListener('mouseleave', () => {
+                tooltip.style.visibility = 'hidden';
+            });
+
+            if (this.api.player.options.debug) {
+                console.log('YT Plugin: Progress tooltip enhanced with chapter info');
+            }
+        }
+
+        /**
+         * Clear all cached chapters from localStorage
+         */
+        clearChaptersCache() {
+            try {
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(this.cachePrefix)) {
+                        keys.push(key);
+                    }
+                }
+
+                keys.forEach(key => localStorage.removeItem(key));
+
+                if (this.api.player.options.debug) {
+                    console.log(`YT Plugin: Cleared ${keys.length} cached chapters`);
+                }
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('YT Plugin: Error clearing cache', error);
+                }
+            }
+        }
+
+        /**
+         * Clear expired cache entries from localStorage
+         */
+        clearExpiredCache() {
+            try {
+                const now = Date.now();
+                const keys = [];
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(this.cachePrefix)) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key));
+                            if (now - data.timestamp >= this.cacheExpiration) {
+                                keys.push(key);
+                            }
+                        } catch (e) {
+                            // Invalid data, remove it
+                            keys.push(key);
+                        }
+                    }
+                }
+
+                keys.forEach(key => localStorage.removeItem(key));
+
+                if (this.api.player.options.debug) {
+                    console.log(`YT Plugin: Cleared ${keys.length} expired cache entries`);
+                }
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.error('YT Plugin: Error clearing expired cache', error);
+                }
+            }
+        }
+
         // ===== CLEANUP =====
 
         dispose() {
@@ -4269,9 +5030,8 @@
             const styleEl = document.getElementById('youtube-controls-override');
             if (styleEl) styleEl.remove();
 
-            if (this.player.qualities && this.player.qualities.length > 0) {
-                // Remove YouTube fake qualities
-            }
+            // Stop chapter monitoring when plugin is destroyed
+            this.stopChapterNameMonitoring();
 
             if (this.api.video) {
                 this.api.video.style.display = '';

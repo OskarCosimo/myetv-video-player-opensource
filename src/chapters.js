@@ -148,46 +148,99 @@ parseTimeToSeconds(timeStr) {
  * Create visual chapter markers on the progress bar
  */
 createChapterMarkers() {
-    if (!this.progressContainer || !this.video || !this.chapters) {
+    if (!this.progressContainer || !this.video || !this.chapters) return;
+
+    const duration = this.video.duration;
+    if (!duration || isNaN(duration)) {
+        // Wait for metadata
+        const loadedMetadataHandler = () => {
+            this.createChapterMarkers();
+            this.video.removeEventListener('loadedmetadata', loadedMetadataHandler);
+        };
+        this.video.addEventListener('loadedmetadata', loadedMetadataHandler);
         return;
     }
 
-    // Create container for chapter markers
+    // Remove existing markers
+    const existingMarkers = this.progressContainer.querySelector('.chapter-markers-container');
+    if (existingMarkers) {
+        existingMarkers.remove();
+    }
+
+    // Create container for chapter segments
     const markersContainer = document.createElement('div');
     markersContainer.className = 'chapter-markers-container';
 
+    // Create segments for each chapter
     this.chapters.forEach((chapter, index) => {
-        const marker = document.createElement('div');
-        marker.className = 'chapter-marker';
-        marker.setAttribute('data-chapter-index', index);
-        marker.setAttribute('data-chapter-time', chapter.time);
-        marker.setAttribute('data-chapter-title', chapter.title);
+        const nextChapter = this.chapters[index + 1];
+        const startPercent = (chapter.time / duration) * 100;
+        const endPercent = nextChapter ? (nextChapter.time / duration) * 100 : 100;
 
-        // Set custom color if provided
-        if (chapter.color) {
-            marker.style.backgroundColor = chapter.color;
+        // Calculate segment width minus the gap
+        const gapSize = nextChapter ? 6 : 0; // 6px gap between segments
+        const widthPercent = endPercent - startPercent;
+
+        // Create segment container
+        const segment = document.createElement('div');
+        segment.className = 'chapter-segment';
+        segment.style.cssText = `
+            position: absolute;
+            left: ${startPercent}%;
+            top: 0;
+            width: calc(${widthPercent}% - ${gapSize}px);
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            z-index: 3;
+            transition: background 0.2s;
+            pointer-events: none;
+        `;
+
+        segment.setAttribute('data-chapter-index', index);
+        segment.setAttribute('data-chapter-time', chapter.time);
+        segment.setAttribute('data-chapter-title', chapter.title);
+
+        markersContainer.appendChild(segment);
+
+        // Add marker at the START of next segment (transparent divider)
+        if (nextChapter) {
+            const marker = document.createElement('div');
+            marker.className = 'chapter-marker';
+            marker.style.cssText = `
+                position: absolute !important;
+                left: ${endPercent}% !important;
+                top: 0 !important;
+                width: 6px !important;
+                height: 100% !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin-left: -3px !important;
+                cursor: pointer !important;
+                z-index: 10 !important;
+            `;
+
+            marker.setAttribute('data-chapter-time', nextChapter.time);
+            marker.setAttribute('data-chapter-title', nextChapter.title);
+
+            // Click on marker to jump to chapter start
+            marker.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.jumpToChapter(index + 1);
+            });
+
+            markersContainer.appendChild(marker);
         }
-
-        markersContainer.appendChild(marker);
     });
 
     // Insert markers container into progress container
     this.progressContainer.appendChild(markersContainer);
     this.chapterMarkersContainer = markersContainer;
 
-    // Update marker positions when video duration is known
-    if (this.video.duration && !isNaN(this.video.duration)) {
-        this.updateChapterMarkerPositions();
-    } else {
-        // Wait for metadata to be loaded
-        const loadedMetadataHandler = () => {
-            this.updateChapterMarkerPositions();
-            this.video.removeEventListener('loadedmetadata', loadedMetadataHandler);
-        };
-        this.video.addEventListener('loadedmetadata', loadedMetadataHandler);
+    if (this.options.debug) {
+        console.log(`Chapter markers created: ${this.chapters.length} segments`);
     }
-
-    if (this.options.debug) console.log('📚 Chapter markers created on timeline');
 }
 
 /**
@@ -212,70 +265,278 @@ updateChapterMarkerPositions() {
 }
 
 /**
- * Create chapter tooltip
+ * Create chapter tooltip with title and image
  */
 createChapterTooltip() {
-    if (!this.progressContainer) {
-        return;
+    if (!this.progressContainer) return;
+
+    // Remove existing chapter tooltip
+    let chapterTooltip = this.progressContainer.querySelector('.chapter-tooltip');
+    if (chapterTooltip) {
+        chapterTooltip.remove();
     }
 
-    const tooltip = document.createElement('div');
-    tooltip.className = 'chapter-tooltip';
-    tooltip.style.opacity = '0';
-    tooltip.style.visibility = 'hidden';
-
-    // Tooltip content structure
-    tooltip.innerHTML = `
-        <div class="chapter-tooltip-image"></div>
-        <div class="chapter-tooltip-title"></div>
-        <div class="chapter-tooltip-time"></div>
+    // Create chapter tooltip container (positioned ABOVE the time tooltip)
+    chapterTooltip = document.createElement('div');
+    chapterTooltip.className = 'chapter-tooltip';
+    chapterTooltip.style.cssText = `
+        position: absolute;
+        bottom: calc(100% + 35px);
+        left: 0;
+        background: rgba(28, 28, 28, 0.95);
+        color: #fff;
+        border-radius: 4px;
+        pointer-events: none;
+        visibility: hidden;
+        opacity: 0;
+        z-index: 100001;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        max-width: 300px;
+        overflow: hidden;
+        transform: translateX(-50%);
+        transition: opacity 0.15s, visibility 0.15s;
+        display: flex;
+        flex-direction: column;
     `;
 
-    this.progressContainer.appendChild(tooltip);
-    this.chapterTooltip = tooltip;
+    // Create inner content structure
+    chapterTooltip.innerHTML = `
+        <div class="chapter-tooltip-content" style="display: flex; flex-direction: column; gap: 8px; padding: 8px;">
+            <div class="chapter-tooltip-image" style="
+                width: 100%;
+                height: 120px;
+                background-size: cover;
+                background-position: center;
+                border-radius: 3px;
+                display: none;
+            "></div>
+            <div class="chapter-tooltip-info" style="display: flex; flex-direction: column; gap: 4px;">
+                <div class="chapter-tooltip-title" style="
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #fff;
+                    max-width: 280px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                "></div>
+                <div class="chapter-tooltip-time" style="
+                    font-size: 12px;
+                    font-weight: 400;
+                    color: rgba(255, 255, 255, 0.8);
+                "></div>
+            </div>
+        </div>
+    `;
 
-    if (this.options.debug) console.log('📚 Chapter tooltip created');
+    this.progressContainer.appendChild(chapterTooltip);
+    this.chapterTooltip = chapterTooltip;
+
+    if (this.options.debug) {
+        console.log('Chapter tooltip created');
+    }
 }
 
 /**
- * Bind chapter-related events
+ * Bind chapter-related events - tooltip on progressbar mousemove
  */
 bindChapterEvents() {
-    if (!this.chapterMarkersContainer || !this.chapterTooltip) {
-        return;
+    if (!this.progressContainer) return;
+
+    // Remove existing chapter tooltip if present
+    let chapterTooltip = this.progressContainer.querySelector('.chapter-tooltip-hover');
+    if (chapterTooltip) {
+        chapterTooltip.remove();
     }
 
-    // Hover on chapter markers
-    const markers = this.chapterMarkersContainer.querySelectorAll('.chapter-marker');
+    // Create chapter tooltip
+    chapterTooltip = document.createElement('div');
+    chapterTooltip.className = 'chapter-tooltip-hover';
+    chapterTooltip.style.cssText = `
+        position: absolute;
+        bottom: calc(100% + 35px);
+        left: 0;
+        background: rgba(28, 28, 28, 0.95);
+        color: #fff;
+        border-radius: 4px;
+        padding: 8px;
+        pointer-events: none;
+        visibility: hidden;
+        opacity: 0;
+        z-index: 100001;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        max-width: 300px;
+        transform: translateX(-50%);
+        transition: opacity 0.15s, visibility 0.15s;
+    `;
 
-    markers.forEach((marker, index) => {
-        marker.addEventListener('mouseenter', (e) => {
-            this.showChapterTooltip(index, e);
-        });
+    this.progressContainer.appendChild(chapterTooltip);
+    this.chapterTooltip = chapterTooltip;
 
-        marker.addEventListener('mousemove', (e) => {
-            this.updateChapterTooltipPosition(e);
-        });
+    // Get player container for edge detection
+    const getPlayerBounds = () => {
+        return this.container ? this.container.getBoundingClientRect() : null;
+    };
 
-        marker.addEventListener('mouseleave', () => {
-            this.hideChapterTooltip();
-        });
+    // Mousemove handler to show tooltip with title and image
+    this.progressContainer.addEventListener('mousemove', (e) => {
+        if (!this.video || !this.video.duration || !this.chapters || this.chapters.length === 0) {
+            return;
+        }
 
-        // Click to jump to chapter
-        marker.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.jumpToChapter(index);
-        });
+        const rect = this.progressContainer.getBoundingClientRect();
+        const playerRect = getPlayerBounds();
+        const mouseX = e.clientX - rect.left;
+        const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+        const time = percentage * this.video.duration;
+
+        // Find chapter at current time
+        let currentChapter = null;
+        for (let i = this.chapters.length - 1; i >= 0; i--) {
+            if (time >= this.chapters[i].time) {
+                currentChapter = this.chapters[i];
+                break;
+            }
+        }
+
+        if (currentChapter) {
+            // Build tooltip HTML
+            let tooltipHTML = '<div style="display: flex; flex-direction: column; gap: 6px;">';
+
+            // Add image if available
+            if (currentChapter.image) {
+                tooltipHTML += `
+                    <div style="
+                        width: 100%;
+                        height: 120px;
+                        background-image: url('${currentChapter.image}');
+                        background-size: cover;
+                        background-position: center;
+                        border-radius: 3px;
+                    "></div>
+                `;
+            }
+
+            // Add title
+            tooltipHTML += `
+                <div style="
+                    font-size: 13px;
+                    font-weight: 600;
+                    max-width: 280px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                ">
+                    ${currentChapter.title}
+                </div>
+            `;
+
+            // Add time
+            tooltipHTML += `
+                <div style="
+                    font-size: 12px;
+                    font-weight: 400;
+                    color: rgba(255, 255, 255, 0.8);
+                ">
+                    ${this.formatTime(currentChapter.time)}
+                </div>
+            `;
+
+            tooltipHTML += '</div>';
+
+            chapterTooltip.innerHTML = tooltipHTML;
+            chapterTooltip.style.visibility = 'visible';
+            chapterTooltip.style.opacity = '1';
+
+            // Position tooltip with edge detection
+            setTimeout(() => {
+                const tooltipWidth = chapterTooltip.offsetWidth;
+                const tooltipHalfWidth = tooltipWidth / 2;
+                const absoluteX = e.clientX;
+
+                if (playerRect) {
+                    // Left edge
+                    if (absoluteX - tooltipHalfWidth < playerRect.left) {
+                        chapterTooltip.style.left = `${playerRect.left - rect.left + tooltipHalfWidth}px`;
+                    }
+                    // Right edge
+                    else if (absoluteX + tooltipHalfWidth > playerRect.right) {
+                        chapterTooltip.style.left = `${playerRect.right - rect.left - tooltipHalfWidth}px`;
+                    }
+                    // Normal center
+                    else {
+                        chapterTooltip.style.left = `${mouseX}px`;
+                    }
+                } else {
+                    chapterTooltip.style.left = `${mouseX}px`;
+                }
+            }, 0);
+        } else {
+            chapterTooltip.style.visibility = 'hidden';
+            chapterTooltip.style.opacity = '0';
+        }
+    });
+
+    // Mouseleave handler
+    this.progressContainer.addEventListener('mouseleave', () => {
+        chapterTooltip.style.visibility = 'hidden';
+        chapterTooltip.style.opacity = '0';
     });
 
     // Update active chapter during playback
     if (this.video) {
-        this.video.addEventListener('timeupdate', () => {
-            this.updateActiveChapter();
-        });
+        this.video.addEventListener('timeupdate', () => this.updateActiveChapter());
     }
 
-    if (this.options.debug) console.log('📚 Chapter events bound');
+    if (this.options.debug) {
+        console.log('Chapter events bound with tooltip');
+    }
+}
+
+/**
+ * Update chapter name in title overlay dynamically
+ */
+updateChapterInTitleOverlay() {
+    if (!this.video || !this.chapters || this.chapters.length === 0) return;
+
+    const titleOverlay = this.container ? this.container.querySelector('.title-overlay') : null;
+    if (!titleOverlay) return;
+
+    // Find or create chapter name element
+    let chapterElement = titleOverlay.querySelector('.chapter-name');
+    if (!chapterElement) {
+        chapterElement = document.createElement('div');
+        chapterElement.className = 'chapter-name';
+        chapterElement.style.cssText = `
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 6px;
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        `;
+        titleOverlay.appendChild(chapterElement);
+    }
+
+    // Find current chapter
+    const currentTime = this.video.currentTime;
+    let currentChapter = null;
+    for (let i = this.chapters.length - 1; i >= 0; i--) {
+        if (currentTime >= this.chapters[i].time) {
+            currentChapter = this.chapters[i];
+            break;
+        }
+    }
+
+    // Update or hide chapter name
+    if (currentChapter) {
+        chapterElement.textContent = currentChapter.title;
+        chapterElement.style.display = 'block';
+    } else {
+        chapterElement.style.display = 'none';
+    }
 }
 
 /**
@@ -379,9 +640,7 @@ jumpToChapter(chapterIndex) {
  * Update active chapter marker during playback
  */
 updateActiveChapter() {
-    if (!this.video || !this.chapterMarkersContainer || !this.chapters) {
-        return;
-    }
+    if (!this.video || !this.chapterMarkersContainer || !this.chapters) return;
 
     const currentTime = this.video.currentTime;
     const markers = this.chapterMarkersContainer.querySelectorAll('.chapter-marker');
@@ -403,6 +662,9 @@ updateActiveChapter() {
             marker.classList.remove('active');
         }
     });
+
+    // Update chapter name in title overlay
+    this.updateChapterInTitleOverlay();
 }
 
 /**

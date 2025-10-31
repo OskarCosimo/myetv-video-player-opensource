@@ -480,6 +480,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.chapter-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 6px;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+
 /* CONTROLS CONTAINER - IMPROVED RESPONSIVE DESIGN */
 .controls {
   position: absolute;
@@ -983,6 +995,125 @@ body {
   .progress-container:hover .progress-bar {
     height: calc(var(--player-progress-height) * 1.3);
     transition: height 0.15s ease;
+  }
+}
+/* ===================================
+   CHAPTERS IMPROVEMENTS
+   =================================== */
+.chapter-segment {
+  box-sizing: border-box;
+}
+
+.chapter-marker:hover {
+  background: rgba(0, 0, 0, 0.9) !important;
+}
+
+.chapter-tooltip {
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.progress-container:hover .chapter-segment {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.chapter-tooltip {
+  animation: fadeIn 0.15s ease-in-out;
+}
+.chapter-tooltip .chapter-tooltip-content {
+  display: flex;
+  flex-direction: column;
+}
+.chapter-tooltip .chapter-tooltip-image {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 3px;
+}
+.chapter-tooltip .chapter-tooltip-title {
+  line-height: 1.3;
+}
+.chapter-tooltip .chapter-tooltip-time {
+  opacity: 0.8;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.chapter-tooltip-hover .chapter-tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chapter-tooltip-hover .chapter-tooltip-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 3px;
+  max-width: 180px;
+}
+.chapter-tooltip-hover .chapter-tooltip-title {
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chapter-tooltip-hover .chapter-tooltip-time {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 180px;
+}
+
+@media (max-width: 1200px) {
+  .chapter-tooltip-hover .chapter-tooltip-image {
+    max-width: 150px;
+  }
+  .chapter-tooltip-hover .chapter-tooltip-title,
+  .chapter-tooltip-hover .chapter-tooltip-time {
+    max-width: 150px;
+  }
+}
+@media (max-width: 768px) {
+  .chapter-tooltip-hover .chapter-tooltip-image {
+    max-width: 100px;
+  }
+  .chapter-tooltip-hover .chapter-tooltip-title,
+  .chapter-tooltip-hover .chapter-tooltip-time {
+    max-width: 100px;
+  }
+}
+@media (max-width: 480px) {
+  .chapter-tooltip-hover .chapter-tooltip-image {
+    max-width: 80px;
+  }
+  .chapter-tooltip-hover .chapter-tooltip-title {
+    font-size: 11px;
+    max-width: 80px;
+  }
+  .chapter-tooltip-hover .chapter-tooltip-time {
+    font-size: 10px;
+    max-width: 80px;
   }
 }
 /* VOLUME CONTROLS - IMPROVED RESPONSIVE */

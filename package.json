@@ -1,6 +1,6 @@
 {
   "name": "myetv-player",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "MYETV Video Player - Modular HTML5 video player with plugin support for YouTube, Vimeo, Twitch, Facebook, and streaming protocols (HLS/DASH)",
   "main": "dist/myetv-player.js",
   "files": [
@@ -57,3 +57,4 @@
   },
   "homepage": "https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html"
 }
+

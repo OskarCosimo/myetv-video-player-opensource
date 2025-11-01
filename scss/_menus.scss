@@ -6,10 +6,19 @@
 @use 'variables' as *;
 
 /* CONTROL MENUS */
-.speed-control,
-.quality-control,
-.subtitles-control {
+/* show quality menu in the controlbar */
+.quality-control {
     position: relative;
+}
+
+/* Hide individual subtitle button - it's now inside settings menu */
+.subtitles-control {
+    display: none !important;
+}
+
+/* Hide individual speed control button - it's now inside settings menu */
+.speed-control {
+    display: none !important;
 }
 
 .speed-menu,
@@ -125,10 +134,13 @@
     color: var(--player-primary-color);
 }
 
-/* SETTINGS DROPDOWN MENU - FOR SMALL SCREENS */
+/* ========================================
+   SETTINGS DROPDOWN MENU - ALWAYS VISIBLE
+   ======================================== */
+
 .settings-control {
     position: relative;
-    display: none;
+    display: block !important;
 }
 
 .settings-btn {
@@ -160,11 +172,7 @@
     background: var(--player-button-active);
 }
 
-.settings-btn .icon::before {
-    content: '⚙️';
-    font-size: 16px;
-}
-
+/* SETTINGS MENU CONTAINER */
 .settings-menu {
     position: absolute;
     bottom: 100%;
@@ -181,15 +189,44 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 100;
     box-shadow: var(--player-shadow-menu);
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Custom scrollbar styling - Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--player-primary-color) rgba(255, 255, 255, 0.05);
 }
 
-/* ⚠️ Settings menu opens ONLY with .active (CLICK) */
+/* Settings menu opens ONLY with .active (CLICK) */
 .settings-menu.active {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: all !important;
 }
 
+/* Custom scrollbar styling - Webkit browsers (Chrome, Safari, Edge) */
+.settings-menu::-webkit-scrollbar {
+    width: 8px;
+}
+
+.settings-menu::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.settings-menu::-webkit-scrollbar-thumb {
+    background: var(--player-primary-color);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.settings-menu::-webkit-scrollbar-thumb:hover {
+    background: var(--player-primary-hover, var(--player-primary-color));
+    background-clip: content-box;
+}
+
+/* SETTINGS OPTIONS */
 .settings-option {
     padding: 8px 16px;
     color: var(--player-text-color);
@@ -225,163 +262,10 @@
     opacity: 0.8;
 }
 
-/* Submenu styling - HIDDEN BY DEFAULT */
-.settings-submenu,
-.quality-submenu,
-.speed-submenu {
-    position: absolute;
-    bottom: 0;
-    right: 100%;
-    background: var(--player-bg-menu);
-    backdrop-filter: blur(10px);
-    border-radius: 8px;
-    padding: 8px 0;
-    margin-right: 5px;
-    opacity: 0;
-    visibility: hidden;
-    transition: all var(--player-transition-fast);
-    min-width: 150px;
-    max-width: 180px;
-    max-height: 250px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    white-space: nowrap;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 101;
-    box-shadow: var(--player-shadow-menu);
-    pointer-events: none;
-}
+/* ========================================
+   EXPANDABLE WRAPPER - For Speed, Subtitles
+   ======================================== */
 
-/* ⚠️ SOLUTION: Submenus open on HOVER (easier and more intuitive) */
-.settings-option:hover .settings-submenu,
-.settings-option:hover .quality-submenu,
-.settings-option:hover .speed-submenu {
-    opacity: 1 !important;
-    visibility: visible !important;
-    transform: translateX(-2px) !important;
-    pointer-events: all !important;
-}
-
-.settings-submenu .settings-suboption,
-.quality-submenu .quality-option,
-.speed-submenu .speed-option {
-    padding: 8px 10px !important;
-    font-size: 12px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-.settings-suboption {
-    padding: 8px 16px;
-    color: var(--player-text-color);
-    cursor: pointer;
-    transition: all var(--player-transition-fast);
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.settings-suboption:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--player-primary-color);
-}
-
-.settings-suboption.active {
-    color: var(--player-primary-color);
-    font-weight: 600;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.settings-suboption.active::after {
-    content: '✓';
-    font-size: 12px;
-    color: var(--player-primary-color);
-}
-
-/* Visual indicator for options with submenus */
-.settings-option:has(.settings-submenu, .quality-submenu, .speed-submenu)::after {
-    content: '▶';
-    font-size: 10px;
-    color: var(--player-text-secondary);
-    margin-left: 8px;
-}
-
-.settings-option:hover::after {
-    color: var(--player-primary-color);
-}
-
-/* RESPONSIVE - PROGRESSIVE REDUCTION */
-@media (max-width: 768px) {
-    .settings-menu > .settings-option {
-        font-size: 12px !important;
-    }
-
-    .settings-submenu,
-    .quality-submenu,
-    .speed-submenu {
-        max-width: min(140px, calc(100vw - 180px)) !important;
-    }
-
-    .settings-submenu .settings-suboption,
-    .quality-submenu .quality-option,
-    .speed-submenu .speed-option {
-        padding: 7px 8px !important;
-        font-size: 11px !important;
-    }
-}
-
-@media (max-width: 600px) {
-    .settings-menu > .settings-option {
-        font-size: 11px !important;
-    }
-
-    .settings-submenu,
-    .quality-submenu,
-    .speed-submenu {
-        max-width: min(120px, calc(100vw - 160px)) !important;
-    }
-
-    .settings-submenu .settings-suboption,
-    .quality-submenu .quality-option,
-    .speed-submenu .speed-option {
-        padding: 6px 7px !important;
-        font-size: 10px !important;
-    }
-}
-
-@media (max-width: 450px) {
-    .settings-menu > .settings-option {
-        font-size: 10px !important;
-    }
-
-    .settings-submenu,
-    .quality-submenu,
-    .speed-submenu {
-        max-width: min(100px, calc(100vw - 140px)) !important;
-    }
-
-    .settings-submenu .settings-suboption,
-    .quality-submenu .quality-option,
-    .speed-submenu .speed-option {
-        padding: 5px 6px !important;
-        font-size: 9px !important;
-    }
-}
-
-@media (max-width: 350px) {
-    .settings-control {
-        display: block !important;
-    }
-
-    .pip-btn,
-    .speed-control,
-    .subtitles-control {
-        display: none !important;
-    }
-}
-// Expandable settings menu styles
 .settings-expandable-wrapper {
     position: relative;
     display: block;
@@ -392,41 +276,109 @@
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    font-size: 10px !important;
 
     .settings-option-label {
-        font-size: 10px !important;
+        font-size: 14px;
     }
 
     .expand-arrow {
-        font-size: 8px;
+        font-size: 12px;
         transition: transform 0.2s ease;
         margin-left: 8px;
     }
 }
 
+.settings-option.expandable-trigger:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* EXPANDABLE CONTENT - THE SUBMENU - HIDDEN BY DEFAULT */
 .settings-expandable-content {
     padding-left: 15px;
     margin-top: 4px;
+    display: none;
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 3px solid var(--player-primary-color);
+}
+
+.settings-expandable-content.active {
+    display: block;
+}
+
+/* SUBOPTIONS (velocità, tracce sottotitoli) */
+.settings-suboption {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: white;
+    font-size: 13px;
+    white-space: normal;
+    word-wrap: break-word;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-suboption:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-suboption.active {
+    opacity: 1;
+    font-weight: bold;
+    color: var(--player-primary-color);
+}
+
+.settings-suboption.active::after {
+    content: '✓';
+    font-size: 12px;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .settings-menu > .settings-option {
+        font-size: 13px;
+    }
 
     .settings-suboption {
-        padding: 6px 12px;
-        cursor: pointer;
-        color: white;
+        font-size: 12px;
+        padding: 7px 10px;
+    }
+}
+
+@media (max-width: 600px) {
+    .settings-menu > .settings-option {
+        font-size: 12px;
+    }
+
+    .settings-suboption {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+}
+
+@media (max-width: 450px) {
+    .settings-menu > .settings-option {
+        font-size: 11px;
+    }
+
+    .settings-suboption {
         font-size: 10px;
-        white-space: normal;
-        word-wrap: break-word;
-        opacity: 0.8;
-        transition: opacity 0.2s;
+        padding: 5px 6px;
+    }
+}
 
-        &.active {
-            opacity: 1;
-            font-weight: bold;
-        }
+@media (max-width: 350px) {
+    .settings-control {
+        display: block !important;
+    }
 
-        &:hover {
-            opacity: 1;
-            background: rgba(255, 255, 255, 0.1);
-        }
+    .pip-btn {
+        display: none !important;
     }
 }

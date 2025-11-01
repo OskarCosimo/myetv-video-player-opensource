@@ -133,21 +133,9 @@
     }
 }
 
-/* SCHERMI MOLTO PICCOLI - ATTIVA MENU SETTINGS DROPDOWN */
+/* MENU SETTINGS DROPDOWN */
 @media (max-width: 350px) {
-    /* Mostra il menu Settings solo su schermi molto piccoli */
-    .settings-control {
-        display: block !important;
-    }
 
-    /* Nascondi i controlli individuali e spostali nel menu */
-    .pip-btn,
-    .speed-control,
-    .subtitles-control {
-        display: none !important;
-    }
-
-    /* Riduci ulteriormente gli spazi */
     .controls-left,
     .controls-right {
         gap: 4px;
@@ -181,10 +169,10 @@
     }
 
     .volume-slider {
-        width: 30px; /* Volume slider ancora più piccolo */
+        width: 30px;
     }
 
-    /* Riduci il menu settings per schermi ultra-piccoli */
+    /* screen small */
     .settings-menu {
         min-width: 160px;
         font-size: 12px;
@@ -243,7 +231,6 @@
         width: 25px;
     }
 
-    /* Menu settings ultra-compatto */
     .settings-menu {
         min-width: 140px;
         font-size: 11px;
@@ -264,7 +251,7 @@
     }
 }
 
-/* OVERFLOW HANDLING - CRITICAL FIX */
+/* OVERFLOW HANDLING */
 @media (max-width: 600px) {
     .controls-main {
         /* Allow horizontal scrolling if absolutely necessary */

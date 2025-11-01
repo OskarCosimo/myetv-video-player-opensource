@@ -529,6 +529,11 @@ markPlayerReady() {
             this.video.style.pointerEvents = '';
         }
 
+        // UPDATE SETTINGS MENU VISIBILITY IF APPLICABLE
+        if (typeof this.updateSettingsMenuVisibility === 'function') {
+            this.updateSettingsMenuVisibility();
+        }
+
         // INITIALIZE AUTO-HIDE AFTER EVERYTHING IS READY
         setTimeout(() => {
             if (this.options.autoHide && !this.autoHideInitialized) {

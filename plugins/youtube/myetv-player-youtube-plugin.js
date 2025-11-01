@@ -320,6 +320,25 @@
             }
         }
 
+        // Helper: update menu selection highlight
+        updateMenuHeight() {
+            const menu = this.api.container.querySelector('.settings-menu');
+            if (!menu) return;
+
+            const settingsBtn = this.api.container.querySelector('.settings-btn');
+            const containerRect = this.api.container.getBoundingClientRect();
+            const btnRect = settingsBtn.getBoundingClientRect();
+
+            // space from top of container to settings button
+            const distanceFromTop = btnRect.top - containerRect.top;
+
+            // Max height = distance from top - 30px padding
+            const maxHeight = Math.max(150, distanceFromTop - 30);
+
+            menu.style.maxHeight = `${maxHeight}px !important`;
+            menu.style.overflowY = 'scroll !important';
+        }
+
         /**
          * Handle responsive layout for mobile settings
          */
@@ -334,43 +353,18 @@
                 pipBtn.style.display = 'none';
             }
 
-            // Breakpoint at 600px
-            if (containerWidth < 600) {
                 // Add max-height and scroll to settings menu on mobile
                 if (settingsMenu) {
                     const playerHeight = this.api.container.offsetHeight;
-                    const maxMenuHeight = playerHeight - 100; // Leave 100px margin from top/bottom
+                    const settingsBtn = this.api.container.querySelector('.settings-btn');
+                    const settingsBtnRect = settingsBtn.getBoundingClientRect();
+                    const containerRect = this.api.container.getBoundingClientRect();
 
-                    settingsMenu.style.maxHeight = `${maxMenuHeight}px`;
-                    settingsMenu.style.overflowY = 'auto';
-                    settingsMenu.style.overflowX = 'hidden';
+                    // Calculate distance from top of container to settings button
+                    const distanceFromTop = settingsBtnRect.top - containerRect.top;
 
-                    // Add scrollbar styling
-                    if (!document.getElementById('yt-settings-scrollbar-style')) {
-                        const scrollbarStyle = document.createElement('style');
-                        scrollbarStyle.id = 'yt-settings-scrollbar-style';
-                        scrollbarStyle.textContent = `
-                    .settings-menu::-webkit-scrollbar {
-                        width: 6px;
-                    }
-                    .settings-menu::-webkit-scrollbar-track {
-                        background: rgba(255,255,255,0.05);
-                        border-radius: 3px;
-                    }
-                    .settings-menu::-webkit-scrollbar-thumb {
-                        background: rgba(255,255,255,0.3);
-                        border-radius: 3px;
-                    }
-                    .settings-menu::-webkit-scrollbar-thumb:hover {
-                        background: rgba(255,255,255,0.5);
-                    }
-                `;
-                        document.head.appendChild(scrollbarStyle);
-                    }
+                    const maxMenuHeight = Math.min(300, playerHeight * 0.5);
 
-                    // Firefox scrollbar
-                    settingsMenu.style.scrollbarWidth = 'thin';
-                    settingsMenu.style.scrollbarColor = 'rgba(255,255,255,0.3) transparent';
                 }
 
                 // Hide subtitles button
@@ -417,7 +411,6 @@
                         // Create trigger
                         const trigger = document.createElement('div');
                         trigger.className = 'quality-option';
-                        trigger.style.fontSize = '10px';
                         trigger.textContent = subtitlesText;
 
                         // Add arrow indicator
@@ -450,7 +443,6 @@
                             padding: 6px 12px;
                             cursor: pointer;
                             color: white;
-                            font-size: 10px;
                             white-space: normal;
                             word-wrap: break-word;
                             opacity: 0.8;
@@ -494,16 +486,19 @@
                         let isExpanded = false;
                         trigger.addEventListener('click', (e) => {
                             e.stopPropagation();
-
                             isExpanded = !isExpanded;
 
                             if (isExpanded) {
                                 rebuildOptions();
                                 optionsContainer.style.display = 'block';
                                 arrow.style.transform = 'rotate(180deg)';
+
+                                setTimeout(() => this.updateMenuHeight(), 10);
                             } else {
                                 optionsContainer.style.display = 'none';
                                 arrow.style.transform = 'rotate(0deg)';
+
+                                setTimeout(() => this.updateMenuHeight(), 10);
                             }
                         });
 
@@ -533,7 +528,6 @@
                         // Create trigger
                         const trigger = document.createElement('div');
                         trigger.className = 'quality-option';
-                        trigger.style.fontSize = '10px';
 
                         // Get current speed
                         const getCurrentSpeed = () => {
@@ -574,7 +568,6 @@
                             padding: 6px 12px;
                             cursor: pointer;
                             color: white;
-                            font-size: 10px;
                             white-space: normal;
                             word-wrap: break-word;
                             opacity: 0.8;
@@ -630,9 +623,11 @@
                                 rebuildOptions();
                                 optionsContainer.style.display = 'block';
                                 arrow.style.transform = 'rotate(180deg)';
+                                setTimeout(() => this.updateMenuHeight(), 10);
                             } else {
                                 optionsContainer.style.display = 'none';
                                 arrow.style.transform = 'rotate(0deg)';
+                                setTimeout(() => this.updateMenuHeight(), 10);
                             }
                         });
 
@@ -649,51 +644,7 @@
                         }
                     }
                 }
-            } else {
-                // Wide screen
-                if (subtitlesBtn) {
-                    subtitlesBtn.style.display = '';
-                }
 
-                // Reset settings menu styles
-                if (settingsMenu) {
-                    settingsMenu.style.maxHeight = '';
-                    settingsMenu.style.overflowY = '';
-                    settingsMenu.style.overflowX = '';
-                    settingsMenu.style.scrollbarWidth = '';
-                    settingsMenu.style.scrollbarColor = '';
-                }
-
-                // Show original speed option again
-                if (settingsMenu) {
-                    const originalSpeedOption = settingsMenu.querySelector('[data-action="speed"]');
-                    if (originalSpeedOption) {
-                        originalSpeedOption.style.display = '';
-                    }
-
-                    // Show expandable speed option again
-                    const expandableSpeedWrapper = settingsMenu.querySelector('[data-action="speed-expand"]');
-                    if (expandableSpeedWrapper) {
-                        const wrapper = expandableSpeedWrapper.closest('.settings-expandable-wrapper');
-                        if (wrapper) {
-                            wrapper.style.display = '';
-                        }
-                    }
-                }
-
-                // Remove from settings
-                if (settingsMenu) {
-                    const subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
-                    if (subtitlesWrapper) {
-                        subtitlesWrapper.remove();
-                    }
-
-                    const speedWrapper = settingsMenu.querySelector('.yt-speed-wrapper');
-                    if (speedWrapper) {
-                        speedWrapper.remove();
-                    }
-                }
-            }
         }
 
         hidePipFromSettingsMenuOnly() {

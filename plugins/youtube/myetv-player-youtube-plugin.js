@@ -998,7 +998,7 @@
         z-index: 2;
         background: transparent;
         pointer-events: ${pointerEvents};
-        cursor: default;
+        cursor: auto;
     `;
 
             this.api.container.insertBefore(this.mouseMoveOverlay, this.api.controls);
@@ -1367,14 +1367,27 @@
                 this.checkInitialCaptionState();
             }, 2500); // after 2.5s
 
-            // Initialize cursor state based on controls visibility
+            // Initialize cursor synchronization with player's auto-hide system
             if (!this.options.showYouTubeUI && this.api.player.options.hideCursor) {
-                // Check if controls are visible
-                const controlsVisible = this.api.controls && this.api.controls.classList.contains('show');
-                if (!controlsVisible) {
-                    this.hideCursor();
+                // Hook into player's hideControlsNow method
+                const originalHideControlsNow = this.api.player.hideControlsNow;
+                this.api.player.hideControlsNow = function () {
+                    originalHideControlsNow.call(this);
+                    // Cursor is already hidden by the player's hideCursor() call inside hideControlsNow
+                };
+
+                // Hook into player's showControlsNow method
+                const originalShowControlsNow = this.api.player.showControlsNow;
+                this.api.player.showControlsNow = function () {
+                    originalShowControlsNow.call(this);
+                    // Cursor is already shown by the player's showCursor() call inside showControlsNow
+                };
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Cursor sync hooks installed');
                 }
             }
+
             if (this.api.player.options.debug) console.log('YT Plugin: Setup completed');
             this.api.triggerEvent('youtubeplugin:playerready', {});
 
@@ -3947,19 +3960,20 @@
          * Only works when showYouTubeUI is false (custom controls)
          */
         hideCursor() {
-            // Don't hide cursor if YouTube native UI is active
-            if (this.options.showYouTubeUI) {
-                return;
+            if (this.options.showYouTubeUI) return;
+            if (!this.api.player.options.hideCursor) return;
+
+            // Update main container
+            if (this.api.player && this.api.player.container) {
+                this.api.player.container.classList.add('hide-cursor');
             }
 
-            // Add hide-cursor class to MAIN PLAYER CONTAINER
-            // This ensures cursor is hidden everywhere in the player
-            if (this.api.container) {
-                this.api.container.classList.add('hide-cursor');
-            }
-
-            if (this.api.player.options.debug) {
-                console.log('[YT Plugin] Cursor hidden on main container');
+            // Update overlay cursor as well!
+            if (this.mouseMoveOverlay) {
+                this.mouseMoveOverlay.style.cursor = 'none';
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Overlay cursor hidden');
+                }
             }
         }
 
@@ -3967,13 +3981,17 @@
          * Show mouse cursor in YouTube player
          */
         showCursor() {
-            // Remove hide-cursor class from MAIN PLAYER CONTAINER
-            if (this.api.container) {
-                this.api.container.classList.remove('hide-cursor');
+            // Update main container
+            if (this.api.player && this.api.player.container) {
+                this.api.player.container.classList.remove('hide-cursor');
             }
 
-            if (this.api.player.options.debug) {
-                console.log('[YT Plugin] Cursor shown on main container');
+            // Update overlay cursor back to default!
+            if (this.mouseMoveOverlay) {
+                this.mouseMoveOverlay.style.cursor = 'default';
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Overlay cursor shown');
+                }
             }
         }
 

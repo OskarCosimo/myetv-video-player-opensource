@@ -1169,9 +1169,10 @@ updateProgress() {
         this.progressHandle.style.left = progress + '%';
     }
 
+    // Always call updateTimeDisplay, regardless of duration validity
     this.updateTimeDisplay();
 
-    // Trigger timeupdate event (with throttling to avoid too many events)
+    // Trigger timeupdate event with throttling
     if (!this.lastTimeUpdate || Date.now() - this.lastTimeUpdate > 250) {
         this.triggerEvent('timeupdate', {
             currentTime: this.getCurrentTime(),
@@ -1250,6 +1251,8 @@ updateDuration() {
     if (this.durationEl && this.video && this.video.duration && !isNaN(this.video.duration)) {
         this.durationEl.textContent = this.formatTime(this.video.duration);
     }
+    // Call updateTimeDisplay to handle all states (loading, encoding, normal)
+    this.updateTimeDisplay();
 }
 
 changeSpeed(e) {

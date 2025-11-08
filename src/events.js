@@ -215,12 +215,19 @@
             if (!this.isChangingQuality) {
                 this.showLoading();
             }
+
+            // Update time display to show "Loading..." during initial buffering
+            this.updateTimeDisplay();
+
             // Trigger loadstart event - browser started loading media
             this.triggerEvent('loadstart');
         });
 
         this.video.addEventListener('loadedmetadata', () => {
             this.updateDuration();
+
+            // Update time display when metadata is loaded
+            this.updateTimeDisplay();
 
             // Trigger loadedmetadata event - video metadata loaded
             this.triggerEvent('loadedmetadata', {
@@ -239,6 +246,10 @@
             if (!this.isChangingQuality) {
                 this.hideLoading();
             }
+
+            // Update time display when data is loaded
+            this.updateTimeDisplay();
+
             // Trigger loadeddata event - current frame data loaded
             this.triggerEvent('loadeddata', {
                 currentTime: this.getCurrentTime()
@@ -249,11 +260,30 @@
             if (!this.isChangingQuality) {
                 this.hideLoading();
             }
+
+            // Update time display when video can play
+            this.updateTimeDisplay();
+
             // Trigger canplay event - video can start playing
             this.triggerEvent('canplay', {
                 currentTime: this.getCurrentTime(),
                 duration: this.getDuration()
             });
+        });
+
+        // Also add to waiting event
+        this.video.addEventListener('waiting', () => {
+            if (!this.isChangingQuality) {
+                this.showLoading();
+
+                // Update time display during buffering
+                this.updateTimeDisplay();
+
+                // Trigger waiting event - video is buffering
+                this.triggerEvent('waiting', {
+                    currentTime: this.getCurrentTime()
+                });
+            }
         });
 
         this.video.addEventListener('progress', () => {

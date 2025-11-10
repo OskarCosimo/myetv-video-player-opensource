@@ -4350,18 +4350,19 @@
         }
 
         /**
-         * Parse chapters from video description
-         * Validates YouTube chapter requirements: 3+ chapters, starts at 0:00, 10+ seconds each
-         */
+ * Parse chapters from video description
+ * Validates YouTube chapter requirements: ≥3 chapters, starts at 0:00
+ */
         parseChaptersFromDescription(description) {
             if (!description) return null;
 
             const chapters = [];
+
             // Regex for timestamps: 0:00, 00:00, 0:00:00
             // Matches both "0:00 Title" and "0:00 - Title"
-            const timestampRegex = /(?:^|\n)(\d{1,2}:?\d{0,2}:?\d{2})\s*[-–—]?\s*(.+?)(?=\n|$)/gm;
-            let match;
+            const timestampRegex = /^(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–—]*\s*(.+)$/gm;
 
+            let match;
             while ((match = timestampRegex.exec(description)) !== null) {
                 const timeString = match[1].trim();
                 const title = match[2].trim();
@@ -4370,7 +4371,6 @@
                 if (!title || title.length < 2) continue;
 
                 const seconds = this.parseTimeToSeconds(timeString);
-
                 if (seconds !== null) {
                     chapters.push({
                         time: seconds,
@@ -4385,27 +4385,16 @@
 
             // Validate: at least 3 chapters and first starts at 0:00
             if (chapters.length >= 3 && chapters[0].time === 0) {
-                // Validate minimum duration (10 seconds)
-                let valid = true;
-                for (let i = 0; i < chapters.length - 1; i++) {
-                    if (chapters[i + 1].time - chapters[i].time < 10) {
-                        valid = false;
-                        break;
-                    }
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] ✅ Found', chapters.length, 'valid chapters');
                 }
-
-                if (valid) {
-                    if (this.api.player.options.debug) {
-                        console.log(`YT Plugin: Found ${chapters.length} valid chapters`);
-                    }
-                    return chapters;
-                }
+                return chapters;
             }
 
             if (this.api.player.options.debug) {
-                console.log('YT Plugin: No valid chapters found (requires 3+ chapters, starting at 0:00, each 10+ seconds)');
+                console.log('[YT Plugin] ❌ No valid chapters found (requires ≥3 chapters starting at 0:00)');
+                console.log('[YT Plugin] Debug: Found', chapters.length, 'chapters, first time:', chapters[0]?.time);
             }
-
             return null;
         }
 

@@ -1,4 +1,4 @@
-﻿// ===================================
+// ===================================
 // VIDEO PLAYER
 // ===================================
 
@@ -10,8 +10,13 @@
     height: auto;
     display: block;
     min-height: 300px;
-    visibility: hidden;
-    opacity: 0;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
+    visibility: visible;
+    opacity: 1;
     position: relative;
     z-index: 1;
     transition: none;

@@ -903,6 +903,47 @@ constructor(videoElement, options = {}) {
     }
 }
 
+// check if the device is Fire TV
+isFireTV() {
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('aftm') ||
+        ua.includes('aftb') ||
+        ua.includes('afts') ||
+        ua.includes('aftmm') ||
+        ua.includes('aftt');
+}
+
+// apply Fire TV specific optimizations
+optimizeVideoForFireTV() {
+    if (!this.isFireTV() || !this.video) return;
+
+    if (this.options.debug) {
+        console.log('Fire TV detected - applying optimizations');
+    }
+
+    // set playsinline attributes
+    this.video.setAttribute('playsinline', '');
+    this.video.setAttribute('webkit-playsinline', '');
+
+    // CSS optimizations
+    this.video.style.transform = 'translateZ(0)';
+    this.video.style.webkitTransform = 'translateZ(0)';
+    this.video.style.backfaceVisibility = 'hidden';
+    this.video.style.webkitBackfaceVisibility = 'hidden';
+    this.video.style.willChange = 'transform';
+
+    // force repaint on loadeddata
+    this.video.addEventListener('loadeddata', () => {
+        if (this.options.debug) {
+            console.log('Fire TV: Video loaded, forcing repaint');
+        }
+        this.video.style.display = 'none';
+        setTimeout(() => {
+            this.video.style.display = 'block';
+        }, 10);
+    }, { once: true });
+}
+
 getPlayerState() {
     return {
         isPlaying: !this.isPaused(),
@@ -1202,6 +1243,7 @@ createPlayerStructure() {
 
     this.container = wrapper;
 
+    this.optimizeVideoForFireTV();
     this.createInitialLoading();
     this.createLoadingOverlay();
     this.collectVideoQualities();

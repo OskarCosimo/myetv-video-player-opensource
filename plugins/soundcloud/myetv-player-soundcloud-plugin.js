@@ -116,6 +116,8 @@
                 // Intercept progress bar
                 this.interceptProgressBar();
 
+                this.hideSpeedPiPButtons();
+
                 this.isInitialized = true;
 
                 if (this.options.debug) {
@@ -360,6 +362,52 @@
             if (progressHandle) {
                 progressHandle.style.left = percentage + '%';
             }
+        }
+
+        hideSpeedPiPButtons() {
+            // speed
+            const speedElements = this.player.controls?.querySelectorAll(
+                '[data-speed], .speed-btn, .playback-speed, .speed-control, .playback-rate, .speed-menu, .speed-container, .speed-select'
+            );
+
+            speedElements?.forEach(el => {
+                el.style.display = 'none';
+                if (this.options.debug) console.log('Speed control HIDDEN');
+            });
+
+            // PiP
+            const pipElements = this.player.controls?.querySelectorAll(
+                '[data-pip], .pip-btn, .picture-in-picture, .pip-icon'
+            );
+
+            pipElements?.forEach(el => {
+                el.style.display = 'none';
+                if (this.options.debug) console.log('PiP control HIDDEN');
+            });
+        }
+
+        showSpeedPiPButtons() {
+            // SPEED - reenable
+            const speedElements = this.player.controls?.querySelectorAll(
+                '[data-speed], .speed-btn, .playback-speed, .speed-control, .playback-rate, .speed-menu, .speed-container, .speed-select'
+            );
+
+            speedElements?.forEach(el => {
+                el.style.display = '';
+                el.style.opacity = '1';
+                el.style.pointerEvents = 'auto';
+            });
+
+            // PiP
+            const pipElements = this.player.controls?.querySelectorAll(
+                '[data-pip], .pip-btn, .picture-in-picture, .pip-icon'
+            );
+
+            pipElements?.forEach(el => {
+                el.style.display = '';
+                el.style.opacity = '1';
+                el.style.pointerEvents = 'auto';
+            });
         }
 
         /**
@@ -866,7 +914,7 @@
                 clearInterval(this.tooltipUpdateInterval);
                 this.tooltipUpdateInterval = null;
             }
-
+            this.showSpeedPiPButtons();
         }
     }
 

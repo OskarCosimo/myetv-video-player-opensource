@@ -286,6 +286,18 @@ constructor(videoElement, options = {}) {
     }
 }
 
+/**
+ * Decode HTML entities to normal characters
+ * @param {string} text - Text with HTML entities
+ * @returns {string} Decoded text
+ */
+decodeHTMLEntities(text) {
+    if (!text) return '';
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+}
+
 // check if the device is Fire TV
 isFireTV() {
     const ua = navigator.userAgent.toLowerCase();
@@ -667,14 +679,14 @@ createTitleOverlay() {
 
     const titleText = document.createElement('h2');
     titleText.className = 'title-text';
-    titleText.textContent = this.options.videoTitle || '';
+    titleText.textContent = this.decodeHTMLEntities(this.options.videoTitle) || '';
     overlay.appendChild(titleText);
 
     // add subtitles
     if (this.options.videoSubtitle) {
         const subtitleText = document.createElement('p');
         subtitleText.className = 'subtitle-text';
-        subtitleText.textContent = this.options.videoSubtitle;
+        subtitleText.textContent = this.decodeHTMLEntities(this.options.videoSubtitle);
         overlay.appendChild(subtitleText);
     }
 
@@ -729,7 +741,7 @@ setVideoTitle(title) {
     if (this.titleOverlay) {
         const titleElement = this.titleOverlay.querySelector('.title-text');
         if (titleElement) {
-            titleElement.textContent = this.options.videoTitle;
+            titleElement.textContent = this.decodeHTMLEntities(this.options.videoTitle);
         }
 
         if (title) {
@@ -1587,7 +1599,7 @@ switchToVideo(newVideoElement, shouldPlay = false) {
     if (newTitle && this.options.showTitleOverlay) {
         this.options.videoTitle = newTitle;
         if (this.titleText) {
-            this.titleText.textContent = newTitle;
+            this.titleText.textContent = this.decodeHTMLEntities(newTitle);
         }
     }
 

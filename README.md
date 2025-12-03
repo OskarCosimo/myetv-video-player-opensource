@@ -9,6 +9,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 
 - [Features](#features)
 - [Demo Page](#demo-page)
+- [Screenshot](#screenshot)
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
 - [Initialization Options](#initialization-options)
@@ -46,6 +47,11 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 
 ## Demo page
 [MYETV Video Player Demo Page: https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html](https://oskarcosimo.com/myetv-video-player/myetv-player-demo.html)
+
+## Screenshot
+
+<img width="1360" height="769" alt="MYETV Video Player Opensource - mouse over" src="https://github.com/user-attachments/assets/71cb5d77-171f-4e14-817c-583df1e137f9" />
+<img width="1360" height="769" alt="MYETV Video Player Opensource - chapters" src="https://github.com/user-attachments/assets/569c3b59-8d5e-4d97-8b9b-67a222e73e06" />
 
 ## Installation
 

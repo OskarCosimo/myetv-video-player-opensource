@@ -7,9 +7,12 @@
 
 A modern and complete HTML5 + JavaScript + css video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.
 
-[Features](#features) • [Installation](#installation) • [Documentation](#initialization-options) • [Demo](#demo-page) • [NPM Download](https://www.npmjs.com/package/myetv-player) • [License](#license)
+[Features](#features) • [Installation](#installation) • [Documentation](#documentation) • [Demo](#demo-page) • [NPM Download](https://www.npmjs.com/package/myetv-player) • [License](#license)
 
 </div>
+
+---
+# Documentation
 
 ## Table of Contents
 

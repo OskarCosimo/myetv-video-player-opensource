@@ -1,9 +1,15 @@
-[![CodeQL Advanced](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/codeql.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/codeql.yml) [![Node.js Package](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?logo=javascript)
+<div align="center">
 
 # MYETV Audio/Video Player Open Source
 
+[![CodeQL Advanced](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/codeql.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/codeql.yml) [![Node.js Package](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/OskarCosimo/myetv-video-player-opensource/actions/workflows/npm-publish.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?logo=javascript)
+
 A modern and complete HTML5 + JavaScript + css video player with custom controls, multiple quality support, subtitles, Picture-in-Picture and much more.
+
+[Features](#features) • [Installation](#installation) • [Documentation](#initialization-options) • [Demo](#demo-page) • [npm download](https://www.npmjs.com/package/my-file-manager-opensource) • [License](#license)
+
+</div>
 
 ## Table of Contents
 

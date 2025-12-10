@@ -3434,11 +3434,67 @@
                 '3': 'BUFFERING',
                 '5': 'CUED'
             };
-            if (this.api.player.options.debug) console.log('[YT Plugin] State:', states[event.data], event.data);
 
-            // Know if video have some problems to start
+            if (this.api.player.options.debug)
+                console.log('YT Plugin State:', states[event.data], event.data);
+
+            // Handle auto-hide based on YouTube state
+            if (event.data === YT.PlayerState.PAUSED) {
+                // Video paused: show controls and CANCEL timer
+                if (this.api.player.showControlsNow) {
+                    this.api.player.showControlsNow();
+                }
+                // Clear timer to prevent controls from disappearing
+                if (this.api.player.autoHideTimer) {
+                    clearTimeout(this.api.player.autoHideTimer);
+                    this.api.player.autoHideTimer = null;
+                }
+                // Add CSS class
+                if (this.api.container) {
+                    this.api.container.classList.add('video-paused');
+                }
+
+                if (this.api.player.options.debug)
+                    console.log('YT Plugin: Video paused - controls locked visible');
+            }
+
+            if (event.data === YT.PlayerState.PLAYING) {
+                // Video playing: remove class and restart auto-hide
+                if (this.api.container) {
+                    this.api.container.classList.remove('video-paused');
+                }
+                // Restart auto-hide only if enabled
+                if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
+                    if (this.api.player.showControlsNow) {
+                        this.api.player.showControlsNow();
+                    }
+                    if (this.api.player.resetAutoHideTimer) {
+                        this.api.player.resetAutoHideTimer();
+                    }
+                }
+
+                if (this.api.player.options.debug)
+                    console.log('YT Plugin: Video playing - auto-hide restarted');
+            }
+
+            // Handle when video fails to autoplay (stays in UNSTARTED)
             if (event.data === YT.PlayerState.UNSTARTED || event.data === -1) {
-                // start timeout when video is unstarted
+                // Show controls and block auto-hide
+                if (this.api.player.showControlsNow) {
+                    this.api.player.showControlsNow();
+                }
+                // Clear any active timer
+                if (this.api.player.autoHideTimer) {
+                    clearTimeout(this.api.player.autoHideTimer);
+                    this.api.player.autoHideTimer = null;
+                }
+
+                if (this.api.player.options.debug)
+                    console.log('YT Plugin: Video UNSTARTED (autoplay blocked?) - controls locked visible');
+            }
+
+            // Start timeout when video is unstarted
+            if (event.data === YT.PlayerState.UNSTARTED || event.data === -1) {
                 if (this.playAttemptTimeout) {
                     clearTimeout(this.playAttemptTimeout);
                 }
@@ -3448,15 +3504,14 @@
 
                     const currentState = this.ytPlayer.getPlayerState();
 
-                    // If video is unstrated after timeout, consider it restricted
+                    // If video is unstarted after timeout, consider it restricted
                     if (currentState === YT.PlayerState.UNSTARTED || currentState === -1) {
-                        if (this.api.player.options.debug) {
+                        if (this.api.player.options.debug)
                             console.log('YT Plugin: Video stuck in UNSTARTED - possibly members-only or restricted');
-                        }
 
                         // Trigger ended event
                         this.api.triggerEvent('ended', {
-                            reason: 'video_restricted_or_membership',
+                            reason: 'videorestrictedormembership',
                             state: currentState
                         });
 
@@ -3464,14 +3519,12 @@
                         this.showPosterOverlay();
 
                         // Trigger custom event
-                        this.api.triggerEvent('youtubeplugin:membershiprestricted', {
+                        this.api.triggerEvent('youtubepluginmembershiprestricted', {
                             videoId: this.videoId
                         });
                     }
-                }, 15000); // 15 seconds of timeout
-
-            } else if (event.data === YT.PlayerState.PLAYING ||
-                event.data === YT.PlayerState.BUFFERING) {
+                }, 15000); // 15 seconds timeout
+            } else if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING) {
                 // Clear the timeout if video starts correctly
                 if (this.playAttemptTimeout) {
                     clearTimeout(this.playAttemptTimeout);
@@ -3488,9 +3541,8 @@
 
             // Handle live stream ended
             if (this.isLiveStream && event.data === YT.PlayerState.ENDED) {
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] 🔴➡️📹 Live stream ended (player state: ENDED)');
-                }
+                if (this.api.player.options.debug)
+                    console.log('YT Plugin: Live stream ended (player state ENDED)');
                 this.handleLiveStreamEnded();
                 return;
             }
@@ -3500,24 +3552,19 @@
                 if (event.data === YT.PlayerState.PAUSED) {
                     // Orange when paused during live
                     badge.style.background = '#ff8800';
-                    badge.textContent = '⏸ LIVE';
+                    badge.textContent = 'LIVE';
                     badge.title = 'Livestreaming in Pause';
-
-                    if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] 🟠 Live paused');
-                    }
+                    if (this.api.player.options.debug)
+                        console.log('YT Plugin: Live paused');
                 } else if (event.data === YT.PlayerState.PLAYING) {
                     // Red when playing (will be checked for de-sync below)
                     badge.style.background = '#ff0000';
                     badge.textContent = 'LIVE';
                     badge.title = 'Livestreaming';
-
-                    if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] 🔴 Live playing');
-                    }
                 }
             }
 
+            // Handle state changes
             switch (event.data) {
                 case YT.PlayerState.PLAYING:
                     this.api.triggerEvent('played', {});
@@ -3549,26 +3596,12 @@
                 case YT.PlayerState.ENDED:
                     this.api.triggerEvent('ended', {});
 
-                    // Show play icon (for replay)
+                    // Show play icon for replay
                     if (playIcon && pauseIcon) {
                         playIcon.classList.remove('hidden');
                         pauseIcon.classList.add('hidden');
                     }
                     break;
-            }
-
-            if (event.data === YT.PlayerState.PAUSED) {
-                // add pause class
-                if (this.api.container) {
-                    this.api.container.classList.add('video-paused');
-                }
-            }
-
-            if (event.data === YT.PlayerState.PLAYING) {
-                // remove pause class
-                if (this.api.container) {
-                    this.api.container.classList.remove('video-paused');
-                }
             }
         }
 

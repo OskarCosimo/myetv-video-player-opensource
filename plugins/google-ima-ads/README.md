@@ -86,7 +86,7 @@ All options are passed as the second argument to `new GoogleIMAPlugin(player, op
 | `vastLoadTimeout` | Number | `5000` | VAST load timeout in milliseconds |
 | `debug` | Boolean | `false` | Enable console debug logging |
 | `vpaidMode` | String | `'ENABLED'` | `'ENABLED'`, `'INSECURE'`, or `'DISABLED'` for VPAID support |
-| `adLabel` | String | `'Pubblicità'` | Ad label text (e.g. "Ad", "Advertisement") |
+| `adLabel` | String | `'ADS'` | Ad label text (e.g. "Ad", "Advertisement") |
 | `adLabelNofN` | String | `'di'` | Separator for "Ad X of Y" text (e.g. "of") |
 | `nonLinearWidth` | Number / `null` | `null` | Custom non-linear ad width (fallback: video width) |
 | `nonLinearHeight` | Number / `null` | `null` | Custom non-linear ad height (fallback: video height / 3) |

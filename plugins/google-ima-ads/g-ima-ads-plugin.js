@@ -1,4 +1,4 @@
-﻿/* Google IMA Plugin for MYETV Video Player
+/* Google IMA Plugin for MYETV Video Player
  * Integrates Google Interactive Media Ads SDK
  * Supports VAST, VMAP, VPAID
  * Created by https://www.myetv.tv https://oskarcosimo.com
@@ -30,7 +30,7 @@
                 vastLoadTimeout: options.vastLoadTimeout || 5000,
                 debug: options.debug || false,
                 vpaidMode: options.vpaidMode || 'ENABLED', // ENABLED, INSECURE, DISABLED
-                adLabel: options.adLabel || 'Pubblicità',
+                adLabel: options.adLabel || 'ADS',
                 adLabelNofN: options.adLabelNofN || 'di',
                 nonLinearWidth: options.nonLinearWidth || null,
                 nonLinearHeight: options.nonLinearHeight || null,

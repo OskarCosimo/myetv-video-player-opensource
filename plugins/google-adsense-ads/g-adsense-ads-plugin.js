@@ -45,39 +45,20 @@
         }
 
         /**
-        * Attach video events
-        */
-        attachVideoEvents() {
-            this.player.video.addEventListener('pause', () => {
-                if (!this.player.video.ended) {
-                    this.showAd();
-                }
-            });
-
-            this.player.video.addEventListener('play', () => {
-                this.hideAd();
-            });
-
-            this.player.video.addEventListener('ended', () => {
-                this.hideAd();
-            });
-        }
-
-        /**
          * Create ad container
          */
         createAdContainer() {
             this.adContainer = document.createElement('div');
             this.adContainer.className = 'adsense-video-container';
             this.adContainer.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 999;
-        display: none;
-    `;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 999;
+                display: none;
+            `;
 
             // Create AdSense ins element
             const ins = document.createElement('ins');
@@ -94,26 +75,30 @@
                 ins.setAttribute('data-full-width-responsive', 'true');
             }
 
-            // Close button
+            // Create Close button
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '✕ Close Ad';
             closeBtn.style.cssText = `
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        padding: 8px 16px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        z-index: 1000;
-        font-size: 14px;
-    `;
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                padding: 8px 16px;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                z-index: 1000;
+                font-size: 14px;
+                font-family: Arial, sans-serif;
+            `;
 
             closeBtn.addEventListener('click', () => {
                 this.hideAd();
-                this.player.video.play();
+                // Resume video only if not ended
+                if (!this.player.video.ended) {
+                    this.player.video.play();
+                }
             });
 
             this.adContainer.appendChild(ins);
@@ -152,18 +137,54 @@
                 if (this.options.debug) {
                     console.log('🎬 AdSense ad initialized');
                 }
+
+                // Show ad immediately if video is paused or not started
+                if (this.player.video.paused) {
+                    this.showAd();
+                }
             } catch (error) {
                 console.error('🎬 AdSense initialization error:', error);
             }
         }
 
         /**
+         * Attach video events
+         */
+        attachVideoEvents() {
+            // Show ad when video is paused
+            this.player.video.addEventListener('pause', () => {
+                this.showAd();
+            });
+
+            // Show ad when video ends
+            this.player.video.addEventListener('ended', () => {
+                this.showAd();
+            });
+
+            // Hide ad when video starts playing
+            this.player.video.addEventListener('play', () => {
+                this.hideAd();
+            });
+
+            // Show ad on load if no autoplay
+            this.player.video.addEventListener('loadedmetadata', () => {
+                if (this.player.video.paused && this.isAdLoaded) {
+                    this.showAd();
+                }
+            });
+        }
+
+        /**
          * Show ad
          */
         showAd() {
-            if (this.isAdLoaded) {
+            if (this.isAdLoaded && this.adContainer) {
                 this.adContainer.style.display = 'block';
                 this.player.triggerEvent('adstarted');
+
+                if (this.options.debug) {
+                    console.log('🎬 Ad shown');
+                }
             }
         }
 
@@ -171,20 +192,20 @@
          * Hide ad
          */
         hideAd() {
-            this.adContainer.style.display = 'none';
-            this.player.video.play();
-            this.player.triggerEvent('adcomplete');
+            if (this.adContainer) {
+                this.adContainer.style.display = 'none';
+                this.player.triggerEvent('adcomplete');
+
+                if (this.options.debug) {
+                    console.log('🎬 Ad hidden');
+                }
+            }
         }
 
         /**
          * Dispose plugin
          */
         dispose() {
-            if (this.player.video) {
-                this.player.video.removeEventListener('pause', this.showAd);
-                this.player.video.removeEventListener('play', this.hideAd);
-            }
-
             if (this.adContainer) {
                 this.adContainer.remove();
             }
@@ -193,7 +214,6 @@
                 console.log('🎬 AdSense Video Plugin disposed');
             }
         }
-
     }
 
     // Register plugin globally

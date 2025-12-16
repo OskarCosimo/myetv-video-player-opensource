@@ -1,4 +1,4 @@
-﻿/* Google AdSense Plugin for MYETV Video Player
+/* Google AdSense Plugin for MYETV Video Player
  * Integrates Google AdSense for Video
  * Created by https://www.myetv.tv https://oskarcosimo.com
  */
@@ -37,10 +37,30 @@
 
             this.createAdContainer();
             this.loadAdSenseScript();
+            this.attachVideoEvents();
 
             if (this.options.debug) {
                 console.log('🎬 AdSense Video Plugin initialized');
             }
+        }
+
+        /**
+        * Attach video events
+        */
+        attachVideoEvents() {
+            this.player.video.addEventListener('pause', () => {
+                if (!this.player.video.ended) {
+                    this.showAd();
+                }
+            });
+
+            this.player.video.addEventListener('play', () => {
+                this.hideAd();
+            });
+
+            this.player.video.addEventListener('ended', () => {
+                this.hideAd();
+            });
         }
 
         /**
@@ -50,14 +70,14 @@
             this.adContainer = document.createElement('div');
             this.adContainer.className = 'adsense-video-container';
             this.adContainer.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 999;
-                display: none;
-            `;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 999;
+        display: none;
+    `;
 
             // Create AdSense ins element
             const ins = document.createElement('ins');
@@ -70,12 +90,34 @@
             }
 
             ins.setAttribute('data-ad-format', this.options.adFormat);
-
             if (this.options.fullWidth) {
                 ins.setAttribute('data-full-width-responsive', 'true');
             }
 
+            // Close button
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕ Close Ad';
+            closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 8px 16px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        z-index: 1000;
+        font-size: 14px;
+    `;
+
+            closeBtn.addEventListener('click', () => {
+                this.hideAd();
+                this.player.video.play();
+            });
+
             this.adContainer.appendChild(ins);
+            this.adContainer.appendChild(closeBtn);
             this.player.container.appendChild(this.adContainer);
         }
 
@@ -121,7 +163,6 @@
         showAd() {
             if (this.isAdLoaded) {
                 this.adContainer.style.display = 'block';
-                this.player.video.pause();
                 this.player.triggerEvent('adstarted');
             }
         }
@@ -139,6 +180,11 @@
          * Dispose plugin
          */
         dispose() {
+            if (this.player.video) {
+                this.player.video.removeEventListener('pause', this.showAd);
+                this.player.video.removeEventListener('play', this.hideAd);
+            }
+
             if (this.adContainer) {
                 this.adContainer.remove();
             }
@@ -147,6 +193,7 @@
                 console.log('🎬 AdSense Video Plugin disposed');
             }
         }
+
     }
 
     // Register plugin globally

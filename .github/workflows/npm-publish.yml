@@ -4,6 +4,10 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: read
+  id-token: write   # Required for OIDC at workflow level
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,20 +16,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: npm install -g npm@latest  # Ensure npm 11.5.1+
       - run: npm ci
       - run: npm test
 
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write   # Trusted Publishing
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
+      
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+      
       - run: npm ci
-      - run: npm publish --provenance --access public
+      - run: npm publish --access public

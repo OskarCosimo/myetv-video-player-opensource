@@ -31,7 +31,8 @@ jobs:
       
       - run: npm ci
       
-      - name: Publish to npm
+      - name: Publish to npm (using token only)
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false

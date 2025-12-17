@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write  # Per Trusted Publishing
+  id-token: write
 
 jobs:
   build:
@@ -30,16 +30,10 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org/
       
-      - name: Install latest npm
-        run: npm install -g npm@latest
-      
-      - name: Show npm version
-        run: npm --version
-      
       - run: npm ci
       
-      # Trusted Publishing proverà OIDC prima, poi fallback al token
-      - name: Publish to npm
+      # SENZA --provenance per testare solo il token
+      - name: Publish to npm (token only)
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

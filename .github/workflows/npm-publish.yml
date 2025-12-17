@@ -1,4 +1,3 @@
-
 name: Publish to NPM
 
 on:
@@ -27,17 +26,18 @@ jobs:
         run: npm ci
       
       - name: Build (minify)
-        run: npm run minify
+        run: npm run build
       
-      # ✅ First try: Provenance
-      - name: Publish with Provenance
+      # ✅ Try Provenance (OIDC)
+      - name: Try Publish with Provenance
         id: publish_provenance
         continue-on-error: true
         run: npm publish --provenance --access public
       
-      # ✅ Fallback: use token (if it is the first pubblication)
-      - name: Publish with Token (first time only)
+      # ✅ Fallback to Token
+      - name: Publish with Token (Fallback)
         if: steps.publish_provenance.outcome == 'failure'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+

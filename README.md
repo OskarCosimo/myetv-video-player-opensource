@@ -978,6 +978,54 @@ The playlist detection will work through HTML attributes on your video elements:
 </video>
 ```
 ## Adaptive streaming (HLS/DASH)
+(Dash)
+Ecco un esempio per il tuo README.md:​
+
+text
+## Adaptive Streaming (DASH/HLS)
+
+MyeTV Player supports adaptive bitrate streaming using DASH (Dynamic Adaptive Streaming over HTTP) and HLS (HTTP Live Streaming) protocols. This enables automatic quality switching based on network conditions for optimal playback experience.
+
+### Features
+
+- **Automatic Quality Selection**: The player automatically adjusts video quality based on available bandwidth
+- **Manual Quality Control**: Users can manually select specific resolutions (240p, 360p, 480p, 720p, 1080p, 4K)
+- **Seamless Switching**: Quality changes occur smoothly without interrupting playback
+- **Real-time Monitoring**: Displays current playing quality in the control bar
+
+### Basic Usage
+
+#### Method 1: Using HTML Video Tag
+```
+<video id="my-player" controls> <source src="https://example.com/video/manifest.mpd" type="application/dash+xml"> <!-- Fallback for browsers without DASH support --> <source src="https://example.com/video/fallback.mp4" type="video/mp4"> </video>
+<script>const player = new MYETVvideoplayer({ container: '#my-player', autoplay: false, adaptiveStreaming: true, adaptiveQualityControl: true, debug: true });</script>
+```
+#### Method 2: Using JavaScript Load
+```
+const player = new MYETVvideoplayer({
+container: '#player-container',
+autoplay: true,
+debug: true
+});
+
+// Load DASH stream
+player.load({
+src: 'https://example.com/video/manifest.mpd',
+type: 'application/dash+xml'
+});
+
+// Or load HLS stream
+player.load({
+src: 'https://example.com/video/playlist.m3u8',
+type: 'application/x-mpegURL'
+});
+```
+The player automatically loads the required libraries:
+
+- **dash.js** (v5.x) for DASH streams
+- **hls.js** (latest) for HLS streams
+
+No additional configuration needed - libraries are loaded on-demand when adaptive streaming is detected.
 ### Adaptive Streaming APIs
 ```
 // Info adaptive streaming

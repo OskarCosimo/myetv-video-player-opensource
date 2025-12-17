@@ -464,7 +464,7 @@ createControls() {
                         <div class="settings-menu"></div>
                     </div>
 
-                    ${this.options.showQualitySelector && this.originalSources && this.originalSources.length > 1 ? `
+${(this.options.showQualitySelector && this.originalSources && this.originalSources.length > 1) || this.options.adaptiveQualityControl ? `
                     <div class="quality-control">
                         <button class="control-btn quality-btn" data-tooltip="video_quality">
                             <div class="quality-btn-text">

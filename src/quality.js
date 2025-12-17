@@ -111,6 +111,11 @@ updateQualityDisplay() {
 }
 
 updateQualityButton() {
+    if (this.isAdaptiveStream) {
+        if (this.options.debug) console.log('🔒 Adaptive streaming active - quality button managed by streaming.js');
+        return;
+    }
+
     const qualityBtn = this.controls?.querySelector('.quality-btn');
     if (!qualityBtn) return;
 
@@ -161,6 +166,11 @@ updateQualityButton() {
 updateQualityMenu() {
     const qualityMenu = this.controls?.querySelector('.quality-menu');
     if (!qualityMenu) return;
+
+    if (this.isAdaptiveStream) {
+        if (this.options.debug) console.log('🔒 Adaptive streaming active - quality menu managed by streaming.js');
+        return;
+    }
 
     let menuHTML = '';
 

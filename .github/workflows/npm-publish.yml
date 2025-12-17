@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   build:
@@ -32,8 +31,7 @@ jobs:
       
       - run: npm ci
       
-      # SENZA --provenance per testare solo il token
-      - name: Publish to npm (token only)
+      - name: Publish to npm
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

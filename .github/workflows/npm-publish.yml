@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # Required for OIDC at workflow level
+  id-token: write  # Per Trusted Publishing
 
 jobs:
   build:
@@ -16,7 +16,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install -g npm@latest  # Ensure npm 11.5.1+
       - run: npm ci
       - run: npm test
 
@@ -25,13 +24,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
       
-      - name: Update npm to latest
+      - name: Install latest npm
         run: npm install -g npm@latest
       
+      - name: Show npm version
+        run: npm --version
+      
       - run: npm ci
-      - run: npm publish --access public
+      
+      # Trusted Publishing proverà OIDC prima, poi fallback al token
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

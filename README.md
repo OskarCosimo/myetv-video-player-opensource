@@ -107,6 +107,7 @@ const player = new MYETVvideoplayer('my-video', {
 |--------|------|---------|-------------|
 | `poster` | string | `''` | URL of a cover image (optional) |
 | `showPosterOnEnd` | boolean | `false` | Show the cover image when the video ends |
+| `playFromStartButton` | boolean | `false` | Show/hide play from start button (restart video) |
 | `showQualitySelector` | boolean | `true` | Show video quality selector |
 | `showSpeedControl` | boolean | `true` | Show playback speed controls |
 | `showFullscreen` | boolean | `true` | Show fullscreen button |

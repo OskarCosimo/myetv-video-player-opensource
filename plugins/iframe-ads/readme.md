@@ -18,8 +18,6 @@ Display customizable iframe banner advertisements with countdown timer and auto-
 Include the plugin after the MyeTV Player script:
 
 ```
-
-```
 <script src="myetv-player.js"></script>
 ```
 
@@ -27,14 +25,11 @@ Include the plugin after the MyeTV Player script:
 <script src="myetv-iframe-banner-ads.js"></script>
 ```
 
-```
-
 ## Quick Start
 
 ### Method 1: Direct Iframe URL
 
 ```
-
 const player = new MYETVvideoplayer('videoElement', {
 plugins: {
 'iframe-banner-ads': {
@@ -44,13 +39,11 @@ opacity: 0.8
 }
 }
 });
-
 ```
 
 ### Method 2: External Ad Script
 
 ```
-
 const player = new MYETVvideoplayer('videoElement', {
 plugins: {
 'iframe-banner-ads': {
@@ -67,7 +60,6 @@ opacity: 0.85
 }
 }
 });
-
 ```
 
 ## Configuration Options
@@ -92,7 +84,6 @@ opacity: 0.85
 ### Frequency Control with Repeat Interval
 
 ```
-
 const player = new MYETVvideoplayer('videoElement', {
 plugins: {
 'iframe-banner-ads': {
@@ -104,7 +95,6 @@ debug: false
 }
 }
 });
-
 ```
 
 **Behavior:**
@@ -116,7 +106,6 @@ debug: false
 ### Custom Ad Script with All Options
 
 ```
-
 const player = new MYETVvideoplayer('videoElement', {
 plugins: {
 'iframe-banner-ads': {
@@ -136,7 +125,6 @@ debug: false
 }
 }
 });
-
 ```
 
 ## API Methods
@@ -144,15 +132,12 @@ debug: false
 Access plugin instance:
 
 ```
-
 const adsPlugin = player.getPlugin('iframe-banner-ads');
-
 ```
 
 ### Available Methods
 
 ```
-
 // Show/hide banner manually
 adsPlugin.show();
 adsPlugin.hide();
@@ -167,7 +152,6 @@ adsPlugin.setOpacity(0.75);
 // Get current state
 const state = adsPlugin.getState();
 console.log(state.isVisible, state.adShownCount);
-
 ```
 
 ## Responsive Behavior

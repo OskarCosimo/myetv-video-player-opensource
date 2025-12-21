@@ -551,7 +551,7 @@ body {
 .controls-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 1;
   min-width: 0;
 }
@@ -566,6 +566,7 @@ body {
   border-radius: 6px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   transition: all var(--player-transition-fast);
   font-size: 14px;
@@ -574,6 +575,7 @@ body {
   flex-shrink: 1;
   min-width: 0;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .control-btn:hover {
@@ -693,6 +695,18 @@ body {
 .video-wrapper.hide-cursor iframe {
   cursor: auto !important;
   pointer-events: auto !important;
+}
+
+.play-from-start-btn .restart-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* PROGRESS BAR */

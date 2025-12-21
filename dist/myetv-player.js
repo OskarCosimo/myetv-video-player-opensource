@@ -27,7 +27,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Indietro',
                 'settings_menu': 'Impostazioni',
                 'loading': 'Caricamento...',
-                'encoding_in_progress': 'Encoding in corso'
+                'encoding_in_progress': 'Encoding in corso',
+                'restart_video': 'Torna all\'inizio'
             },
 
             // English
@@ -51,7 +52,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Previous',
                 'settings_menu': 'Settings',
                 'loading': 'Loading...',
-                'encoding_in_progress': 'Encoding in progress'
+                'encoding_in_progress': 'Encoding in progress',
+                'restart_video': 'Restart the video'
             },
 
             // Español
@@ -75,7 +77,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Anterior',
                 'settings_menu': 'Configuración',
                 'loading': 'Cargando...',
-                'encoding_in_progress': 'Codificación en curso'
+                'encoding_in_progress': 'Codificación en curso',
+                'restart_video': 'Reiniciar el vídeo'
             },
 
             // Français
@@ -99,7 +102,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Précédent',
                 'settings_menu': 'Paramètres',
                 'loading': 'Chargement...',
-                'encoding_in_progress': 'Encodage en cours'
+                'encoding_in_progress': 'Encodage en cours',
+                'restart_video': 'Redémarrer la vidéo'
             },
 
             // Deutsch
@@ -123,7 +127,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Zurück',
                 'settings_menu': 'Einstellungen',
                 'loading': 'Laden...',
-                'encoding_in_progress': 'Kodierung läuft'
+                'encoding_in_progress': 'Kodierung läuft',
+                'restart_video': 'Video neu starten'
             },
 
             // Português
@@ -147,7 +152,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Anterior',
                 'settings_menu': 'Configurações',
                 'loading': 'Carregando...',
-                'encoding_in_progress': 'Codificação em andamento'
+                'encoding_in_progress': 'Codificação em andamento',
+                'restart_video': 'Restart video'
             },
 
             // 中文
@@ -171,7 +177,8 @@ class VideoPlayerI18n {
                 'playlist_prev': '上一个',
                 'settings_menu': '设置',
                 'loading': '加载中...',
-                'encoding_in_progress': '编码中'
+                'encoding_in_progress': '编码中',
+                'restart_video': '重新开始视频'
             },
 
             // 日本語
@@ -195,7 +202,8 @@ class VideoPlayerI18n {
                 'playlist_prev': '前へ',
                 'settings_menu': '設定',
                 'loading': '読み込み中...',
-                'encoding_in_progress': 'エンコード中'
+                'encoding_in_progress': 'エンコード中',
+                'restart_video': 'ビデオを再開'
             },
 
             // Русский
@@ -219,7 +227,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Назад',
                 'settings_menu': 'Настройки',
                 'loading': 'Загрузка...',
-                'encoding_in_progress': 'Кодирование'
+                'encoding_in_progress': 'Кодирование',
+                'restart_video': 'Перезапустить видео'
             },
 
             // العربية
@@ -243,7 +252,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'السابق',
                 'settings_menu': 'الإعدادات',
                 'loading': 'جاري التحميل...',
-                'encoding_in_progress': 'الترميز جارٍ'
+                'encoding_in_progress': 'الترميز جارٍ',
+                'restart_video': 'إعادة تشغيل الفيديو'
             },
 
             // 한국어 (Korean)
@@ -267,7 +277,8 @@ class VideoPlayerI18n {
                 'playlist_prev': '이전',
                 'settings_menu': '설정',
                 'loading': '로딩 중...',
-                'encoding_in_progress': '인코딩 진행 중'
+                'encoding_in_progress': '인코딩 진행 중',
+                'restart_video': 'Restart video'
             },
 
             // Polski
@@ -291,7 +302,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Wstecz',
                 'settings_menu': 'Ustawienia',
                 'loading': 'Ładowanie...',
-                'encoding_in_progress': 'Kodowanie w toku'
+                'encoding_in_progress': 'Kodowanie w toku',
+                'restart_video': 'Restart video'
             },
 
             // Magyar
@@ -315,7 +327,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Előző',
                 'settings_menu': 'Beállítások',
                 'loading': 'Betöltés...',
-                'encoding_in_progress': 'Kódolás folyamatban'
+                'encoding_in_progress': 'Kódolás folyamatban',
+                'restart_video': 'Restart video'
             },
 
             // Türkçe
@@ -339,7 +352,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Önceki',
                 'settings_menu': 'Ayarlar',
                 'loading': 'Yükleniyor...',
-                'encoding_in_progress': 'Kodlama devam ediyor'
+                'encoding_in_progress': 'Kodlama devam ediyor',
+                'restart_video': 'Restart video'
             },
 
             // Nederlands
@@ -363,7 +377,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Vorige',
                 'settings_menu': 'Instellingen',
                 'loading': 'Laden...',
-                'encoding_in_progress': 'Codering bezig'
+                'encoding_in_progress': 'Codering bezig',
+                'restart_video': 'Restart video'
             },
 
             // हिन्दी (Hindi)
@@ -387,7 +402,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'पिछला',
                 'settings_menu': 'सेटिंग्स',
                 'loading': 'लोड हो रहा है...',
-                'encoding_in_progress': 'एन्कोडिंग प्रगति में'
+                'encoding_in_progress': 'एन्कोडिंग प्रगति में',
+                'restart_video': 'Restart video'
             },
 
             // Svenska
@@ -411,7 +427,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Föregående',
                 'settings_menu': 'Inställningar',
                 'loading': 'Laddar...',
-                'encoding_in_progress': 'Kodning pågår'
+                'encoding_in_progress': 'Kodning pågår',
+                'restart_video': 'Restart video'
             },
 
             // Bahasa Indonesia
@@ -435,7 +452,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Sebelumnya',
                 'settings_menu': 'Pengaturan',
                 'loading': 'Memuat...',
-                'encoding_in_progress': 'Encoding sedang berlangsung'
+                'encoding_in_progress': 'Encoding sedang berlangsung',
+                'restart_video': 'Restart video'
             }
         };
 
@@ -565,7 +583,8 @@ try {
                 'brand_logo': 'Brand logo',
                 'settings_menu': 'Settings',
                 'loading': 'Loading...',
-                'encoding_in_progress': 'Encoding in progress'
+                'encoding_in_progress': 'Encoding in progress',
+                'restart_video': 'Restart video'
             };
             return fallback[key] || key;
         },
@@ -629,6 +648,7 @@ constructor(videoElement, options = {}) {
     }
 
     this.options = {
+        playFromStartButton: false, // Enable play from start button (restart video)
         showQualitySelector: true,   // Enable quality selector button
         showSpeedControl: true,      // Enable speed control button
         showFullscreen: true,        // Enable fullscreen button
@@ -737,6 +757,7 @@ constructor(videoElement, options = {}) {
         'played': [],          // Fired when video starts playing
         'paused': [],          // Fired when video is paused
         'ended': [],           // Fired when video playback ends
+        'restarted': [],       // Fired when video is restarted from beginning
 
         // Playback state events
         'playing': [],         // Fired when video is actually playing (after buffering)
@@ -1454,6 +1475,7 @@ initializeElements() {
     this.progressHandle = this.controls?.querySelector('.progress-handle');
     this.seekTooltip = this.controls?.querySelector('.seek-tooltip');
 
+    this.playFromStartBtn = this.controls?.querySelector('.play-from-start-btn');
     this.playPauseBtn = this.controls?.querySelector('.play-pause-btn');
     this.muteBtn = this.controls?.querySelector('.mute-btn');
     this.fullscreenBtn = this.controls?.querySelector('.fullscreen-btn');
@@ -1557,6 +1579,51 @@ setupMenuToggles() {
     if (this.options.debug) {
         console.log('✅ Menu toggle system initialized (click-based, auto-close)');
     }
+}
+
+/**
+ * Restart video from beginning - Works with HTML5 video and ALL plugins
+ * @returns {this} Returns this for method chaining
+ */
+restartVideo() {
+    if (!this.video) return this;
+
+    const previousTime = this.getCurrentTime();
+    const wasPaused = this.isPaused();
+
+    // Set video to beginning (0 seconds)
+    // This works for both HTML5 video and plugins
+    this.video.currentTime = 0;
+
+    // Alternative: use seek method if available (for plugins)
+    if (typeof this.seek === 'function') {
+        this.seek(0);
+    }
+
+    // Auto-play after restart if video was playing
+    if (!wasPaused) {
+        // Use player's play method (works for HTML5 and plugins)
+        if (typeof this.play === 'function') {
+            this.play();
+        } else {
+            this.video.play().catch(error => {
+                if (this.options.debug) console.warn('⚠️ Restart play failed:', error);
+            });
+        }
+    }
+
+    if (this.options.debug) {
+        console.log(`🔄 Video restarted from ${this.formatTime(previousTime)} to 0:00`);
+    }
+
+    // Trigger custom event
+    this.triggerEvent('restarted', {
+        previousTime: previousTime,
+        duration: this.getDuration(),
+        autoPlayed: !wasPaused
+    });
+
+    return this;
 }
 
 updateVolumeSliderVisual() {
@@ -2762,6 +2829,14 @@ addEventListener(eventType, callback) {
     bindEvents() {
     if (this.video) {
 
+        // Play from start button
+        if (this.playFromStartBtn) {
+            this.playFromStartBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.restartVideo();
+            });
+        }
+
         // Playback events
         this.video.addEventListener('playing', () => {
             this.hideLoading();
@@ -3587,26 +3662,36 @@ createControls() {
 
             <div class="controls-main">
                 <div class="controls-left">
-                    <button class="control-btn play-pause-btn" data-tooltip="play_pause">
-                        <span class="icon play-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-                        <span class="icon pause-icon hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></span>
-                    </button>
+    ${this.options.playFromStartButton ? `
+<button class="control-btn play-from-start-btn" data-tooltip="restart_video">
+    <span class="icon restart-icon">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+        </svg>
+    </span>
+</button>
+` : ''}
 
-                    <button class="control-btn mute-btn" data-tooltip="mute_unmute">
-    <span class="icon volume-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z"/><path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8M7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12z"/></svg></span>
-    <span class="icon mute-icon hidden"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/></svg></span>
-                    </button>
+<button class="control-btn play-pause-btn" data-tooltip="play_pause">
+    <span class="icon play-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+    <span class="icon pause-icon hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></span>
+</button>
 
-                    <div class="volume-container" data-mobile-slider="${this.options.volumeSlider}">
-    <input type="range" class="volume-slider" min="0" max="100" value="100" data-tooltip="volume">
-                    </div>
+    <button class="control-btn mute-btn" data-tooltip="mute_unmute">
+        <span class="icon volume-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z"/><path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8M7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12z"/></svg></span>
+        <span class="icon mute-icon hidden"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/></svg></span>
+    </button>
 
-                    <div class="time-display">
-                        <span class="current-time">0:00</span>
-                        <span>/</span>
-                        <span class="duration">0:00</span>
-                    </div>
-                </div>
+    <div class="volume-container" data-mobile-slider="${this.options.volumeSlider}">
+        <input type="range" class="volume-slider" min="0" max="100" value="100" data-tooltip="volume">
+    </div>
+
+    <div class="time-display">
+        <span class="current-time">0:00</span>
+        <span>/</span>
+        <span class="duration">0:00</span>
+    </div>
+</div>
 
                 <div class="controls-right">
 <button class="control-btn playlist-prev-btn" data-tooltip="prevvideo" style="display: none;">

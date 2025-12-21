@@ -167,6 +167,14 @@
     bindEvents() {
     if (this.video) {
 
+        // Play from start button
+        if (this.playFromStartBtn) {
+            this.playFromStartBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.restartVideo();
+            });
+        }
+
         // Playback events
         this.video.addEventListener('playing', () => {
             this.hideLoading();

@@ -428,26 +428,36 @@ createControls() {
 
             <div class="controls-main">
                 <div class="controls-left">
-                    <button class="control-btn play-pause-btn" data-tooltip="play_pause">
-                        <span class="icon play-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-                        <span class="icon pause-icon hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></span>
-                    </button>
+    ${this.options.playFromStartButton ? `
+<button class="control-btn play-from-start-btn" data-tooltip="restart_video">
+    <span class="icon restart-icon">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+        </svg>
+    </span>
+</button>
+` : ''}
 
-                    <button class="control-btn mute-btn" data-tooltip="mute_unmute">
-    <span class="icon volume-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z"/><path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8M7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12z"/></svg></span>
-    <span class="icon mute-icon hidden"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/></svg></span>
-                    </button>
+<button class="control-btn play-pause-btn" data-tooltip="play_pause">
+    <span class="icon play-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+    <span class="icon pause-icon hidden"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg></span>
+</button>
 
-                    <div class="volume-container" data-mobile-slider="${this.options.volumeSlider}">
-    <input type="range" class="volume-slider" min="0" max="100" value="100" data-tooltip="volume">
-                    </div>
+    <button class="control-btn mute-btn" data-tooltip="mute_unmute">
+        <span class="icon volume-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.483 5.483 0 0 1 11.025 8a5.483 5.483 0 0 1-1.61 3.89z"/><path d="M10.025 8a4.486 4.486 0 0 1-1.318 3.182L8 10.475A3.489 3.489 0 0 0 9.025 8c0-.966-.392-1.841-1.025-2.475l.707-.707A4.486 4.486 0 0 1 10.025 8M7 4a.5.5 0 0 0-.812-.39L3.825 5.5H1.5A.5.5 0 0 0 1 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 7 12z"/></svg></span>
+        <span class="icon mute-icon hidden"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0"/></svg></span>
+    </button>
 
-                    <div class="time-display">
-                        <span class="current-time">0:00</span>
-                        <span>/</span>
-                        <span class="duration">0:00</span>
-                    </div>
-                </div>
+    <div class="volume-container" data-mobile-slider="${this.options.volumeSlider}">
+        <input type="range" class="volume-slider" min="0" max="100" value="100" data-tooltip="volume">
+    </div>
+
+    <div class="time-display">
+        <span class="current-time">0:00</span>
+        <span>/</span>
+        <span class="duration">0:00</span>
+    </div>
+</div>
 
                 <div class="controls-right">
 <button class="control-btn playlist-prev-btn" data-tooltip="prevvideo" style="display: none;">

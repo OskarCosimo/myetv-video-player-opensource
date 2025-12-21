@@ -12,6 +12,7 @@ constructor(videoElement, options = {}) {
     }
 
     this.options = {
+        playFromStartButton: false, // Enable play from start button (restart video)
         showQualitySelector: true,   // Enable quality selector button
         showSpeedControl: true,      // Enable speed control button
         showFullscreen: true,        // Enable fullscreen button
@@ -120,6 +121,7 @@ constructor(videoElement, options = {}) {
         'played': [],          // Fired when video starts playing
         'paused': [],          // Fired when video is paused
         'ended': [],           // Fired when video playback ends
+        'restarted': [],       // Fired when video is restarted from beginning
 
         // Playback state events
         'playing': [],         // Fired when video is actually playing (after buffering)
@@ -837,6 +839,7 @@ initializeElements() {
     this.progressHandle = this.controls?.querySelector('.progress-handle');
     this.seekTooltip = this.controls?.querySelector('.seek-tooltip');
 
+    this.playFromStartBtn = this.controls?.querySelector('.play-from-start-btn');
     this.playPauseBtn = this.controls?.querySelector('.play-pause-btn');
     this.muteBtn = this.controls?.querySelector('.mute-btn');
     this.fullscreenBtn = this.controls?.querySelector('.fullscreen-btn');
@@ -940,6 +943,51 @@ setupMenuToggles() {
     if (this.options.debug) {
         console.log('✅ Menu toggle system initialized (click-based, auto-close)');
     }
+}
+
+/**
+ * Restart video from beginning - Works with HTML5 video and ALL plugins
+ * @returns {this} Returns this for method chaining
+ */
+restartVideo() {
+    if (!this.video) return this;
+
+    const previousTime = this.getCurrentTime();
+    const wasPaused = this.isPaused();
+
+    // Set video to beginning (0 seconds)
+    // This works for both HTML5 video and plugins
+    this.video.currentTime = 0;
+
+    // Alternative: use seek method if available (for plugins)
+    if (typeof this.seek === 'function') {
+        this.seek(0);
+    }
+
+    // Auto-play after restart if video was playing
+    if (!wasPaused) {
+        // Use player's play method (works for HTML5 and plugins)
+        if (typeof this.play === 'function') {
+            this.play();
+        } else {
+            this.video.play().catch(error => {
+                if (this.options.debug) console.warn('⚠️ Restart play failed:', error);
+            });
+        }
+    }
+
+    if (this.options.debug) {
+        console.log(`🔄 Video restarted from ${this.formatTime(previousTime)} to 0:00`);
+    }
+
+    // Trigger custom event
+    this.triggerEvent('restarted', {
+        previousTime: previousTime,
+        duration: this.getDuration(),
+        autoPlayed: !wasPaused
+    });
+
+    return this;
 }
 
 updateVolumeSliderVisual() {

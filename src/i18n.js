@@ -28,7 +28,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Indietro',
                 'settings_menu': 'Impostazioni',
                 'loading': 'Caricamento...',
-                'encoding_in_progress': 'Encoding in corso'
+                'encoding_in_progress': 'Encoding in corso',
+                'restart_video': 'Torna all\'inizio'
             },
 
             // English
@@ -52,7 +53,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Previous',
                 'settings_menu': 'Settings',
                 'loading': 'Loading...',
-                'encoding_in_progress': 'Encoding in progress'
+                'encoding_in_progress': 'Encoding in progress',
+                'restart_video': 'Restart the video'
             },
 
             // Español
@@ -76,7 +78,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Anterior',
                 'settings_menu': 'Configuración',
                 'loading': 'Cargando...',
-                'encoding_in_progress': 'Codificación en curso'
+                'encoding_in_progress': 'Codificación en curso',
+                'restart_video': 'Reiniciar el vídeo'
             },
 
             // Français
@@ -100,7 +103,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Précédent',
                 'settings_menu': 'Paramètres',
                 'loading': 'Chargement...',
-                'encoding_in_progress': 'Encodage en cours'
+                'encoding_in_progress': 'Encodage en cours',
+                'restart_video': 'Redémarrer la vidéo'
             },
 
             // Deutsch
@@ -124,7 +128,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Zurück',
                 'settings_menu': 'Einstellungen',
                 'loading': 'Laden...',
-                'encoding_in_progress': 'Kodierung läuft'
+                'encoding_in_progress': 'Kodierung läuft',
+                'restart_video': 'Video neu starten'
             },
 
             // Português
@@ -148,7 +153,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Anterior',
                 'settings_menu': 'Configurações',
                 'loading': 'Carregando...',
-                'encoding_in_progress': 'Codificação em andamento'
+                'encoding_in_progress': 'Codificação em andamento',
+                'restart_video': 'Restart video'
             },
 
             // 中文
@@ -172,7 +178,8 @@ class VideoPlayerI18n {
                 'playlist_prev': '上一个',
                 'settings_menu': '设置',
                 'loading': '加载中...',
-                'encoding_in_progress': '编码中'
+                'encoding_in_progress': '编码中',
+                'restart_video': '重新开始视频'
             },
 
             // 日本語
@@ -196,7 +203,8 @@ class VideoPlayerI18n {
                 'playlist_prev': '前へ',
                 'settings_menu': '設定',
                 'loading': '読み込み中...',
-                'encoding_in_progress': 'エンコード中'
+                'encoding_in_progress': 'エンコード中',
+                'restart_video': 'ビデオを再開'
             },
 
             // Русский
@@ -220,7 +228,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Назад',
                 'settings_menu': 'Настройки',
                 'loading': 'Загрузка...',
-                'encoding_in_progress': 'Кодирование'
+                'encoding_in_progress': 'Кодирование',
+                'restart_video': 'Перезапустить видео'
             },
 
             // العربية
@@ -244,7 +253,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'السابق',
                 'settings_menu': 'الإعدادات',
                 'loading': 'جاري التحميل...',
-                'encoding_in_progress': 'الترميز جارٍ'
+                'encoding_in_progress': 'الترميز جارٍ',
+                'restart_video': 'إعادة تشغيل الفيديو'
             },
 
             // 한국어 (Korean)
@@ -268,7 +278,8 @@ class VideoPlayerI18n {
                 'playlist_prev': '이전',
                 'settings_menu': '설정',
                 'loading': '로딩 중...',
-                'encoding_in_progress': '인코딩 진행 중'
+                'encoding_in_progress': '인코딩 진행 중',
+                'restart_video': 'Restart video'
             },
 
             // Polski
@@ -292,7 +303,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Wstecz',
                 'settings_menu': 'Ustawienia',
                 'loading': 'Ładowanie...',
-                'encoding_in_progress': 'Kodowanie w toku'
+                'encoding_in_progress': 'Kodowanie w toku',
+                'restart_video': 'Restart video'
             },
 
             // Magyar
@@ -316,7 +328,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Előző',
                 'settings_menu': 'Beállítások',
                 'loading': 'Betöltés...',
-                'encoding_in_progress': 'Kódolás folyamatban'
+                'encoding_in_progress': 'Kódolás folyamatban',
+                'restart_video': 'Restart video'
             },
 
             // Türkçe
@@ -340,7 +353,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Önceki',
                 'settings_menu': 'Ayarlar',
                 'loading': 'Yükleniyor...',
-                'encoding_in_progress': 'Kodlama devam ediyor'
+                'encoding_in_progress': 'Kodlama devam ediyor',
+                'restart_video': 'Restart video'
             },
 
             // Nederlands
@@ -364,7 +378,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Vorige',
                 'settings_menu': 'Instellingen',
                 'loading': 'Laden...',
-                'encoding_in_progress': 'Codering bezig'
+                'encoding_in_progress': 'Codering bezig',
+                'restart_video': 'Restart video'
             },
 
             // हिन्दी (Hindi)
@@ -388,7 +403,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'पिछला',
                 'settings_menu': 'सेटिंग्स',
                 'loading': 'लोड हो रहा है...',
-                'encoding_in_progress': 'एन्कोडिंग प्रगति में'
+                'encoding_in_progress': 'एन्कोडिंग प्रगति में',
+                'restart_video': 'Restart video'
             },
 
             // Svenska
@@ -412,7 +428,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Föregående',
                 'settings_menu': 'Inställningar',
                 'loading': 'Laddar...',
-                'encoding_in_progress': 'Kodning pågår'
+                'encoding_in_progress': 'Kodning pågår',
+                'restart_video': 'Restart video'
             },
 
             // Bahasa Indonesia
@@ -436,7 +453,8 @@ class VideoPlayerI18n {
                 'playlist_prev': 'Sebelumnya',
                 'settings_menu': 'Pengaturan',
                 'loading': 'Memuat...',
-                'encoding_in_progress': 'Encoding sedang berlangsung'
+                'encoding_in_progress': 'Encoding sedang berlangsung',
+                'restart_video': 'Restart video'
             }
         };
 
@@ -566,7 +584,8 @@ try {
                 'brand_logo': 'Brand logo',
                 'settings_menu': 'Settings',
                 'loading': 'Loading...',
-                'encoding_in_progress': 'Encoding in progress'
+                'encoding_in_progress': 'Encoding in progress',
+                'restart_video': 'Restart video'
             };
             return fallback[key] || key;
         },

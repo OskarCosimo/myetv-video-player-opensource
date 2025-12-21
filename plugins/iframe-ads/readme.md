@@ -18,11 +18,11 @@ Display customizable iframe banner advertisements with countdown timer and auto-
 Include the plugin after the MyeTV Player script:
 
 ```
-<script src="myetv-player.js"></script>
+<script src="dist/myetv-player.js"></script>
 ```
 
 ```
-<script src="myetv-iframe-banner-ads.js"></script>
+<script src="plugins/myetv-iframe-banner-ads.js"></script>
 ```
 
 ## Quick Start

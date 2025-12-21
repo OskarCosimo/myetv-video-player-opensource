@@ -86,8 +86,8 @@ All options can be passed at initialization (through `plugins.vast`) or via `use
 | `maxRedirects` | number | `5` | Maximum number of supported VAST redirects (wrappers are only partially handled in this version). |
 | `timeout` | number | `8000` (ms) | Timeout for the VAST `fetch` request. |
 | `debug` | boolean | `false` | Enables more verbose logging in the console. |
-| `adLabel` | string | `Pubblicità` | Text for the label shown in the top‑left corner of the ad overlay. |
-| `skipText` | string | `Salta annuncio` | Text for the skip button. |
+| `adLabel` | string | `ADS` | Text for the label shown in the top‑left corner of the ad overlay. |
+| `skipText` | string | `Skip AD` | Text for the skip button. |
 
 
 ---

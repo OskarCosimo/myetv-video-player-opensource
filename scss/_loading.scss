@@ -17,6 +17,8 @@
     align-items: center;
     justify-content: center;
     z-index: 20;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .video-wrapper.player-initialized .initial-loading {
@@ -45,6 +47,8 @@
     visibility: hidden;
     transition: opacity var(--player-transition-normal);
     z-index: 15;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .loading-overlay.active {
@@ -69,6 +73,16 @@
     100% {
         transform: rotate(360deg);
     }
+}
+
+.loading-text {
+    color: var(--player-text-color);
+    font-size: 14px;
+    font-weight: 500;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.5px;
+    margin-top: 10px;
+    text-align: center;
 }
 
 /* TITLE OVERLAY - WITH AUTO-HIDE */

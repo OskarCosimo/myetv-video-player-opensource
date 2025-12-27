@@ -259,7 +259,7 @@
       flex-direction: column;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       overflow: visible;
-      transition: all 0.3s ease;
+      transition: bottom 0.3s ease, all 0.3s ease;
     }
 
     .myetv-iframe-banner.visible {
@@ -344,25 +344,30 @@
     }
 
     .myetv-iframe-banner-timer {
-      flex: 0 0 auto;
-      background: rgba(0, 0, 0, 0.6);
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
       color: #fff;
       font-size: 12px;
-      padding: 8px 12px;
+      padding: 6px 12px;
       text-align: center;
       font-family: Arial, sans-serif;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 0 0 8px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 999;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
     /* Compact button mode when space is limited */
     @media (max-width: 640px) and (max-height: 500px) {
       .myetv-iframe-banner {
-        width: 25%; /* 1/4 of player width */
-        min-width: 120px;
-        max-width: 200px;
-        left: 10px; /* Position at left */
-        transform: translateX(0);
+        width: 75%; /* 3/4 of player width */
+        min-width: 300px;
+        max-width: 600px;
+        left: 50%; /* Center */
+        transform: translateX(-50%);
         border-radius: 6px;
       }
 
@@ -404,9 +409,9 @@
     /* Extra compact mode for very small screens */
     @media (max-width: 480px) and (max-height: 400px) {
       .myetv-iframe-banner {
-        width: 30%;
-        min-width: 100px;
-        max-width: 150px;
+        width: 75%; /* 3/4 of player width */
+        min-width: 250px;
+        max-width: 500px;
       }
 
       .myetv-iframe-banner-content {
@@ -607,15 +612,112 @@
             if (this.options.debug) {
                 console.log('[IframeBannerAds] Events bound');
             }
+
+            // Setup controlbar tracking
+            this.setupControlbarTracking();
+        }
+
+
+        /**
+         * Setup controlbar tracking to move banner with controlbar
+         */
+        setupControlbarTracking() {
+            if (!this.player || !this.player.container) {
+                if (this.options.debug) {
+                    console.log('[IframeBannerAds] Cannot setup controlbar tracking');
+                }
+                return;
+            }
+
+            const updatePosition = () => {
+                requestAnimationFrame(() => this.updateBannerPosition());
+            };
+
+            this.controlbarObserver = new MutationObserver(() => updatePosition());
+            this.controlbarObserver.observe(this.player.container, {
+                attributes: true,
+                attributeFilter: ['class', 'style'],
+                subtree: true,
+                childList: false
+            });
+
+            let mouseTimer;
+            this.player.container.addEventListener('mousemove', () => {
+                clearTimeout(mouseTimer);
+                mouseTimer = setTimeout(() => updatePosition(), 50);
+            });
+
+            this.player.container.addEventListener('mouseleave', () => {
+                clearTimeout(mouseTimer);
+                mouseTimer = setTimeout(() => updatePosition(), 300);
+            });
+
+            if (this.player.addEventListener) {
+                this.player.addEventListener('controlsshown', () => updatePosition());
+                this.player.addEventListener('controlshidden', () => updatePosition());
+            }
+
+            setTimeout(() => updatePosition(), 100);
+
+            if (this.options.debug) {
+                console.log('[IframeBannerAds] Controlbar tracking setup completed');
+            }
         }
 
         /**
-         * Update timer text display
+         * Update banner position based on controlbar visibility
          */
+        updateBannerPosition() {
+            if (!this.banner || !this.player || !this.player.container || !this.isVisible) {
+                return;
+            }
+
+            const controlbar = this.player.container.querySelector('.myetv-controls-container') ||
+                this.player.container.querySelector('.myetv-controls') ||
+                this.player.container.querySelector('[class*="controls"]');
+
+            if (!controlbar) {
+                if (this.options.debug) {
+                    console.log('[IframeBannerAds] Controlbar not found');
+                }
+                this.banner.style.bottom = '10px';
+                return;
+            }
+
+            const computedStyle = window.getComputedStyle(controlbar);
+            const rect = controlbar.getBoundingClientRect();
+
+            const isHidden =
+                controlbar.classList.contains('hidden') ||
+                controlbar.classList.contains('myetv-controls-hidden') ||
+                computedStyle.opacity === '0' ||
+                computedStyle.visibility === 'hidden' ||
+                computedStyle.display === 'none' ||
+                rect.height === 0;
+
+            let newBottom;
+            if (isHidden) {
+                newBottom = '10px';
+            } else {
+                const controlbarHeight = controlbar.offsetHeight || rect.height || 60;
+                newBottom = `${controlbarHeight + 5}px`;
+            }
+
+            if (this.banner.style.bottom !== newBottom) {
+                this.banner.style.bottom = newBottom;
+
+                if (this.options.debug) {
+                    console.log(`[IframeBannerAds] Banner repositioned to: ${newBottom} (controlbar ${isHidden ? 'hidden' : 'visible'})`);
+                }
+            }
+        }
+        /**
+                 * Update timer text display
+                 */
         updateTimerText() {
             if (this.timerElement) {
                 if (this.countdown > 0) {
-                    this.timerElement.textContent = `Close in ${this.countdown} second${this.countdown !== 1 ? 's' : ''}`;
+                    this.timerElement.textContent = `This ad will close in ${this.countdown} second${this.countdown !== 1 ? 's' : ''}`;
                 } else {
                     this.timerElement.textContent = 'Closing...';
                 }
@@ -706,6 +808,9 @@
             this.banner.classList.add('visible');
             this.isVisible = true;
             this.adShownCount++;
+
+            // Update banner position
+            setTimeout(() => this.updateBannerPosition(), 150);
 
             // Update last ad timestamp
             this.updateLastAdTimestamp();
@@ -900,6 +1005,12 @@
             // Stop timers
             this.stopCountdown();
             this.stopRepeatInterval();
+
+            // Cleanup controlbar tracking
+            if (this.controlbarObserver) {
+                this.controlbarObserver.disconnect();
+                this.controlbarObserver = null;
+            }
 
             // Remove DOM elements
             if (this.banner && this.banner.parentNode) {

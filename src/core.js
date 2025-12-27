@@ -656,7 +656,7 @@ createPlayerStructure() {
 createInitialLoading() {
     const initialLoader = document.createElement('div');
     initialLoader.className = 'initial-loading';
-    initialLoader.innerHTML = '<div class="loading-spinner"></div>';
+    initialLoader.innerHTML = '<div class="loading-spinner"></div><div class="loading-text"></div>';
     this.container.appendChild(initialLoader);
     this.initialLoading = initialLoader;
 }
@@ -669,7 +669,7 @@ createLoadingOverlay() {
     const overlay = document.createElement('div');
     overlay.className = 'loading-overlay';
     overlay.id = 'loadingOverlay-' + this.getUniqueId();
-    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    overlay.innerHTML = '<div class="loading-spinner"></div><div class="loading-text"></div>';
     this.container.appendChild(overlay);
     this.loadingOverlay = overlay;
 }
@@ -1282,6 +1282,18 @@ updateProgress() {
             progress: (this.getCurrentTime() / this.getDuration()) * 100 || 0
         });
         this.lastTimeUpdate = Date.now();
+    }
+}
+
+// Helper to update loading text in center overlays
+updateLoadingText(text) {
+    if (this.initialLoading) {
+        const textEl = this.initialLoading.querySelector('.loading-text');
+        if (textEl) textEl.textContent = text;
+    }
+    if (this.loadingOverlay) {
+        const textEl = this.loadingOverlay.querySelector('.loading-text');
+        if (textEl) textEl.textContent = text;
     }
 }
 

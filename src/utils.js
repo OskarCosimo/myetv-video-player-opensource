@@ -24,12 +24,10 @@ skipTime(seconds) {
 }
 
 updateTimeDisplay() {
-    // Update current time
     if (this.currentTimeEl && this.video) {
         this.currentTimeEl.textContent = this.formatTime(this.video.currentTime || 0);
     }
 
-    // Update duration or show appropriate message
     if (this.durationEl && this.video) {
         const duration = this.video.duration;
         const readyState = this.video.readyState;
@@ -37,28 +35,47 @@ updateTimeDisplay() {
         const networkState = this.video.networkState;
 
         // Check for initial buffering state
-        // readyState < 2 means not enough data to play (HAVE_NOTHING or HAVE_METADATA)
-        // currentTime === 0 and duration === 0 indicates initial loading
-        const isInitialBuffering = (readyState < 2 && currentTime === 0) ||
-            (currentTime === 0 && (!duration || duration === 0) && networkState === 2);
-
+        const isInitialBuffering = (readyState < 2 && currentTime === 0) || (currentTime === 0 && !duration) || (duration === 0 && networkState === 2);
         // Check if duration is invalid (NaN or Infinity)
         const isDurationInvalid = !duration || isNaN(duration) || !isFinite(duration);
 
+        // Text for translations
+        const t = (key) => {
+            if (this.isI18nAvailable()) {
+                try {
+                    return VideoPlayerTranslations.t(key);
+                } catch (error) {
+                    return key;
+                }
+            }
+            const fallback = {
+                'loading': 'Loading...',
+                'encodinginprogress': 'Encoding in progress...'
+            };
+            return fallback[key] || key;
+        };
+
         if (isInitialBuffering) {
-            // Initial buffering - show loading message
-            this.durationEl.textContent = t('loading');
+            // CHANGED: Move text to center overlay, clear control bar text
+            this.updateLoadingText(t('loading'));
+            this.durationEl.textContent = this.formatTime(0); // Just show 00:00 or empty
             this.durationEl.classList.remove('encoding-state');
             this.durationEl.classList.add('loading-state');
         } else if (isDurationInvalid) {
-            // Video is encoding (FFmpeg still processing) - show encoding badge
-            this.durationEl.textContent = t('encoding_in_progress');
+            // CHANGED: Move text to center overlay
+            this.updateLoadingText(t('encodinginprogress'));
+            // Optional: you might want to keep encoding text in bar OR move it too. 
+            // If you want it ONLY in center:
+            this.durationEl.textContent = "--:--";
+
             this.durationEl.classList.remove('loading-state');
             this.durationEl.classList.add('encoding-state');
         } else {
             // Valid duration - show normal time
             this.durationEl.textContent = this.formatTime(duration);
             this.durationEl.classList.remove('encoding-state', 'loading-state');
+            // Clear loading text when playing normally
+            this.updateLoadingText('');
         }
     }
 }

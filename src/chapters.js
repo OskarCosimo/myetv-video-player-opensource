@@ -1,4 +1,4 @@
-﻿/* Chapters Module for MYETV Video Player
+/* Chapters Module for MYETV Video Player
  * Chapter markers with tooltips and thumbnails on timeline
  * Created by https://www.myetv.tv https://oskarcosimo.com
  */
@@ -494,35 +494,35 @@ bindChapterEvents() {
 }
 
 /**
- * Update chapter name in title overlay dynamically
+ * Update chapter name in top bar subtitle dynamically
+ * Shows current chapter title as subtitle in the top bar
  */
 updateChapterInTitleOverlay() {
     if (!this.video || !this.chapters || this.chapters.length === 0) return;
 
-    const titleOverlay = this.container ? this.container.querySelector('.title-overlay') : null;
-    if (!titleOverlay) return;
+    // Use topBar instead of old titleOverlay
+    if (!this.topBar) return;
 
-    // Find or create chapter name element
-    let chapterElement = titleOverlay.querySelector('.chapter-name');
-    if (!chapterElement) {
-        chapterElement = document.createElement('div');
-        chapterElement.className = 'chapter-name';
-        chapterElement.style.cssText = `
-            font-size: 13px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
-            margin-top: 6px;
-            max-width: 400px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        `;
-        titleOverlay.appendChild(chapterElement);
+    // Find or create subtitle element in top bar
+    let subtitleElement = this.topBar.querySelector('.video-subtitle');
+
+    if (!subtitleElement) {
+        // Create subtitle element if it doesn't exist
+        const titleSection = this.topBar.querySelector('.top-bar-title');
+        if (!titleSection) return;
+
+        subtitleElement = document.createElement('span');
+        subtitleElement.className = 'video-subtitle';
+        titleSection.appendChild(subtitleElement);
+
+        // Save reference
+        this.topBarSubtitle = subtitleElement;
     }
 
     // Find current chapter
     const currentTime = this.video.currentTime;
     let currentChapter = null;
+
     for (let i = this.chapters.length - 1; i >= 0; i--) {
         if (currentTime >= this.chapters[i].time) {
             currentChapter = this.chapters[i];
@@ -530,12 +530,22 @@ updateChapterInTitleOverlay() {
         }
     }
 
-    // Update or hide chapter name
+    // Update subtitle with chapter title or hide if no chapter
     if (currentChapter) {
-        chapterElement.textContent = currentChapter.title;
-        chapterElement.style.display = 'block';
+        subtitleElement.textContent = currentChapter.title;
+        subtitleElement.style.display = 'block';
     } else {
-        chapterElement.style.display = 'none';
+        // Se non c'è un capitolo attivo, mostra il sottotitolo originale o nascondi
+        if (this.options.videoSubtitle) {
+            subtitleElement.textContent = this.options.videoSubtitle;
+            subtitleElement.style.display = 'block';
+        } else {
+            subtitleElement.style.display = 'none';
+        }
+    }
+
+    if (this.options.debug) {
+        console.log('Chapter overlay updated:', currentChapter ? currentChapter.title : 'No chapter');
     }
 }
 

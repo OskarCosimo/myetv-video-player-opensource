@@ -692,37 +692,6 @@ createLoadingOverlay() {
     this.loadingOverlay = overlay;
 }
 
-createTitleOverlay() {
-    const overlay = document.createElement('div');
-    overlay.className = 'title-overlay';
-    overlay.id = 'titleOverlay-' + this.getUniqueId();
-
-    const titleText = document.createElement('h2');
-    titleText.className = 'title-text';
-    titleText.textContent = this.decodeHTMLEntities(this.options.videoTitle) || '';
-    overlay.appendChild(titleText);
-
-    // add subtitles
-    if (this.options.videoSubtitle) {
-        const subtitleText = document.createElement('p');
-        subtitleText.className = 'subtitle-text';
-        subtitleText.textContent = this.decodeHTMLEntities(this.options.videoSubtitle);
-        overlay.appendChild(subtitleText);
-    }
-
-    if (this.controls) {
-        this.container.insertBefore(overlay, this.controls);
-    } else {
-        this.container.appendChild(overlay);
-    }
-
-    this.titleOverlay = overlay;
-
-    if (this.options.persistentTitle && this.options.videoTitle) {
-        this.showTitleOverlay();
-    }
-}
-
 updateTooltips() {
     if (!this.controls) return;
 
@@ -765,27 +734,44 @@ setLanguage(lang) {
     return false;
 }
 
+/**
+ * Set video title
+ * @param {string} title - Video title
+ * @returns {Object} this
+ */
 setVideoTitle(title) {
-    this.options.videoTitle = title || '';
+    this.options.videoTitle = title;
 
-    if (this.titleOverlay) {
-        const titleElement = this.titleOverlay.querySelector('.title-text');
-        if (titleElement) {
-            titleElement.textContent = this.decodeHTMLEntities(this.options.videoTitle);
-        }
+    if (this.topBarTitle) {
+        this.topBarTitle.textContent = this.decodeHTMLEntities(title);
 
-        if (title) {
-            this.showTitleOverlay();
-
-            if (!this.options.persistentTitle) {
-                this.clearTitleTimeout();
-                this.titleTimeout = setTimeout(() => {
-                    this.hideTitleOverlay();
-                }, 3000);
+        // show top bar if title overlay is enabled
+        if (title && this.options.showTitleOverlay) {
+            const titleSection = this.topBar.querySelector('.top-bar-title');
+            if (titleSection) {
+                titleSection.style.display = '';
             }
+        }
+    } else if (this.topBar && title) {
+        // create title section
+        const titleSection = this.topBar.querySelector('.top-bar-title');
+        if (!titleSection) {
+            const newTitleSection = document.createElement('div');
+            newTitleSection.className = 'top-bar-title';
+
+            const titleElement = document.createElement('h3');
+            titleElement.className = 'video-title';
+            titleElement.textContent = this.decodeHTMLEntities(title);
+            newTitleSection.appendChild(titleElement);
+
+            const settingsControl = this.topBar.querySelector('.settings-control');
+            this.topBar.insertBefore(newTitleSection, settingsControl);
+
+            this.topBarTitle = titleElement;
         }
     }
 
+    if (this.options.debug) console.log('Video title set:', title);
     return this;
 }
 
@@ -794,23 +780,23 @@ getVideoTitle() {
 }
 
 setVideoSubtitle(subtitle) {
-    this.options.videoSubtitle = subtitle || '';
+    this.options.videoSubtitle = subtitle;
 
-    if (this.titleOverlay) {
-        let subtitleElement = this.titleOverlay.querySelector('.subtitle-text');
-
-        if (subtitle) {
-            if (!subtitleElement) {
-                subtitleElement = document.createElement('p');
-                subtitleElement.className = 'subtitle-text';
-                this.titleOverlay.appendChild(subtitleElement);
-            }
-            subtitleElement.textContent = subtitle;
-        } else if (subtitleElement) {
-            subtitleElement.remove();
+    if (this.topBarSubtitle) {
+        this.topBarSubtitle.textContent = subtitle;
+    } else if (subtitle && this.topBar) {
+        // Create subtitle element
+        const titleSection = this.topBar.querySelector('.top-bar-title');
+        if (titleSection) {
+            const subtitleEl = document.createElement('span');
+            subtitleEl.className = 'video-subtitle';
+            subtitleEl.textContent = subtitle;
+            titleSection.appendChild(subtitleEl);
+            this.topBarSubtitle = subtitleEl;
         }
     }
 
+    if (this.options.debug) console.log('Video subtitle set:', subtitle);
     return this;
 }
 
@@ -818,41 +804,65 @@ getVideoSubtitle() {
     return this.options.videoSubtitle;
 }
 
+/**
+ * Set persistent title (always visible)
+ * @param {boolean} persistent - If true, title stays visible
+ * @returns {Object} this
+ */
 setPersistentTitle(persistent) {
     this.options.persistentTitle = persistent;
 
-    if (this.titleOverlay && this.options.videoTitle) {
+    if (this.topBar) {
         if (persistent) {
-            this.showTitleOverlay();
-            this.clearTitleTimeout();
+            this.topBar.classList.add('persistent');
         } else {
-            this.titleOverlay.classList.remove('persistent');
-            if (this.titleOverlay.classList.contains('show')) {
-                this.clearTitleTimeout();
-                this.titleTimeout = setTimeout(() => {
-                    this.hideTitleOverlay();
-                }, 3000);
-            }
+            this.topBar.classList.remove('persistent');
         }
     }
 
     return this;
 }
 
+/**
+ * Enable title overlay (shows top bar with title)
+ * @returns {Object} this
+ */
 enableTitleOverlay() {
-    if (!this.titleOverlay && !this.options.showTitleOverlay) {
-        this.options.showTitleOverlay = true;
-        this.createTitleOverlay();
+    if (!this.topBar) {
+        if (this.options.debug) console.warn('Top bar not available');
+        return this;
     }
+
+    this.options.showTitleOverlay = true;
+
+    // show top bar
+    if (this.options.videoTitle) {
+        const titleSection = this.topBar.querySelector('.top-bar-title');
+        if (titleSection) {
+            titleSection.style.display = '';
+        }
+    }
+
+    if (this.options.debug) console.log('Title overlay enabled');
     return this;
 }
 
+/**
+ * Disable title overlay (hides top bar)
+ * @returns {Object} this
+ */
 disableTitleOverlay() {
-    if (this.titleOverlay) {
-        this.titleOverlay.remove();
-        this.titleOverlay = null;
-    }
+    if (!this.topBar) return this;
+
     this.options.showTitleOverlay = false;
+
+    // hide top bar
+    const titleSection = this.topBar.querySelector('.top-bar-title');
+    if (titleSection) {
+        titleSection.style.display = 'none';
+    }
+
+    if (this.options.debug) console.log('Title overlay disabled');
     return this;
 }
 
@@ -990,34 +1000,32 @@ createTopBar() {
     topBar.className = 'player-top-bar';
     topBar.id = `topBar${this.getUniqueId()}`;
 
-    // Left section: Title (only if showTitleOverlay is enabled and videoTitle exists)
-    if (this.options.showTitleOverlay && this.options.videoTitle) {
-        const titleSection = document.createElement('div');
-        titleSection.className = 'top-bar-title';
+    // Left section - Title (ALWAYS create structure)
+    const titleSection = document.createElement('div');
+    titleSection.className = 'top-bar-title';
 
-        // Main title
-        const titleElement = document.createElement('h3');
-        titleElement.className = 'video-title';
-        titleElement.textContent = this.decodeHTMLEntities(this.options.videoTitle);
-        titleSection.appendChild(titleElement);
+    // Main title
+    const titleElement = document.createElement('h3');
+    titleElement.className = 'video-title';
+    titleElement.textContent = this.options.videoTitle ? this.decodeHTMLEntities(this.options.videoTitle) : '';
+    titleSection.appendChild(titleElement);
 
-        // Optional subtitle
-        if (this.options.videoSubtitle) {
-            const subtitleElement = document.createElement('span');
-            subtitleElement.className = 'video-subtitle';
-            subtitleElement.textContent = this.decodeHTMLEntities(this.options.videoSubtitle);
-            titleSection.appendChild(subtitleElement);
-        }
-
-        topBar.appendChild(titleSection);
-    } else {
-        // Spacer if no title
-        const spacer = document.createElement('div');
-        spacer.className = 'top-bar-spacer';
-        topBar.appendChild(spacer);
+    // Optional subtitle (if present)
+    if (this.options.videoSubtitle) {
+        const subtitleElement = document.createElement('span');
+        subtitleElement.className = 'video-subtitle';
+        subtitleElement.textContent = this.decodeHTMLEntities(this.options.videoSubtitle);
+        titleSection.appendChild(subtitleElement);
     }
 
-    // Right section: Settings control
+    // Hide title section if showTitleOverlay is false
+    if (!this.options.showTitleOverlay || !this.options.videoTitle) {
+        titleSection.style.display = 'none';
+    }
+
+    topBar.appendChild(titleSection);
+
+    // Right section - Settings control
     const settingsControl = document.createElement('div');
     settingsControl.className = 'settings-control settings-top-bar';
 

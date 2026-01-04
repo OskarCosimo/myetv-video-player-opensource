@@ -372,23 +372,29 @@
                     subtitlesBtn.style.display = 'none';
                 }
 
-                // Hide original speed menu option from settings (if exists)
-                if (settingsMenu) {
-                    // Hide old non-expandable speed option
-                    const originalSpeedOption = settingsMenu.querySelector('[data-action="speed"]');
-                    if (originalSpeedOption) {
-                        originalSpeedOption.style.display = 'none';
-                    }
+            // Remove ONLY the original player speed (not YouTube speed)
+            if (settingsMenu) {
+                // Find and remove ONLY options with data-action="speed" or "speed-expand"
+                // that are NOT inside .yt-speed-wrapper
+                const speedOptions = settingsMenu.querySelectorAll('[data-action="speed"], [data-action="speed_expand"]');
 
-                    // Hide new expandable speed option
-                    const expandableSpeedWrapper = settingsMenu.querySelector('[data-action="speed-expand"]');
-                    if (expandableSpeedWrapper) {
-                        const wrapper = expandableSpeedWrapper.closest('.settings-expandable-wrapper');
+                speedOptions.forEach(option => {
+                    // Check if this option is NOT inside YouTube speed wrapper
+                    if (!option.closest('.yt-speed-wrapper')) {
+                        // It's the original player speed - remove it
+                        const wrapper = option.closest('.settings-expandable-wrapper');
                         if (wrapper) {
-                            wrapper.style.display = 'none';
+                            wrapper.remove(); // Remove the whole wrapper
+                        } else {
+                            option.remove(); // Remove just the option
+                        }
+
+                        if (this.api.player.options.debug) {
+                            console.log('YT Plugin: Removed original player speed option');
                         }
                     }
-                }
+                });
+            }
 
                 // Add subtitles option to settings menu
                 if (settingsMenu) {
@@ -4681,42 +4687,36 @@
         }
 
         /**
- * Initialize chapter display in title overlay
- */
+        * Initialize chapter display in top bar subtitle (instead of title overlay)
+        */
         initChapterDisplayInOverlay() {
             if (!this.chapters || this.chapters.length === 0) return;
 
-            const titleOverlay = this.api.container.querySelector('.title-overlay');
-            if (!titleOverlay) return;
+            // Use topBar instead of old title-overlay
+            const topBar = this.api.container.querySelector('.player-top-bar');
+            if (!topBar) return;
 
-            // Remove existing chapter element if present
-            let chapterElement = titleOverlay.querySelector('.chapter-name');
-            if (chapterElement) {
-                chapterElement.remove();
+            // Find or create subtitle element in top bar
+            let subtitleElement = topBar.querySelector('.video-subtitle');
+
+            if (!subtitleElement) {
+                // Create subtitle element if it doesn't exist
+                const titleSection = topBar.querySelector('.top-bar-title');
+                if (!titleSection) return;
+
+                subtitleElement = document.createElement('span');
+                subtitleElement.className = 'video-subtitle chapter-name';
+                titleSection.appendChild(subtitleElement);
+            } else {
+                // Add chapter-name class to existing subtitle
+                subtitleElement.classList.add('chapter-name');
             }
-
-            // Create chapter name element
-            chapterElement = document.createElement('div');
-            chapterElement.className = 'chapter-name';
-            chapterElement.style.cssText = `
-        font-size: 13px;
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.9);
-        margin-top: 6px;
-        max-width: 400px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    `;
-
-            // Append to title overlay
-            titleOverlay.appendChild(chapterElement);
 
             // Start monitoring playback to update chapter name
             this.startChapterNameMonitoring();
 
             if (this.api.player.options.debug) {
-                console.log('YT Plugin: Chapter name display initialized in title overlay');
+                console.log('YT Plugin: Chapter name display initialized in top bar');
             }
         }
 
@@ -4746,10 +4746,11 @@
         }
 
         /**
-         * Update chapter name in overlay based on current time
-         */
+        * Update chapter name in top bar subtitle based on current time
+        */
         updateChapterNameDisplay(currentTime) {
-            const chapterElement = this.api.container.querySelector('.title-overlay .chapter-name');
+            // Use topBar instead of title-overlay
+            const chapterElement = this.api.container.querySelector('.player-top-bar .video-subtitle.chapter-name');
             if (!chapterElement) return;
 
             // Find current chapter
@@ -4766,7 +4767,13 @@
                 chapterElement.textContent = currentChapter.title;
                 chapterElement.style.display = 'block';
             } else {
-                chapterElement.style.display = 'none';
+                // Show original subtitle if no chapter active
+                if (this.api.player.options.videoSubtitle) {
+                    chapterElement.textContent = this.api.player.options.videoSubtitle;
+                    chapterElement.style.display = 'block';
+                } else {
+                    chapterElement.style.display = 'none';
+                }
             }
         }
 

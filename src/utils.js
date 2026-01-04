@@ -49,8 +49,7 @@ updateTimeDisplay() {
                 }
             }
             const fallback = {
-                'loading': 'Loading...',
-                'encodinginprogress': 'Encoding in progress...'
+                'loading': 'Loading...'
             };
             return fallback[key] || key;
         };
@@ -63,7 +62,7 @@ updateTimeDisplay() {
             this.durationEl.classList.add('loading-state');
         } else if (isDurationInvalid) {
             // CHANGED: Move text to center overlay
-            this.updateLoadingText(t('encodinginprogress'));
+            this.updateLoadingText(t('loading'));
             // Optional: you might want to keep encoding text in bar OR move it too. 
             // If you want it ONLY in center:
             this.durationEl.textContent = "--:--";

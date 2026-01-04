@@ -113,31 +113,36 @@ resetAutoHideTimer() {
         this.autoHideTimer = null;
     }
 
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     if (this.mouseOverControls && !isTouchDevice) {
-        if (this.autoHideDebug) {
-            if (this.options.debug) console.log('Not starting timer - mouse on controls');
-        }
+        if (this.autoHideDebug && this.options.debug) console.log('Not starting timer - mouse on controls');
         return;
     }
 
+    // Only block timer if video is paused AND user explicitly paused it
+    // Don't block if paused due to autoplay blocked (currentTime === 0 and no interaction yet)
     if (this.video && this.video.paused) {
-        if (this.autoHideDebug) {
-            if (this.options.debug) console.log('Not starting timer - video paused');
+        // Allow timer if this is initial pause (autoplay blocked scenario)
+        const isInitialPause = this.video.currentTime === 0 && !this.video.ended;
+
+        if (!isInitialPause) {
+            if (this.autoHideDebug && this.options.debug) console.log('Not starting timer - video paused by user');
+            return;
         }
-        return;
+
+        if (this.autoHideDebug && this.options.debug) {
+            console.log('Video paused but at start - allowing timer (autoplay blocked scenario)');
+        }
     }
 
+    // Start timer...
     this.autoHideTimer = setTimeout(() => {
-        if (this.autoHideDebug) {
-            if (this.options.debug) console.log(`Timer expired after ${this.options.autoHideDelay}ms - nascondo controlli`);
-        }
+        if (this.autoHideDebug && this.options.debug) console.log(`Timer expired after ${this.options.autoHideDelay}ms - hiding controls`);
         this.hideControlsNow();
     }, this.options.autoHideDelay);
 
-    if (this.autoHideDebug) {
-        if (this.options.debug) console.log(`Auto-hide timer started: ${this.options.autoHideDelay}ms`);
-    }
+    if (this.autoHideDebug && this.options.debug) console.log(`Auto-hide timer started (${this.options.autoHideDelay}ms)`);
 }
 
 showControlsNow() {
@@ -164,7 +169,7 @@ showControlsNow() {
         // *show cursor when controls are shown*
         this.showCursor();
 
-        if (this.autoHideDebug && this.options.debug) console.log('✅ Controls shown');
+        if (this.autoHideDebug && this.options.debug) console.log('Controls shown');
     }
 }
 
@@ -205,7 +210,7 @@ hideControlsNow() {
         // *hide cursor after controls are hidden*
         this.hideCursor();
 
-        if (this.autoHideDebug && this.options.debug) console.log('✅ Controls hidden');
+        if (this.autoHideDebug && this.options.debug) console.log('Controls hidden');
     }
 }
 
@@ -453,10 +458,9 @@ createControls() {
     </div>
 
     <div class="time-display">
-        <span class="current-time">0:00</span>
-        <span>/</span>
-        <span class="duration">0:00</span>
-    </div>
+    <span class="current-time">00:00</span>
+    <span class="duration">00:00</span>
+</div>
 </div>
 
                 <div class="controls-right">
@@ -466,13 +470,6 @@ createControls() {
 <button class="control-btn playlist-next-btn" data-tooltip="nextvideo" style="display: none;">
     <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M12.5 4v8l-7-4zm-8 0v8l7-4z"/></svg></span>
 </button>
-
-                    <div class="settings-control">
-                        <button class="control-btn settings-btn" data-tooltip="settings_menu">
-                            <span class="icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg></span>
-                        </button>
-                        <div class="settings-menu"></div>
-                    </div>
 
 ${(this.options.showQualitySelector && this.originalSources && this.originalSources.length > 1) || this.options.adaptiveQualityControl ? `
                     <div class="quality-control">
@@ -596,18 +593,21 @@ checkScreenSize() {
 
 /* Update settings menu visibility */
 updateSettingsMenuVisibility() {
-    const settingsControl = this.controls?.querySelector('.settings-control');
+    // SEARCH IN CONTAINER
+    const settingsControl = this.container?.querySelector('.settings-control');
+
     if (!settingsControl) return;
 
-    // always show settings
+    // Always show settings
     settingsControl.style.display = 'block';
 
     // Populate settings menu
     this.populateSettingsMenu();
 
-    // hide speed and subtitles controls
+    // Hide speed and subtitles controls in bottom bar
     const speedControl = this.controls.querySelector('.speed-control');
     const subtitlesControl = this.controls.querySelector('.subtitles-control');
+
     if (speedControl) speedControl.style.display = 'none';
     if (subtitlesControl) subtitlesControl.style.display = 'none';
 }
@@ -616,44 +616,52 @@ updateSettingsMenuVisibility() {
  * Populate settings menu with controls
  */
 populateSettingsMenu() {
-    const settingsMenu = this.controls?.querySelector('.settings-menu');
+    // SEARCH IN CONTAINER
+    const settingsMenu = this.container?.querySelector('.settings-menu');
+
     if (!settingsMenu) return;
 
     let menuHTML = '';
 
     // SPEED - always included
     if (this.options.showSpeedControl) {
-        const speedLabel = this.t('playback_speed') || 'Playback Speed';
+        const speedLabel = this.t('playback_speed');
         const currentSpeed = this.video ? this.video.playbackRate : 1;
-        menuHTML += `<div class="settings-expandable-wrapper">
-            <div class="settings-option expandable-trigger" data-action="speed-expand">
-                <span class="settings-option-label">${speedLabel} <strong>${currentSpeed}x</strong></span>
-                <span class="expand-arrow">▶</span>
-            </div>
-            <div class="settings-expandable-content" style="display: none;">`;
+
+        menuHTML += `
+            <div class="settings-expandable-wrapper">
+                <div class="settings-option expandable-trigger" data-action="speed_expand">
+                    <span class="settings-option-label">${speedLabel} <strong>${currentSpeed}x</strong></span>
+                    <span class="expand-arrow">▼</span>
+                </div>
+                <div class="settings-expandable-content" style="display: none;">`;
 
         const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
         speeds.forEach(speed => {
             const isActive = Math.abs(speed - currentSpeed) < 0.01;
             menuHTML += `<div class="settings-suboption ${isActive ? 'active' : ''}" data-speed="${speed}">${speed}x</div>`;
         });
+
         menuHTML += `</div></div>`;
     }
 
     // SUBTITLES - always included
     if (this.options.showSubtitles && this.textTracks && this.textTracks.length > 0) {
-        const subtitlesLabel = this.t('subtitles') || 'Subtitles';
+        const subtitlesLabel = this.t('subtitles');
         const currentTrack = this.currentSubtitleTrack;
-        const currentLabel = this.subtitlesEnabled ? (currentTrack ? currentTrack.label : 'Unknown') : (this.t('subtitlesoff') || 'Off');
+        const currentLabel = this.subtitlesEnabled ?
+            (currentTrack ? currentTrack.label : 'Unknown') :
+            this.t('subtitles_off'); //
 
-        menuHTML += `<div class="settings-expandable-wrapper">
-            <div class="settings-option expandable-trigger" data-action="subtitles-expand">
-                <span class="settings-option-label">${subtitlesLabel} <strong>${currentLabel}</strong></span>
-                <span class="expand-arrow">▶</span>
-            </div>
-            <div class="settings-expandable-content" style="display: none;">`;
+        menuHTML += `
+            <div class="settings-expandable-wrapper">
+                <div class="settings-option expandable-trigger" data-action="subtitles_expand">
+                    <span class="settings-option-label">${subtitlesLabel} <strong>${currentLabel}</strong></span>
+                    <span class="expand-arrow">▼</span>
+                </div>
+                <div class="settings-expandable-content" style="display: none;">`;
 
-        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitlesoff') || 'Off'}</div>`;
+        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitles_off')}</div>`;
 
         this.textTracks.forEach((trackData, index) => {
             const isActive = this.currentSubtitleTrack === trackData.track;
@@ -726,43 +734,50 @@ addSettingsMenuScrollbar() {
  * Bind settings menu events
  */
 bindSettingsMenuEvents() {
-    const settingsBtn = this.controls?.querySelector('.settings-btn');
-    const settingsMenu = this.controls?.querySelector('.settings-menu');
+    // Search in container instead of controls (for top bar)
+    const settingsBtn = this.container?.querySelector('.settings-btn');
+    const settingsMenu = this.container?.querySelector('.settings-menu');
+
     if (!settingsMenu || !settingsBtn) return;
 
-    // toggle menu on button click
+    // Toggle menu on button click
     settingsBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         settingsMenu.classList.toggle('active');
 
-        // when menu is opened, set max height and overflow
+        // When menu is opened, set max height and overflow
         if (settingsMenu.classList.contains('active')) {
-            const settingsBtn = document.querySelector('.settings-btn');
-            const containerRect = settingsMenu.parentElement.parentElement.getBoundingClientRect();
+            const containerRect = this.container.getBoundingClientRect();
             const btnRect = settingsBtn.getBoundingClientRect();
-            const spaceBelow = containerRect.bottom - btnRect.bottom;
-            const maxMenuHeight = Math.max(100, Math.min(250, spaceBelow - 20));
+
+            // Calculate available space below the button
+            const spaceBelow = containerRect.bottom - btnRect.bottom - 30; // 30px margin
+
+            // Minimum 300px, maximum 600px or available space
+            const maxMenuHeight = Math.max(300, Math.min(600, spaceBelow));
 
             settingsMenu.style.maxHeight = `${maxMenuHeight}px`;
             settingsMenu.style.overflowY = 'auto';
             settingsMenu.style.overflowX = 'hidden';
-        } else {
-            settingsMenu.style.maxHeight = 'none';
-            settingsMenu.style.overflowY = 'visible';
-        }
 
+            if (this.options.debug) {
+                console.log(`Settings menu opened: height=${maxMenuHeight}px (available=${spaceBelow}px)`);
+            }
+        } else {
+            // Reset when closing
+            settingsMenu.style.maxHeight = '600px'; // Default max height
+            settingsMenu.style.overflowY = 'auto';
+        }
     });
 
-    // close menu when clicking outside
+    // Close menu when clicking outside
     document.addEventListener('click', (e) => {
         if (!settingsBtn?.contains(e.target) && !settingsMenu?.contains(e.target)) {
             settingsMenu?.classList.remove('active');
-            settingsMenu.style.maxHeight = 'none';
-            settingsMenu.style.overflowY = 'visible';
         }
     });
 
-    // manage clicks inside the menu
+    // Manage clicks inside the menu
     settingsMenu.addEventListener('click', (e) => {
         e.stopPropagation();
 
@@ -802,7 +817,7 @@ bindSettingsMenuEvents() {
             const trigger = wrapper.querySelector('.expandable-trigger');
             const action = trigger.getAttribute('data-action');
 
-            if (action === 'speed-expand') {
+            if (action === 'speed_expand') {
                 const speed = parseFloat(e.target.getAttribute('data-speed'));
                 if (speed && speed > 0 && this.video && !this.isChangingQuality) {
                     this.video.playbackRate = speed;
@@ -815,13 +830,13 @@ bindSettingsMenuEvents() {
                     const label = trigger.querySelector('.settings-option-label');
                     if (label) {
                         const speedLabel = this.t('playback_speed') || 'Playback Speed';
-                        label.textContent = `${speedLabel}: ${speed}x`;
+                        label.innerHTML = `${speedLabel} <strong>${speed}x</strong>`;
                     }
 
                     // Trigger event
                     this.triggerEvent('speedchange', { speed, previousSpeed: this.video.playbackRate });
                 }
-            } else if (action === 'subtitles-expand') {
+            } else if (action === 'subtitles_expand') {
                 const trackData = e.target.getAttribute('data-track');
                 if (trackData === 'off') {
                     this.disableSubtitles();
@@ -838,7 +853,7 @@ bindSettingsMenuEvents() {
                 const label = trigger.querySelector('.settings-option-label');
                 if (label) {
                     const subtitlesLabel = this.t('subtitles') || 'Subtitles';
-                    label.textContent = `${subtitlesLabel}: ${e.target.textContent}`;
+                    label.innerHTML = `${subtitlesLabel} <strong>${e.target.textContent}</strong>`;
                 }
             }
         }

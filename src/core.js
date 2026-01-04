@@ -617,13 +617,34 @@ markPlayerReady() {
 
             // Autoplay
             if (this.options.autoplay) {
-                if (this.options.debug) console.log('🎬 Autoplay enabled');
+                if (this.options.debug) console.log('Autoplay enabled');
                 setTimeout(() => {
-                    this.video.play().catch(error => {
-                        if (this.options.debug) console.warn('⚠️ Autoplay blocked:', error);
-                    });
+                    this.video.play()
+                        .then(() => {
+                            // Autoplay succeeded
+                            if (this.options.debug) console.log('Autoplay started successfully');
+                        })
+                        .catch(error => {
+                            // Autoplay blocked by browser
+                            if (this.options.debug) console.warn('Autoplay blocked', error);
+
+                            // Start auto-hide timer even if autoplay is blocked
+                            // This ensures controls hide after delay when video is paused
+                            if (this.options.autoHide && this.autoHideInitialized) {
+                                // Show controls initially (user needs to see play button)
+                                this.showControlsNow();
+
+                                // Start timer to hide controls
+                                this.resetAutoHideTimer();
+
+                                if (this.options.debug) {
+                                    console.log('Auto-hide timer started (autoplay blocked - video paused)');
+                                }
+                            }
+                        });
                 }, 100);
             }
+
         }, 200);
 
     }, 100);
@@ -651,6 +672,7 @@ createPlayerStructure() {
     if (this.options.showTitleOverlay) {
         this.createTitleOverlay();
     }
+    this.createTopBar();
 }
 
 createInitialLoading() {
@@ -709,17 +731,27 @@ updateTooltips() {
     if (!this.controls) return;
 
     try {
+        // Update tooltips in controls
         this.controls.querySelectorAll('[data-tooltip]').forEach(element => {
             const key = element.getAttribute('data-tooltip');
             element.title = this.t(key);
         });
 
+        // Update tooltips in top bar
+        if (this.topBar) {
+            this.topBar.querySelectorAll('[data-tooltip]').forEach(element => {
+                const key = element.getAttribute('data-tooltip');
+                element.title = this.t(key);
+            });
+        }
+
+        // Update "Auto" option in quality menu
         const autoOption = this.controls.querySelector('.quality-option[data-quality="auto"]');
         if (autoOption) {
             autoOption.textContent = this.t('auto');
         }
     } catch (error) {
-        if (this.options.debug) console.warn('Errore aggiornamento tooltip:', error);
+        if (this.options.debug) console.warn('Tooltip update error', error);
     }
 }
 
@@ -865,6 +897,10 @@ initializeElements() {
     this.speedMenu = this.controls?.querySelector('.speed-menu');
     this.qualityMenu = this.controls?.querySelector('.quality-menu');
     this.subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
+
+    this.settingsBtn = this.container?.querySelector('.settings-btn');
+    this.settingsMenu = this.container?.querySelector('.settings-menu');
+
     // Apply seek handle shape from options
     if (this.progressHandle && this.options.seekHandleShape) {
         this.setSeekHandleShape(this.options.seekHandleShape);
@@ -942,6 +978,84 @@ setupMenuToggles() {
 
     if (this.options.debug) {
         console.log('✅ Menu toggle system initialized (click-based, auto-close)');
+    }
+}
+
+/**
+ * Create integrated top bar with settings menu
+ * Netflix/Prime Video style top bar with title and settings on opposite sides
+ * This does NOT replace the existing title-overlay system
+ * @returns {void}
+ */
+createTopBar() {
+    if (!this.container) return;
+
+    // Create top bar element
+    const topBar = document.createElement('div');
+    topBar.className = 'player-top-bar';
+    topBar.id = `topBar_${this.getUniqueId()}`;
+
+    // Left section: Title (if enabled)
+    if (this.options.showTitleOverlay && this.options.videoTitle) {
+        const titleSection = document.createElement('div');
+        titleSection.className = 'top-bar-title';
+
+        // Main title
+        const titleElement = document.createElement('h3');
+        titleElement.className = 'video-title';
+        titleElement.textContent = this.decodeHTMLEntities(this.options.videoTitle);
+        titleSection.appendChild(titleElement);
+
+        // Optional subtitle
+        if (this.options.videoSubtitle) {
+            const subtitleElement = document.createElement('span');
+            subtitleElement.className = 'video-subtitle';
+            subtitleElement.textContent = this.decodeHTMLEntities(this.options.videoSubtitle);
+            titleSection.appendChild(subtitleElement);
+        }
+
+        topBar.appendChild(titleSection);
+    } else {
+        // Spacer if no title
+        const spacer = document.createElement('div');
+        spacer.className = 'top-bar-spacer';
+        topBar.appendChild(spacer);
+    }
+
+    // Right section: Settings control
+    const settingsControl = document.createElement('div');
+    settingsControl.className = 'settings-control settings-top-bar';
+
+    // Settings button
+    const settingsBtn = document.createElement('button');
+    settingsBtn.className = 'control-btn settings-btn';
+    settingsBtn.setAttribute('data-tooltip', 'settings_menu'); // ✅ Correct: underscore
+
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+    </svg>`;
+    settingsBtn.appendChild(icon);
+
+    // Settings menu
+    const settingsMenu = document.createElement('div');
+    settingsMenu.className = 'settings-menu';
+
+    settingsControl.appendChild(settingsBtn);
+    settingsControl.appendChild(settingsMenu);
+    topBar.appendChild(settingsControl);
+
+    // Insert top bar as first child in container
+    this.container.insertBefore(topBar, this.container.firstChild);
+
+    // Save references
+    this.topBar = topBar;
+    this.topBarTitle = topBar.querySelector('.video-title');
+    this.topBarSubtitle = topBar.querySelector('.video-subtitle');
+
+    if (this.options.debug) {
+        console.log('✅ Top bar created with integrated settings');
     }
 }
 
@@ -1529,7 +1643,7 @@ createBrandLogo() {
     if (this.options.brandLogoLinkUrl) {
         // Use custom tooltip text if provided, otherwise fallback to URL
         logo.title = this.options.brandLogoTooltipText || this.options.brandLogoLinkUrl;
-        // NON usare data-tooltip per evitare che venga sovrascritto da updateTooltips()
+        // do not use data-tooltip to not be overwritten
     }
 
     // Handle loading error

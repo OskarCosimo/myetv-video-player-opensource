@@ -186,11 +186,32 @@
                 this.pauseIcon.classList.remove('hidden');
             }
 
+            // Reset auto-hide timer when video starts playing
+            if (this.options.autoHide && this.autoHideInitialized) {
+                if (this.options.debug) console.log('Video playing - reset auto-hide timer');
+                this.showControlsNow();
+                this.resetAutoHideTimer();
+            }
+
             // Trigger playing event - video is now actually playing
             this.triggerEvent('playing', {
                 currentTime: this.getCurrentTime(),
                 duration: this.getDuration()
             });
+        });
+
+        // Show controls and cancel timer when video is paused
+        this.video.addEventListener('pause', () => {
+            if (this.options.autoHide && this.autoHideInitialized) {
+                if (this.options.debug) console.log('Video paused - show controls and cancel timer');
+                this.showControlsNow();
+
+                // Cancel timer so controls stay visible while paused
+                if (this.autoHideTimer) {
+                    clearTimeout(this.autoHideTimer);
+                    this.autoHideTimer = null;
+                }
+            }
         });
 
         this.video.addEventListener('waiting', () => {

@@ -120,10 +120,8 @@ resetAutoHideTimer() {
         return;
     }
 
-    // Only block timer if video is paused AND user explicitly paused it
-    // Don't block if paused due to autoplay blocked (currentTime === 0 and no interaction yet)
+    // Allow timer if video is paused at start (autoplay blocked)
     if (this.video && this.video.paused) {
-        // Allow timer if this is initial pause (autoplay blocked scenario)
         const isInitialPause = this.video.currentTime === 0 && !this.video.ended;
 
         if (!isInitialPause) {
@@ -132,17 +130,21 @@ resetAutoHideTimer() {
         }
 
         if (this.autoHideDebug && this.options.debug) {
-            console.log('Video paused but at start - allowing timer (autoplay blocked scenario)');
+            console.log('Video paused but at start - allowing timer (autoplay blocked)');
         }
     }
 
-    // Start timer...
+    // Start timer
     this.autoHideTimer = setTimeout(() => {
-        if (this.autoHideDebug && this.options.debug) console.log(`Timer expired after ${this.options.autoHideDelay}ms - hiding controls`);
+        if (this.autoHideDebug && this.options.debug) {
+            console.log(`Timer expired after ${this.options.autoHideDelay}ms - hiding controls`);
+        }
         this.hideControlsNow();
     }, this.options.autoHideDelay);
 
-    if (this.autoHideDebug && this.options.debug) console.log(`Auto-hide timer started (${this.options.autoHideDelay}ms)`);
+    if (this.autoHideDebug && this.options.debug) {
+        console.log(`Auto-hide timer started (${this.options.autoHideDelay}ms)`);
+    }
 }
 
 showControlsNow() {
@@ -236,9 +238,7 @@ clearControlsTimeout() {
 
 // Default controlbar styles injection
 injectDefaultControlbarStyles() {
-    if (document.getElementById('default-controlbar-styles')) {
-        return;
-    }
+    if (document.getElementById('default-controlbar-styles')) return;
 
     const controlBarOpacity = Math.max(0, Math.min(1, this.options.controlBarOpacity));
     const titleOverlayOpacity = Math.max(0, Math.min(1, this.options.titleOverlayOpacity));
@@ -260,7 +260,7 @@ injectDefaultControlbarStyles() {
             min-height: 60px;
             padding-bottom: 10px;
         }
-        
+
         .video-wrapper:not(.youtube-active):not(.vimeo-active):not(.facebook-active) .title-overlay {
             background: linear-gradient(
                 to bottom,
@@ -275,8 +275,12 @@ injectDefaultControlbarStyles() {
             min-height: 80px;
             padding-top: 20px;
         }
+        
+        /* ✅ NEW: Set CSS custom property for top bar opacity */
+        .video-wrapper {
+            --player-topbar-opacity: ${titleOverlayOpacity};
+        }
     `;
-
     document.head.appendChild(style);
 }
 

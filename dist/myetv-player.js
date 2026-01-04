@@ -1304,10 +1304,6 @@ createPlayerStructure() {
     this.createControls();
     this.createBrandLogo();
     this.detectPlaylist();
-
-    if (this.options.showTitleOverlay) {
-        this.createTitleOverlay();
-    }
     this.createTopBar();
 }
 
@@ -1619,8 +1615,7 @@ setupMenuToggles() {
 
 /**
  * Create integrated top bar with settings menu
- * Netflix/Prime Video style top bar with title and settings on opposite sides
- * This does NOT replace the existing title-overlay system
+ * Respects showTitleOverlay, videoTitle, videoSubtitle, persistentTitle options
  * @returns {void}
  */
 createTopBar() {
@@ -1629,9 +1624,9 @@ createTopBar() {
     // Create top bar element
     const topBar = document.createElement('div');
     topBar.className = 'player-top-bar';
-    topBar.id = `topBar_${this.getUniqueId()}`;
+    topBar.id = `topBar${this.getUniqueId()}`;
 
-    // Left section: Title (if enabled)
+    // Left section: Title (only if showTitleOverlay is enabled and videoTitle exists)
     if (this.options.showTitleOverlay && this.options.videoTitle) {
         const titleSection = document.createElement('div');
         titleSection.className = 'top-bar-title';
@@ -1665,13 +1660,11 @@ createTopBar() {
     // Settings button
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'control-btn settings-btn';
-    settingsBtn.setAttribute('data-tooltip', 'settings_menu'); // ✅ Correct: underscore
+    settingsBtn.setAttribute('data-tooltip', 'settingsmenu');
 
     const icon = document.createElement('span');
     icon.className = 'icon';
-    icon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
-    </svg>`;
+    icon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>`;
     settingsBtn.appendChild(icon);
 
     // Settings menu
@@ -1682,6 +1675,11 @@ createTopBar() {
     settingsControl.appendChild(settingsMenu);
     topBar.appendChild(settingsControl);
 
+    // Add persistent class if persistentTitle is enabled
+    if (this.options.persistentTitle) {
+        topBar.classList.add('persistent');
+    }
+
     // Insert top bar as first child in container
     this.container.insertBefore(topBar, this.container.firstChild);
 
@@ -1691,7 +1689,11 @@ createTopBar() {
     this.topBarSubtitle = topBar.querySelector('.video-subtitle');
 
     if (this.options.debug) {
-        console.log('✅ Top bar created with integrated settings');
+        console.log('Top bar created with integrated settings', {
+            showTitle: this.options.showTitleOverlay,
+            persistent: this.options.persistentTitle,
+            opacity: this.options.titleOverlayOpacity
+        });
     }
 }
 
@@ -3501,10 +3503,8 @@ resetAutoHideTimer() {
         return;
     }
 
-    // Only block timer if video is paused AND user explicitly paused it
-    // Don't block if paused due to autoplay blocked (currentTime === 0 and no interaction yet)
+    // Allow timer if video is paused at start (autoplay blocked)
     if (this.video && this.video.paused) {
-        // Allow timer if this is initial pause (autoplay blocked scenario)
         const isInitialPause = this.video.currentTime === 0 && !this.video.ended;
 
         if (!isInitialPause) {
@@ -3513,17 +3513,21 @@ resetAutoHideTimer() {
         }
 
         if (this.autoHideDebug && this.options.debug) {
-            console.log('Video paused but at start - allowing timer (autoplay blocked scenario)');
+            console.log('Video paused but at start - allowing timer (autoplay blocked)');
         }
     }
 
-    // Start timer...
+    // Start timer
     this.autoHideTimer = setTimeout(() => {
-        if (this.autoHideDebug && this.options.debug) console.log(`Timer expired after ${this.options.autoHideDelay}ms - hiding controls`);
+        if (this.autoHideDebug && this.options.debug) {
+            console.log(`Timer expired after ${this.options.autoHideDelay}ms - hiding controls`);
+        }
         this.hideControlsNow();
     }, this.options.autoHideDelay);
 
-    if (this.autoHideDebug && this.options.debug) console.log(`Auto-hide timer started (${this.options.autoHideDelay}ms)`);
+    if (this.autoHideDebug && this.options.debug) {
+        console.log(`Auto-hide timer started (${this.options.autoHideDelay}ms)`);
+    }
 }
 
 showControlsNow() {
@@ -3617,9 +3621,7 @@ clearControlsTimeout() {
 
 // Default controlbar styles injection
 injectDefaultControlbarStyles() {
-    if (document.getElementById('default-controlbar-styles')) {
-        return;
-    }
+    if (document.getElementById('default-controlbar-styles')) return;
 
     const controlBarOpacity = Math.max(0, Math.min(1, this.options.controlBarOpacity));
     const titleOverlayOpacity = Math.max(0, Math.min(1, this.options.titleOverlayOpacity));
@@ -3641,7 +3643,7 @@ injectDefaultControlbarStyles() {
             min-height: 60px;
             padding-bottom: 10px;
         }
-        
+
         .video-wrapper:not(.youtube-active):not(.vimeo-active):not(.facebook-active) .title-overlay {
             background: linear-gradient(
                 to bottom,
@@ -3656,8 +3658,12 @@ injectDefaultControlbarStyles() {
             min-height: 80px;
             padding-top: 20px;
         }
+        
+        /* ✅ NEW: Set CSS custom property for top bar opacity */
+        .video-wrapper {
+            --player-topbar-opacity: ${titleOverlayOpacity};
+        }
     `;
-
     document.head.appendChild(style);
 }
 

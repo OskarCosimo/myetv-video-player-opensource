@@ -457,13 +457,17 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   padding: 15px 20px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, calc(var(--player-topbar-opacity, 0.95) * 0.89)) 0%, rgba(0, 0, 0, calc(var(--player-topbar-opacity, 0.95) * 0.68)) 50%, rgba(0, 0, 0, 0) 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, var(--player-topbar-opacity, 0.95)) 0%, rgba(0, 0, 0, calc(var(--player-topbar-opacity, 0.95) * 0.68)) 50%, rgba(0, 0, 0, 0) 100%);
   backdrop-filter: blur(5px);
   z-index: 20;
   opacity: 0;
   transform: translateY(-100%);
   transition: all 0.3s ease;
   pointer-events: none;
+}
+.player-top-bar.no-title-background {
+  background: transparent;
+  backdrop-filter: none;
 }
 .player-top-bar .top-bar-title {
   flex: 1;
@@ -789,7 +793,7 @@ body .video-wrapper .player-top-bar.persistent {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--player-bg-controls);
+  background: rgba(0, 0, 0, var(--control-bar-opacity, 0.95));
   padding: var(--player-controls-padding);
   opacity: 0;
   transform: translateY(100%);

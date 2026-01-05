@@ -11,7 +11,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: var(--player-bg-controls);
+    background: rgba(0, 0, 0, var(--control-bar-opacity, 0.95));
     padding: var(--player-controls-padding);
     opacity: 0;
     transform: translateY(100%);

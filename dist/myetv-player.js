@@ -655,6 +655,7 @@ constructor(videoElement, options = {}) {
         showPictureInPicture: true,  // Enable PiP button
         showSubtitles: true,         // Enable subtitles button
         subtitlesEnabled: false,     // Enable subtitles by default if available
+        showSettingsMenu: true,      // Show settings menu in top bar
         autoHide: true,              // auto-hide controls when idle
         autoHideDelay: 3000,         // hide controls after ... seconds of inactivity (specificed in milliseconds)
         hideCursor: true,            // hide mouse cursor when idle
@@ -1636,6 +1637,11 @@ createTopBar() {
     topBar.className = 'player-top-bar';
     topBar.id = `topBar${this.getUniqueId()}`;
 
+    // Apply background class based on showTitleOverlay option
+    if (!this.options.showTitleOverlay) {
+        topBar.classList.add('no-title-background');
+    }
+
     // Left section - Title (ALWAYS create structure)
     const titleSection = document.createElement('div');
     titleSection.className = 'top-bar-title';
@@ -1661,6 +1667,12 @@ createTopBar() {
 
     topBar.appendChild(titleSection);
 
+    // spacer element
+    const spacer = document.createElement('div');
+    spacer.className = 'top-bar-spacer';
+    spacer.style.flex = '1';
+    topBar.appendChild(spacer);
+
     // Right section - Settings control
     const settingsControl = document.createElement('div');
     settingsControl.className = 'settings-control settings-top-bar';
@@ -1681,6 +1693,12 @@ createTopBar() {
 
     settingsControl.appendChild(settingsBtn);
     settingsControl.appendChild(settingsMenu);
+
+    // hide settings control if showSettingsMenu is false
+    if (this.options.showSettingsMenu === false) {
+        settingsControl.style.display = 'none';
+    }
+
     topBar.appendChild(settingsControl);
 
     // Add persistent class if persistentTitle is enabled
@@ -1699,8 +1717,10 @@ createTopBar() {
     if (this.options.debug) {
         console.log('Top bar created with integrated settings', {
             showTitle: this.options.showTitleOverlay,
+            showSettings: this.options.showSettingsMenu, // ✅ AGGIUNGI nel log
             persistent: this.options.persistentTitle,
-            opacity: this.options.titleOverlayOpacity
+            opacity: this.options.titleOverlayOpacity,
+            hasBackground: !topBar.classList.contains('no-title-background') // ✅ AGGIUNGI nel log
         });
     }
 }
@@ -4046,7 +4066,7 @@ populateSettingsMenu() {
         const currentTrack = this.currentSubtitleTrack;
         const currentLabel = this.subtitlesEnabled ?
             (currentTrack ? currentTrack.label : 'Unknown') :
-            this.t('subtitles_off'); //
+            this.t('subtitlesoff');
 
         menuHTML += `
             <div class="settings-expandable-wrapper">
@@ -4056,7 +4076,7 @@ populateSettingsMenu() {
                 </div>
                 <div class="settings-expandable-content" style="display: none;">`;
 
-        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitles_off')}</div>`;
+        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitlesoff')}</div>`;
 
         this.textTracks.forEach((trackData, index) => {
             const isActive = this.currentSubtitleTrack === trackData.track;
@@ -4644,7 +4664,74 @@ optimizeButtonsForSmallHeight() {
     }
 }
 
-/* Controls methods for main class - All original functionality preserved exactly */
+/**
+ * Update CSS opacity variables dynamically
+ * @returns {Object} this
+ */
+updateOpacityVariables() {
+    if (!this.controls) return this;
+
+    // Update control bar opacity
+    if (this.controls) {
+        this.controls.style.setProperty('--control-bar-opacity', this.options.controlBarOpacity || 0.95);
+    }
+
+    // Update title overlay opacity
+    if (this.topBar) {
+        this.topBar.style.setProperty('--title-overlay-opacity', this.options.titleOverlayOpacity || 0.95);
+    }
+
+    if (this.options.debug) {
+        console.log('Opacity variables updated:', {
+            controlBar: this.options.controlBarOpacity,
+            titleOverlay: this.options.titleOverlayOpacity
+        });
+    }
+
+    return this;
+}
+
+/**
+ * Show settings menu button
+ * @returns {Object} this
+ */
+showSettingsMenu() {
+    if (!this.topBar) return this;
+
+    const settingsControl = this.topBar.querySelector('.settings-control');
+    if (settingsControl) {
+        settingsControl.style.display = '';
+        this.options.showSettingsMenu = true;
+
+        if (this.options.debug) {
+            console.log('Settings menu enabled');
+        }
+    }
+
+    return this;
+}
+
+/**
+ * Hide settings menu button
+ * @returns {Object} this
+ */
+hideSettingsMenu() {
+    if (!this.topBar) return this;
+
+    const settingsControl = this.topBar.querySelector('.settings-control');
+    if (settingsControl) {
+        settingsControl.style.display = 'none';
+        this.options.showSettingsMenu = false;
+
+        if (this.options.debug) {
+            console.log('Settings menu disabled');
+        }
+    }
+
+    return this;
+}
+
+/* Controls methods for main class */
 
 initializeQualityMonitoring() {
     this.qualityMonitorInterval = setInterval(() => {

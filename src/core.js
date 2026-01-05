@@ -19,6 +19,7 @@ constructor(videoElement, options = {}) {
         showPictureInPicture: true,  // Enable PiP button
         showSubtitles: true,         // Enable subtitles button
         subtitlesEnabled: false,     // Enable subtitles by default if available
+        showSettingsMenu: true,      // Show settings menu in top bar
         autoHide: true,              // auto-hide controls when idle
         autoHideDelay: 3000,         // hide controls after ... seconds of inactivity (specificed in milliseconds)
         hideCursor: true,            // hide mouse cursor when idle
@@ -1000,6 +1001,11 @@ createTopBar() {
     topBar.className = 'player-top-bar';
     topBar.id = `topBar${this.getUniqueId()}`;
 
+    // Apply background class based on showTitleOverlay option
+    if (!this.options.showTitleOverlay) {
+        topBar.classList.add('no-title-background');
+    }
+
     // Left section - Title (ALWAYS create structure)
     const titleSection = document.createElement('div');
     titleSection.className = 'top-bar-title';
@@ -1025,6 +1031,12 @@ createTopBar() {
 
     topBar.appendChild(titleSection);
 
+    // spacer element
+    const spacer = document.createElement('div');
+    spacer.className = 'top-bar-spacer';
+    spacer.style.flex = '1';
+    topBar.appendChild(spacer);
+
     // Right section - Settings control
     const settingsControl = document.createElement('div');
     settingsControl.className = 'settings-control settings-top-bar';
@@ -1045,6 +1057,12 @@ createTopBar() {
 
     settingsControl.appendChild(settingsBtn);
     settingsControl.appendChild(settingsMenu);
+
+    // hide settings control if showSettingsMenu is false
+    if (this.options.showSettingsMenu === false) {
+        settingsControl.style.display = 'none';
+    }
+
     topBar.appendChild(settingsControl);
 
     // Add persistent class if persistentTitle is enabled
@@ -1063,8 +1081,10 @@ createTopBar() {
     if (this.options.debug) {
         console.log('Top bar created with integrated settings', {
             showTitle: this.options.showTitleOverlay,
+            showSettings: this.options.showSettingsMenu, // ✅ AGGIUNGI nel log
             persistent: this.options.persistentTitle,
-            opacity: this.options.titleOverlayOpacity
+            opacity: this.options.titleOverlayOpacity,
+            hasBackground: !topBar.classList.contains('no-title-background') // ✅ AGGIUNGI nel log
         });
     }
 }

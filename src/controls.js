@@ -655,7 +655,7 @@ populateSettingsMenu() {
         const currentTrack = this.currentSubtitleTrack;
         const currentLabel = this.subtitlesEnabled ?
             (currentTrack ? currentTrack.label : 'Unknown') :
-            this.t('subtitles_off'); //
+            this.t('subtitlesoff');
 
         menuHTML += `
             <div class="settings-expandable-wrapper">
@@ -665,7 +665,7 @@ populateSettingsMenu() {
                 </div>
                 <div class="settings-expandable-content" style="display: none;">`;
 
-        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitles_off')}</div>`;
+        menuHTML += `<div class="settings-suboption ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitlesoff')}</div>`;
 
         this.textTracks.forEach((trackData, index) => {
             const isActive = this.currentSubtitleTrack === trackData.track;
@@ -1253,4 +1253,71 @@ optimizeButtonsForSmallHeight() {
     }
 }
 
-/* Controls methods for main class - All original functionality preserved exactly */
+/**
+ * Update CSS opacity variables dynamically
+ * @returns {Object} this
+ */
+updateOpacityVariables() {
+    if (!this.controls) return this;
+
+    // Update control bar opacity
+    if (this.controls) {
+        this.controls.style.setProperty('--control-bar-opacity', this.options.controlBarOpacity || 0.95);
+    }
+
+    // Update title overlay opacity
+    if (this.topBar) {
+        this.topBar.style.setProperty('--title-overlay-opacity', this.options.titleOverlayOpacity || 0.95);
+    }
+
+    if (this.options.debug) {
+        console.log('Opacity variables updated:', {
+            controlBar: this.options.controlBarOpacity,
+            titleOverlay: this.options.titleOverlayOpacity
+        });
+    }
+
+    return this;
+}
+
+/**
+ * Show settings menu button
+ * @returns {Object} this
+ */
+showSettingsMenu() {
+    if (!this.topBar) return this;
+
+    const settingsControl = this.topBar.querySelector('.settings-control');
+    if (settingsControl) {
+        settingsControl.style.display = '';
+        this.options.showSettingsMenu = true;
+
+        if (this.options.debug) {
+            console.log('Settings menu enabled');
+        }
+    }
+
+    return this;
+}
+
+/**
+ * Hide settings menu button
+ * @returns {Object} this
+ */
+hideSettingsMenu() {
+    if (!this.topBar) return this;
+
+    const settingsControl = this.topBar.querySelector('.settings-control');
+    if (settingsControl) {
+        settingsControl.style.display = 'none';
+        this.options.showSettingsMenu = false;
+
+        if (this.options.debug) {
+            console.log('Settings menu disabled');
+        }
+    }
+
+    return this;
+}
+
+/* Controls methods for main class */

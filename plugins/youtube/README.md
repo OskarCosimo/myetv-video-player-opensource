@@ -116,6 +116,9 @@ const player = new MYETVPlayer('myVideo', {
             // Extract and show the Youtube chapters (API Key is required)
             showYoutubeChapters : true,
 
+            // Use the no-cookie.com domain instead of the youtube main domain
+            noCookie: false,
+
             controlBarOpacity: 0.95,     // The controlbar opacity or semi-transparency or transparency - values: from 0 to 1
 
             titleOverlayOpacity: 0.95,    // The overlay title opacity or semi-transparency or transparency - values: from 0 to 1

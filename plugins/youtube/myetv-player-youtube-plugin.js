@@ -13,6 +13,7 @@
                 apiKey: options.apiKey || null,
                 autoplay: options.autoplay !== undefined ? options.autoplay : false,
                 showYouTubeUI: options.showYouTubeUI !== undefined ? options.showYouTubeUI : false,
+                noCookie: options.noCookie !== undefined ? options.noCookie : false,
                 showNativeControlsButton: options.showNativeControlsButton !== undefined ? options.showNativeControlsButton : true,
                 controlBarOpacity: options.controlBarOpacity !== undefined
                     ? options.controlBarOpacity
@@ -875,7 +876,8 @@
 
             if (this.api.player.options.debug) console.log('[YT Plugin] Player vars:', playerVars);
 
-            this.ytPlayer = new YT.Player(this.ytPlayerContainer.id, {
+            // Prepare player configuration
+            const playerConfig = {
                 videoId: videoId,
                 playerVars: playerVars,
                 events: {
@@ -885,7 +887,18 @@
                     'onError': (e) => this.onPlayerError(e),
                     'onApiChange': (e) => this.onApiChange(e)
                 }
-            });
+            };
+
+            // Add no-cookie host if option is enabled (helps with Firefox bot detection)
+            if (this.options.noCookie) {
+                playerConfig.host = 'https://www.youtube-nocookie.com';
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Using youtube-nocookie.com domain for privacy-enhanced mode');
+                }
+            }
+
+            // Create YouTube player
+            this.ytPlayer = new YT.Player(this.ytPlayerContainer.id, playerConfig);
 
             // Force iframe to fill container properly
             setTimeout(() => {

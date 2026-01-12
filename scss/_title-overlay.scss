@@ -116,6 +116,8 @@
             overflow-x: hidden;
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+            display: flex;
+            flex-direction: column;
 
             &::-webkit-scrollbar {
                 width: 6px;
@@ -142,6 +144,14 @@
             }
         }
     }
+}
+
+// Force More Information button to be first
+.settings-option[data-action="moreinfo"] {
+    order: -1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 // Menu item styles

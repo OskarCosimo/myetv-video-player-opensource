@@ -115,6 +115,8 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `showSettingsMenu` | boolean | `true` | Show/Hide the settings menu in the top-bar |
+| `moreinfoTitle` | string | `''` | Title for the modal window (if present, the button "more information" in the settings menu will be visible) 
+| `moreinfoDescription` | string | `''` |  Description for the modal window (if present, the button "more information" in the settings menu will be visible) 
 | `chapters` | string | json | Enable/Disable chapters: chapter can be in json format or string format (see below) |
 | `plugins` | string | json | Add a customized plugin to the player to extend its functionality (see below) |
 | `seekHandleShape` | string | `true` | Edit the shape of the seek controlbar. Shape type: none, circle, square, diamond, arrow, triangle, heart, star |

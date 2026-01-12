@@ -689,6 +689,45 @@ createMoreInfoModal() {
 openMoreInfoModal() {
     if (!this.moreinfoModal) return;
 
+    // If settings menu is in modal, restore it first
+    if (this.settingsMenuInModal) {
+        const settingsMenu = this.moreinfoModal.querySelector('.settings-menu');
+
+        if (settingsMenu && this.settingsMenuOriginalParent) {
+            // Restore menu to original position
+            this.settingsMenuOriginalParent.appendChild(settingsMenu);
+
+            // Reset menu styles
+            settingsMenu.style.position = '';
+            settingsMenu.style.top = '';
+            settingsMenu.style.right = '';
+            settingsMenu.style.opacity = '';
+            settingsMenu.style.visibility = '';
+            settingsMenu.style.transform = '';
+            settingsMenu.style.display = '';
+            settingsMenu.style.maxHeight = '';
+            settingsMenu.classList.remove('active');
+
+            this.settingsMenuInModal = false;
+
+            if (this.options.debug) {
+                console.log('[More Info] Menu restored before showing more info');
+            }
+        }
+    }
+
+    // Get modal elements
+    const modalTitle = this.moreinfoModal.querySelector('.moreinfo-modal-title');
+    const modalBody = this.moreinfoModal.querySelector('.moreinfo-modal-body');
+
+    if (!modalTitle || !modalBody) return;
+
+    // Set content for more info
+    modalTitle.textContent = this.decodeHTMLEntities(this.options.moreinfoTitle || '');
+    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+    modalBody.className = 'moreinfo-modal-body'; // Reset class (remove settings-modal-body)
+
+    // Show modal
     this.moreinfoModal.style.display = 'flex';
 
     if (this.options.debug) {
@@ -703,10 +742,140 @@ openMoreInfoModal() {
 closeMoreInfoModal() {
     if (!this.moreinfoModal) return;
 
+    // Check if settings menu needs to be restored (only if it's in modal)
+    if (this.settingsMenuInModal) {
+        const settingsMenu = this.moreinfoModal.querySelector('.settings-menu');
+
+        if (settingsMenu && this.settingsMenuOriginalParent) {
+            // Restore menu to original position
+            this.settingsMenuOriginalParent.appendChild(settingsMenu);
+
+            // Reset menu styles
+            settingsMenu.style.position = '';
+            settingsMenu.style.top = '';
+            settingsMenu.style.right = '';
+            settingsMenu.style.opacity = '';
+            settingsMenu.style.visibility = '';
+            settingsMenu.style.transform = '';
+            settingsMenu.style.display = '';
+            settingsMenu.style.maxHeight = '';
+            settingsMenu.classList.remove('active');
+
+            this.settingsMenuInModal = false;
+
+            if (this.options.debug) {
+                console.log('[Settings Modal] Menu restored to original position');
+            }
+        }
+    }
+
     this.moreinfoModal.style.display = 'none';
 
     if (this.options.debug) {
-        console.log('[More Info] Modal closed');
+        console.log('[Modal] Modal closed');
+    }
+}
+
+/**
+ * Open settings menu in modal
+ * @returns {void}
+ */
+openSettingsInModal() {
+    if (!this.moreinfoModal) return;
+
+    // Get the settings menu element
+    const settingsMenu = this.container?.querySelector('.settings-menu');
+    if (!settingsMenu) {
+        console.error('[Settings Modal] Settings menu not found!');
+        return;
+    }
+
+    // IMPORTANT: Only populate if menu is empty (first time)
+    if (settingsMenu.children.length === 0) {
+        this.populateSettingsMenu();
+
+        if (this.options.debug) {
+            console.log('[Settings Modal] Menu populated for first time');
+        }
+    }
+
+    // Get modal elements
+    const modalTitle = this.moreinfoModal.querySelector('.moreinfo-modal-title');
+    const modalBody = this.moreinfoModal.querySelector('.moreinfo-modal-body');
+
+    if (!modalTitle || !modalBody) return;
+
+    // Set modal title
+    modalTitle.textContent = this.t('settings_menu');
+
+    // CRITICAL: Move (not clone) the actual settings menu into the modal
+    modalBody.innerHTML = ''; // Clear modal body
+
+    // Save reference to original parent for restoration later
+    if (!this.settingsMenuOriginalParent) {
+        this.settingsMenuOriginalParent = settingsMenu.parentNode;
+    }
+
+    // Move the menu into modal body
+    modalBody.appendChild(settingsMenu);
+    modalBody.className = 'moreinfo-modal-body settings-modal-body';
+
+    // Make menu visible (remove dropdown positioning)
+    settingsMenu.style.position = 'relative';
+    settingsMenu.style.top = 'auto';
+    settingsMenu.style.right = 'auto';
+    settingsMenu.style.opacity = '1';
+    settingsMenu.style.visibility = 'visible';
+    settingsMenu.style.transform = 'none';
+    settingsMenu.style.display = 'block';
+    settingsMenu.style.maxHeight = 'none';
+    settingsMenu.classList.add('active');
+
+    // Mark that settings menu is in modal
+    this.settingsMenuInModal = true;
+
+    // Show modal
+    this.moreinfoModal.style.display = 'flex';
+
+    // Add event delegation for "More Info" button
+    this.addModalEventDelegation(modalBody);
+
+    if (this.options.debug) {
+        console.log('[Settings Modal] Modal opened - menu moved into modal');
+    }
+}
+
+/**
+ * Add event delegation for modal-specific actions
+ * @param {HTMLElement} modalBody
+ */
+addModalEventDelegation(modalBody) {
+    if (!modalBody) return;
+
+    // Remove previous listener if exists
+    if (this.modalClickHandler) {
+        modalBody.removeEventListener('click', this.modalClickHandler);
+    }
+
+    // Create new handler
+    this.modalClickHandler = (e) => {
+        // Handle "More Information" button
+        const moreInfoBtn = e.target.closest('[data-action="moreinfo"]');
+        if (moreInfoBtn) {
+            e.stopPropagation();
+            if (this.options.debug) {
+                console.log('[Settings Modal] More Info clicked');
+            }
+            this.openMoreInfoModal();
+            return;
+        }
+    };
+
+    // Add event listener
+    modalBody.addEventListener('click', this.modalClickHandler);
+
+    if (this.options.debug) {
+        console.log('[Settings Modal] Event delegation added for More Info');
     }
 }
 
@@ -850,44 +1019,20 @@ bindSettingsMenuEvents() {
 
     if (!settingsMenu || !settingsBtn) return;
 
-    // Toggle menu on button click
+    // Open settings in modal
     settingsBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        settingsMenu.classList.toggle('active');
-
-        // When menu is opened, set max height and overflow
-        if (settingsMenu.classList.contains('active')) {
-            const containerRect = this.container.getBoundingClientRect();
-            const btnRect = settingsBtn.getBoundingClientRect();
-
-            // Calculate available space below the button
-            const spaceBelow = containerRect.bottom - btnRect.bottom - 30; // 30px margin
-
-            // Minimum 300px, maximum 600px or available space
-            const maxMenuHeight = Math.max(300, Math.min(600, spaceBelow));
-
-            settingsMenu.style.maxHeight = `${maxMenuHeight}px`;
-            settingsMenu.style.overflowY = 'auto';
-            settingsMenu.style.overflowX = 'hidden';
-
-            if (this.options.debug) {
-                console.log(`Settings menu opened: height=${maxMenuHeight}px (available=${spaceBelow}px)`);
-            }
-        } else {
-            // Reset when closing
-            settingsMenu.style.maxHeight = '600px'; // Default max height
-            settingsMenu.style.overflowY = 'auto';
-        }
+        this.openSettingsInModal();
     });
 
-    // Close menu when clicking outside
+    // Close menu when clicking outside (for when menu is back in original position)
     document.addEventListener('click', (e) => {
         if (!settingsBtn?.contains(e.target) && !settingsMenu?.contains(e.target)) {
             settingsMenu?.classList.remove('active');
         }
     });
 
-    // Manage clicks inside the menu
+    // Manage clicks inside the menu (this handles speed, subtitles, pip, etc.)
     settingsMenu.addEventListener('click', (e) => {
         e.stopPropagation();
 
@@ -910,7 +1055,7 @@ bindSettingsMenuEvents() {
             return;
         }
 
-        // Handle direct actions (like PiP)
+        // Handle direct actions (PiP, More Info, etc.)
         if (e.target.classList.contains('settings-option') || e.target.closest('.settings-option')) {
             const option = e.target.classList.contains('settings-option') ? e.target : e.target.closest('.settings-option');
             const action = option.getAttribute('data-action');
@@ -922,16 +1067,15 @@ bindSettingsMenuEvents() {
 
             // Handle More Info action
             if (action === 'moreinfo') {
+                if (this.options.debug) {
+                    console.log('[Settings] More Info clicked');
+                }
                 this.openMoreInfoModal();
-                // Close settings menu
-                settingsMenu.classList.remove('active');
-                const settingsBtn = this.container?.querySelector('.settings-btn');
-                if (settingsBtn) settingsBtn.classList.remove('active');
                 return;
             }
         }
 
-        // Handle submenu actions
+        // Handle submenu actions (speed, subtitles)
         if (e.target.classList.contains('settings-suboption')) {
             const wrapper = e.target.closest('.settings-expandable-wrapper');
             const trigger = wrapper.querySelector('.expandable-trigger');
@@ -955,6 +1099,10 @@ bindSettingsMenuEvents() {
 
                     // Trigger event
                     this.triggerEvent('speedchange', { speed, previousSpeed: this.video.playbackRate });
+
+                    if (this.options.debug) {
+                        console.log('[Settings] Speed changed to', speed);
+                    }
                 }
             } else if (action === 'subtitles_expand') {
                 const trackData = e.target.getAttribute('data-track');
@@ -975,9 +1123,17 @@ bindSettingsMenuEvents() {
                     const subtitlesLabel = this.t('subtitles') || 'Subtitles';
                     label.innerHTML = `${subtitlesLabel} <strong>${e.target.textContent}</strong>`;
                 }
+
+                if (this.options.debug) {
+                    console.log('[Settings] Subtitle changed to', trackData);
+                }
             }
         }
     });
+
+    if (this.options.debug) {
+        console.log('[Settings] Menu events bound');
+    }
 }
 
 /* TITLE OVERLAY MANAGEMENT */

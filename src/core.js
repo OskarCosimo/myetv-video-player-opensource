@@ -175,6 +175,9 @@ constructor(videoElement, options = {}) {
         hls: false
     };
 
+    this.settingsMenuOriginalParent = null;
+    this.settingsMenuInModal = false;
+
     this.lastTimeUpdate = 0; // For throttling timeupdate events
     // Inject default styles
     this.injectDefaultControlbarStyles();

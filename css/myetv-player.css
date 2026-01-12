@@ -545,6 +545,8 @@ body {
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  display: flex;
+  flex-direction: column;
 }
 .player-top-bar .settings-control .settings-menu::-webkit-scrollbar {
   width: 6px;
@@ -564,6 +566,13 @@ body {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+}
+
+.settings-option[data-action=moreinfo] {
+  order: -1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .settings-expandable-wrapper {
@@ -1010,6 +1019,122 @@ body .video-wrapper .player-top-bar.persistent {
   justify-content: center;
 }
 
+/* More Information Modal */
+.moreinfo-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+}
+
+.moreinfo-modal-content {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.moreinfo-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.moreinfo-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  flex: 1;
+}
+
+.moreinfo-modal-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  line-height: 1;
+}
+
+.moreinfo-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.moreinfo-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Scrollbar styling for modal body */
+.moreinfo-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.moreinfo-modal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.moreinfo-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.moreinfo-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox scrollbar */
+.moreinfo-modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+/* Responsive design for mobile */
+@media (max-width: 600px) {
+  .moreinfo-modal-content {
+    width: 95%;
+    max-height: 85%;
+  }
+  .moreinfo-modal-header {
+    padding: 16px 20px;
+  }
+  .moreinfo-modal-title {
+    font-size: 18px;
+  }
+  .moreinfo-modal-body {
+    padding: 20px;
+    font-size: 13px;
+  }
+}
 /* PROGRESS BAR */
 .progress-container {
   width: 100%;

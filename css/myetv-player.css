@@ -1135,6 +1135,80 @@ body .video-wrapper .player-top-bar.persistent {
     font-size: 13px;
   }
 }
+/* Settings menu inside modal */
+.moreinfo-modal-body.settings-modal-body {
+  padding: 8px;
+}
+
+.settings-modal-body .settings-option {
+  padding: 14px 16px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.settings-modal-body .settings-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-modal-body .settings-option[data-action=moreinfo] {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 12px;
+  padding-bottom: 16px;
+}
+
+.settings-modal-body .settings-option-label {
+  font-size: 14px;
+}
+
+.settings-modal-body .settings-expandable-wrapper {
+  margin-bottom: 4px;
+}
+
+.settings-modal-body .expandable-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-modal-body .expand-arrow {
+  transition: transform 0.3s ease;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-modal-body .settings-expandable-content {
+  padding-left: 16px;
+  margin-top: 4px;
+}
+
+.settings-modal-body .settings-suboption {
+  padding: 10px 16px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.settings-modal-body .settings-suboption:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.settings-modal-body .settings-suboption.active {
+  background: rgba(51, 204, 255, 0.2);
+  color: #33ccff;
+  font-weight: 500;
+}
+
+/* Hide the original dropdown menu */
+.player-top-bar .settings-control .settings-menu {
+  display: none !important;
+}
+
 /* PROGRESS BAR */
 .progress-container {
   width: 100%;

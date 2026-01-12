@@ -30,9 +30,11 @@ constructor(videoElement, options = {}) {
         showTitleOverlay: false,     // Show video title overlay
         videoTitle: '',              // Title text to show in overlay
         videoSubtitle: '',           // Subtitle text to show in overlay
-        persistentTitle: false,   // If true, title overlay stays visible
+        persistentTitle: false,      // If true, title overlay stays visible
         controlBarOpacity: options.controlBarOpacity !== undefined ? options.controlBarOpacity : 0.95, // Opacity of control bar (0.0 to 1.0)
         titleOverlayOpacity: options.titleOverlayOpacity !== undefined ? options.titleOverlayOpacity : 0.95, // Opacity of title overlay (0.0 to 1.0)
+        moreinfoTitle: '',           // Title for more information modal (settings button)
+        moreinfoDescription: '',     // Description for more information modal (settings button)
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
         defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
@@ -190,6 +192,8 @@ constructor(videoElement, options = {}) {
         this.createPlayerStructure();
         this.initializeElements();
         this.setupMenuToggles(); // Initialize menu toggle system
+        // Initialize more info modal
+        this.createMoreInfoModal();
         // audio player adaptation
         this.adaptToAudioFile = function () {
             if (this.options.audiofile) {
@@ -745,34 +749,32 @@ setVideoTitle(title) {
 
     if (this.topBarTitle) {
         this.topBarTitle.textContent = this.decodeHTMLEntities(title);
+    }
 
-        // show top bar if title overlay is enabled
-        if (title && this.options.showTitleOverlay) {
-            const titleSection = this.topBar.querySelector('.top-bar-title');
-            if (titleSection) {
-                titleSection.style.display = '';
-            }
+    // show top bar if title overlay is enabled
+    if (title && this.options.showTitleOverlay) {
+        const titleSection = this.topBar?.querySelector('.top-bar-title');
+        if (titleSection) {
+            titleSection.style.display = '';
         }
-    } else if (this.topBar && title) {
-        // create title section
+
+        // Show background
+        if (this.topBar) {
+            this.topBar.classList.remove('no-title-background');
+        }
+    } else if (this.topBar && !title) {
+        // Hide title section and background if no title
         const titleSection = this.topBar.querySelector('.top-bar-title');
-        if (!titleSection) {
-            const newTitleSection = document.createElement('div');
-            newTitleSection.className = 'top-bar-title';
-
-            const titleElement = document.createElement('h3');
-            titleElement.className = 'video-title';
-            titleElement.textContent = this.decodeHTMLEntities(title);
-            newTitleSection.appendChild(titleElement);
-
-            const settingsControl = this.topBar.querySelector('.settings-control');
-            this.topBar.insertBefore(newTitleSection, settingsControl);
-
-            this.topBarTitle = titleElement;
+        if (titleSection && !this.options.videoTitle) {
+            titleSection.style.display = 'none';
+            this.topBar.classList.add('no-title-background');
         }
     }
 
-    if (this.options.debug) console.log('Video title set:', title);
+    if (this.options.debug) {
+        console.log('Video title set:', title);
+    }
+
     return this;
 }
 
@@ -825,18 +827,23 @@ setPersistentTitle(persistent) {
 }
 
 /**
- * Enable title overlay (shows top bar with title)
+ * Enable title overlay (shows title and background)
  * @returns {Object} this
  */
 enableTitleOverlay() {
     if (!this.topBar) {
-        if (this.options.debug) console.warn('Top bar not available');
+        if (this.options.debug) {
+            console.warn('Top bar not available');
+        }
         return this;
     }
 
     this.options.showTitleOverlay = true;
 
-    // show top bar
+    // Show background
+    this.topBar.classList.remove('no-title-background');
+
+    // Show top bar if video title is present
     if (this.options.videoTitle) {
         const titleSection = this.topBar.querySelector('.top-bar-title');
         if (titleSection) {
@@ -844,12 +851,15 @@ enableTitleOverlay() {
         }
     }
 
-    if (this.options.debug) console.log('Title overlay enabled');
+    if (this.options.debug) {
+        console.log('Title overlay enabled (with background)');
+    }
+
     return this;
 }
 
 /**
- * Disable title overlay (hides top bar)
+ * Disable title overlay (hides title and background)
  * @returns {Object} this
  */
 disableTitleOverlay() {
@@ -857,13 +867,19 @@ disableTitleOverlay() {
 
     this.options.showTitleOverlay = false;
 
-    // hide top bar
+    // Hide background
+    this.topBar.classList.add('no-title-background');
+
+    // Hide top bar title section
     const titleSection = this.topBar.querySelector('.top-bar-title');
     if (titleSection) {
         titleSection.style.display = 'none';
     }
 
-    if (this.options.debug) console.log('Title overlay disabled');
+    if (this.options.debug) {
+        console.log('Title overlay disabled (background hidden)');
+    }
+
     return this;
 }
 

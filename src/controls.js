@@ -617,6 +617,100 @@ updateSettingsMenuVisibility() {
 }
 
 /**
+ * Create more information modal
+ * @returns {void}
+ */
+createMoreInfoModal() {
+    if (!this.container) return;
+
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'moreinfo-modal-overlay';
+    modalOverlay.style.display = 'none';
+
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'moreinfo-modal-content';
+
+    // Create modal header with close button
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'moreinfo-modal-header';
+
+    const modalTitle = document.createElement('h3');
+    modalTitle.className = 'moreinfo-modal-title';
+    modalTitle.textContent = this.decodeHTMLEntities(this.options.moreinfoTitle || '');
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'moreinfo-modal-close';
+    closeButton.innerHTML = '&times;';
+    closeButton.setAttribute('aria-label', 'Close');
+
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeButton);
+
+    // Create modal body with scrollable description
+    const modalBody = document.createElement('div');
+    modalBody.className = 'moreinfo-modal-body';
+    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+
+    // Assemble modal
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalOverlay.appendChild(modalContent);
+
+    // Add to container
+    this.container.appendChild(modalOverlay);
+
+    // Save reference
+    this.moreinfoModal = modalOverlay;
+
+    // Bind close events
+    closeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeMoreInfoModal();
+    });
+
+    modalOverlay.addEventListener('click', (e) => {
+        // Close if clicking outside modal content
+        if (e.target === modalOverlay) {
+            this.closeMoreInfoModal();
+        }
+    });
+
+    if (this.options.debug) {
+        console.log('[More Info] Modal created');
+    }
+}
+
+/**
+ * Open more information modal
+ * @returns {void}
+ */
+openMoreInfoModal() {
+    if (!this.moreinfoModal) return;
+
+    this.moreinfoModal.style.display = 'flex';
+
+    if (this.options.debug) {
+        console.log('[More Info] Modal opened');
+    }
+}
+
+/**
+ * Close more information modal
+ * @returns {void}
+ */
+closeMoreInfoModal() {
+    if (!this.moreinfoModal) return;
+
+    this.moreinfoModal.style.display = 'none';
+
+    if (this.options.debug) {
+        console.log('[More Info] Modal closed');
+    }
+}
+
+/**
  * Populate settings menu with controls
  */
 populateSettingsMenu() {
@@ -626,6 +720,18 @@ populateSettingsMenu() {
     if (!settingsMenu) return;
 
     let menuHTML = '';
+
+    // MORE INFORMATION - at the beginning if both title or description are provided
+    const hasMoreInfo = this.options.moreinfoTitle || this.options.moreinfoDescription;
+
+    if (hasMoreInfo) {
+        const moreInfoLabel = this.t('more_information');
+        menuHTML += `
+            <div class="settings-option" data-action="moreinfo">
+                <span class="settings-option-label">${moreInfoLabel}</span>
+            </div>
+        `;
+    }
 
     // SPEED - always included
     if (this.options.showSpeedControl) {
@@ -811,6 +917,16 @@ bindSettingsMenuEvents() {
 
             if (action === 'pip') {
                 this.togglePictureInPicture();
+                return;
+            }
+
+            // Handle More Info action
+            if (action === 'moreinfo') {
+                this.openMoreInfoModal();
+                // Close settings menu
+                settingsMenu.classList.remove('active');
+                const settingsBtn = this.container?.querySelector('.settings-btn');
+                if (settingsBtn) settingsBtn.classList.remove('active');
                 return;
             }
         }

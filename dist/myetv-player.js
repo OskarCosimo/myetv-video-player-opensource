@@ -28,7 +28,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Impostazioni',
                 'loading': 'Caricamento...',
                 'encoding_in_progress': 'Encoding in corso',
-                'restart_video': 'Torna all\'inizio'
+                'restart_video': 'Torna all\'inizio',
+                'more_information': 'Ulteriori informazioni'
             },
 
             // English
@@ -53,7 +54,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Settings',
                 'loading': 'Loading...',
                 'encoding_in_progress': 'Encoding in progress',
-                'restart_video': 'Restart the video'
+                'restart_video': 'Restart the video',
+                'more_information': 'More information'
             },
 
             // Español
@@ -78,7 +80,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Configuración',
                 'loading': 'Cargando...',
                 'encoding_in_progress': 'Codificación en curso',
-                'restart_video': 'Reiniciar el vídeo'
+                'restart_video': 'Reiniciar el vídeo',
+                'more_information': 'Más información'
             },
 
             // Français
@@ -103,7 +106,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Paramètres',
                 'loading': 'Chargement...',
                 'encoding_in_progress': 'Encodage en cours',
-                'restart_video': 'Redémarrer la vidéo'
+                'restart_video': 'Redémarrer la vidéo',
+                'more_information': 'Plus d\'informations'
             },
 
             // Deutsch
@@ -128,7 +132,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Einstellungen',
                 'loading': 'Laden...',
                 'encoding_in_progress': 'Kodierung läuft',
-                'restart_video': 'Video neu starten'
+                'restart_video': 'Video neu starten',
+                'more_information': 'Weitere Informationen'
             },
 
             // Português
@@ -153,7 +158,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Configurações',
                 'loading': 'Carregando...',
                 'encoding_in_progress': 'Codificação em andamento',
-                'restart_video': 'Restart video'
+                'restart_video': 'Reiniciar vídeo',
+                'more_information': 'Mais informações'
             },
 
             // 中文
@@ -178,7 +184,8 @@ class VideoPlayerI18n {
                 'settings_menu': '设置',
                 'loading': '加载中...',
                 'encoding_in_progress': '编码中',
-                'restart_video': '重新开始视频'
+                'restart_video': '重新开始视频',
+                'more_information': '更多信息'
             },
 
             // 日本語
@@ -203,7 +210,8 @@ class VideoPlayerI18n {
                 'settings_menu': '設定',
                 'loading': '読み込み中...',
                 'encoding_in_progress': 'エンコード中',
-                'restart_video': 'ビデオを再開'
+                'restart_video': 'ビデオを再開',
+                'more_information': '詳細情報'
             },
 
             // Русский
@@ -228,7 +236,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Настройки',
                 'loading': 'Загрузка...',
                 'encoding_in_progress': 'Кодирование',
-                'restart_video': 'Перезапустить видео'
+                'restart_video': 'Перезапустить видео',
+                'more_information': 'Дополнительная информация'
             },
 
             // العربية
@@ -253,7 +262,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'الإعدادات',
                 'loading': 'جاري التحميل...',
                 'encoding_in_progress': 'الترميز جارٍ',
-                'restart_video': 'إعادة تشغيل الفيديو'
+                'restart_video': 'إعادة تشغيل الفيديو',
+                'more_information': 'مزيد من المعلومات'
             },
 
             // 한국어 (Korean)
@@ -278,7 +288,8 @@ class VideoPlayerI18n {
                 'settings_menu': '설정',
                 'loading': '로딩 중...',
                 'encoding_in_progress': '인코딩 진행 중',
-                'restart_video': 'Restart video'
+                'restart_video': '동영상 재생 재개',
+                'more_information': '추가 정보'
             },
 
             // Polski
@@ -303,7 +314,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Ustawienia',
                 'loading': 'Ładowanie...',
                 'encoding_in_progress': 'Kodowanie w toku',
-                'restart_video': 'Restart video'
+                'restart_video': 'Uruchom ponownie wideo',
+                'more_information': 'Więcej informacji'
             },
 
             // Magyar
@@ -328,7 +340,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Beállítások',
                 'loading': 'Betöltés...',
                 'encoding_in_progress': 'Kódolás folyamatban',
-                'restart_video': 'Restart video'
+                'restart_video': 'Videó újraindítása',
+                'more_information': 'További információk'
             },
 
             // Türkçe
@@ -353,7 +366,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Ayarlar',
                 'loading': 'Yükleniyor...',
                 'encoding_in_progress': 'Kodlama devam ediyor',
-                'restart_video': 'Restart video'
+                'restart_video': 'Videoyu yeniden başlat',
+                'more_information': 'Daha fazla bilgi'
             },
 
             // Nederlands
@@ -378,7 +392,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Instellingen',
                 'loading': 'Laden...',
                 'encoding_in_progress': 'Codering bezig',
-                'restart_video': 'Restart video'
+                'restart_video': 'Video opnieuw starten',
+                'more_information': 'Meer informatie'
             },
 
             // हिन्दी (Hindi)
@@ -403,7 +418,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'सेटिंग्स',
                 'loading': 'लोड हो रहा है...',
                 'encoding_in_progress': 'एन्कोडिंग प्रगति में',
-                'restart_video': 'Restart video'
+                'restart_video': 'वीडियो पुनः आरंभ करें',
+                'more_information': 'अधिक जानकारी'
             },
 
             // Svenska
@@ -428,7 +444,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Inställningar',
                 'loading': 'Laddar...',
                 'encoding_in_progress': 'Kodning pågår',
-                'restart_video': 'Restart video'
+                'restart_video': 'Starta om videon',
+                'more_information': 'Mer information'
             },
 
             // Bahasa Indonesia
@@ -453,7 +470,8 @@ class VideoPlayerI18n {
                 'settings_menu': 'Pengaturan',
                 'loading': 'Memuat...',
                 'encoding_in_progress': 'Encoding sedang berlangsung',
-                'restart_video': 'Restart video'
+                'restart_video': 'Mulai ulang video',
+                'more_information': 'Informasi lebih lanjut'
             }
         };
 
@@ -584,7 +602,8 @@ try {
                 'settings_menu': 'Settings',
                 'loading': 'Loading...',
                 'encoding_in_progress': 'Encoding in progress',
-                'restart_video': 'Restart video'
+                'restart_video': 'Restart video',
+                'more_information': 'More information'
             };
             return fallback[key] || key;
         },
@@ -666,9 +685,11 @@ constructor(videoElement, options = {}) {
         showTitleOverlay: false,     // Show video title overlay
         videoTitle: '',              // Title text to show in overlay
         videoSubtitle: '',           // Subtitle text to show in overlay
-        persistentTitle: false,   // If true, title overlay stays visible
+        persistentTitle: false,      // If true, title overlay stays visible
         controlBarOpacity: options.controlBarOpacity !== undefined ? options.controlBarOpacity : 0.95, // Opacity of control bar (0.0 to 1.0)
         titleOverlayOpacity: options.titleOverlayOpacity !== undefined ? options.titleOverlayOpacity : 0.95, // Opacity of title overlay (0.0 to 1.0)
+        moreinfoTitle: '',           // Title for more information modal (settings button)
+        moreinfoDescription: '',     // Description for more information modal (settings button)
         debug: false,             // Enable/disable debug logging
         autoplay: false,          // if video should autoplay at start
         defaultQuality: 'auto',   // 'auto', '1080p', '720p', '480p', etc.
@@ -826,6 +847,8 @@ constructor(videoElement, options = {}) {
         this.createPlayerStructure();
         this.initializeElements();
         this.setupMenuToggles(); // Initialize menu toggle system
+        // Initialize more info modal
+        this.createMoreInfoModal();
         // audio player adaptation
         this.adaptToAudioFile = function () {
             if (this.options.audiofile) {
@@ -1381,34 +1404,32 @@ setVideoTitle(title) {
 
     if (this.topBarTitle) {
         this.topBarTitle.textContent = this.decodeHTMLEntities(title);
+    }
 
-        // show top bar if title overlay is enabled
-        if (title && this.options.showTitleOverlay) {
-            const titleSection = this.topBar.querySelector('.top-bar-title');
-            if (titleSection) {
-                titleSection.style.display = '';
-            }
+    // show top bar if title overlay is enabled
+    if (title && this.options.showTitleOverlay) {
+        const titleSection = this.topBar?.querySelector('.top-bar-title');
+        if (titleSection) {
+            titleSection.style.display = '';
         }
-    } else if (this.topBar && title) {
-        // create title section
+
+        // Show background
+        if (this.topBar) {
+            this.topBar.classList.remove('no-title-background');
+        }
+    } else if (this.topBar && !title) {
+        // Hide title section and background if no title
         const titleSection = this.topBar.querySelector('.top-bar-title');
-        if (!titleSection) {
-            const newTitleSection = document.createElement('div');
-            newTitleSection.className = 'top-bar-title';
-
-            const titleElement = document.createElement('h3');
-            titleElement.className = 'video-title';
-            titleElement.textContent = this.decodeHTMLEntities(title);
-            newTitleSection.appendChild(titleElement);
-
-            const settingsControl = this.topBar.querySelector('.settings-control');
-            this.topBar.insertBefore(newTitleSection, settingsControl);
-
-            this.topBarTitle = titleElement;
+        if (titleSection && !this.options.videoTitle) {
+            titleSection.style.display = 'none';
+            this.topBar.classList.add('no-title-background');
         }
     }
 
-    if (this.options.debug) console.log('Video title set:', title);
+    if (this.options.debug) {
+        console.log('Video title set:', title);
+    }
+
     return this;
 }
 
@@ -1461,18 +1482,23 @@ setPersistentTitle(persistent) {
 }
 
 /**
- * Enable title overlay (shows top bar with title)
+ * Enable title overlay (shows title and background)
  * @returns {Object} this
  */
 enableTitleOverlay() {
     if (!this.topBar) {
-        if (this.options.debug) console.warn('Top bar not available');
+        if (this.options.debug) {
+            console.warn('Top bar not available');
+        }
         return this;
     }
 
     this.options.showTitleOverlay = true;
 
-    // show top bar
+    // Show background
+    this.topBar.classList.remove('no-title-background');
+
+    // Show top bar if video title is present
     if (this.options.videoTitle) {
         const titleSection = this.topBar.querySelector('.top-bar-title');
         if (titleSection) {
@@ -1480,12 +1506,15 @@ enableTitleOverlay() {
         }
     }
 
-    if (this.options.debug) console.log('Title overlay enabled');
+    if (this.options.debug) {
+        console.log('Title overlay enabled (with background)');
+    }
+
     return this;
 }
 
 /**
- * Disable title overlay (hides top bar)
+ * Disable title overlay (hides title and background)
  * @returns {Object} this
  */
 disableTitleOverlay() {
@@ -1493,13 +1522,19 @@ disableTitleOverlay() {
 
     this.options.showTitleOverlay = false;
 
-    // hide top bar
+    // Hide background
+    this.topBar.classList.add('no-title-background');
+
+    // Hide top bar title section
     const titleSection = this.topBar.querySelector('.top-bar-title');
     if (titleSection) {
         titleSection.style.display = 'none';
     }
 
-    if (this.options.debug) console.log('Title overlay disabled');
+    if (this.options.debug) {
+        console.log('Title overlay disabled (background hidden)');
+    }
+
     return this;
 }
 
@@ -4028,6 +4063,100 @@ updateSettingsMenuVisibility() {
 }
 
 /**
+ * Create more information modal
+ * @returns {void}
+ */
+createMoreInfoModal() {
+    if (!this.container) return;
+
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'moreinfo-modal-overlay';
+    modalOverlay.style.display = 'none';
+
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'moreinfo-modal-content';
+
+    // Create modal header with close button
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'moreinfo-modal-header';
+
+    const modalTitle = document.createElement('h3');
+    modalTitle.className = 'moreinfo-modal-title';
+    modalTitle.textContent = this.decodeHTMLEntities(this.options.moreinfoTitle || '');
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'moreinfo-modal-close';
+    closeButton.innerHTML = '&times;';
+    closeButton.setAttribute('aria-label', 'Close');
+
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeButton);
+
+    // Create modal body with scrollable description
+    const modalBody = document.createElement('div');
+    modalBody.className = 'moreinfo-modal-body';
+    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+
+    // Assemble modal
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalOverlay.appendChild(modalContent);
+
+    // Add to container
+    this.container.appendChild(modalOverlay);
+
+    // Save reference
+    this.moreinfoModal = modalOverlay;
+
+    // Bind close events
+    closeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeMoreInfoModal();
+    });
+
+    modalOverlay.addEventListener('click', (e) => {
+        // Close if clicking outside modal content
+        if (e.target === modalOverlay) {
+            this.closeMoreInfoModal();
+        }
+    });
+
+    if (this.options.debug) {
+        console.log('[More Info] Modal created');
+    }
+}
+
+/**
+ * Open more information modal
+ * @returns {void}
+ */
+openMoreInfoModal() {
+    if (!this.moreinfoModal) return;
+
+    this.moreinfoModal.style.display = 'flex';
+
+    if (this.options.debug) {
+        console.log('[More Info] Modal opened');
+    }
+}
+
+/**
+ * Close more information modal
+ * @returns {void}
+ */
+closeMoreInfoModal() {
+    if (!this.moreinfoModal) return;
+
+    this.moreinfoModal.style.display = 'none';
+
+    if (this.options.debug) {
+        console.log('[More Info] Modal closed');
+    }
+}
+
+/**
  * Populate settings menu with controls
  */
 populateSettingsMenu() {
@@ -4037,6 +4166,18 @@ populateSettingsMenu() {
     if (!settingsMenu) return;
 
     let menuHTML = '';
+
+    // MORE INFORMATION - at the beginning if both title or description are provided
+    const hasMoreInfo = this.options.moreinfoTitle || this.options.moreinfoDescription;
+
+    if (hasMoreInfo) {
+        const moreInfoLabel = this.t('more_information');
+        menuHTML += `
+            <div class="settings-option" data-action="moreinfo">
+                <span class="settings-option-label">${moreInfoLabel}</span>
+            </div>
+        `;
+    }
 
     // SPEED - always included
     if (this.options.showSpeedControl) {
@@ -4222,6 +4363,16 @@ bindSettingsMenuEvents() {
 
             if (action === 'pip') {
                 this.togglePictureInPicture();
+                return;
+            }
+
+            // Handle More Info action
+            if (action === 'moreinfo') {
+                this.openMoreInfoModal();
+                // Close settings menu
+                settingsMenu.classList.remove('active');
+                const settingsBtn = this.container?.querySelector('.settings-btn');
+                if (settingsBtn) settingsBtn.classList.remove('active');
                 return;
             }
         }

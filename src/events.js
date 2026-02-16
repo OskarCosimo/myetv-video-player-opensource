@@ -189,7 +189,18 @@
             // Reset auto-hide timer when video starts playing
             if (this.options.autoHide && this.autoHideInitialized) {
                 if (this.options.debug) console.log('Video playing - reset auto-hide timer');
+
+                // show controls immediately when play starts (in case they were hidden)
                 this.showControlsNow();
+
+                // delete timer
+                if (this.autoHideTimer) {
+                    clearTimeout(this.autoHideTimer);
+                    this.autoHideTimer = null;
+                    if (this.options.debug) console.log('Cleared existing timer before reset');
+                }
+
+                // start new timer
                 this.resetAutoHideTimer();
             }
 
@@ -400,14 +411,6 @@
                 } else {
                     // NORMAL MODE: sempre pausa (comportamento originale, SAME as desktop)
                     this.togglePlayPause();
-                }
-            });
-
-            // CRITICAL: Start auto-hide when video starts playing
-            this.video.addEventListener('play', () => {
-                if (this.options.autoHide && this.autoHideInitialized) {
-                    this.showControlsNow();
-                    this.resetAutoHideTimer();
                 }
             });
 

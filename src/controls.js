@@ -120,29 +120,23 @@ resetAutoHideTimer() {
         return;
     }
 
-    // Allow timer if video is paused at start (autoplay blocked)
+    // do not start the timer if video is in pause
     if (this.video && this.video.paused) {
-        const isInitialPause = this.video.currentTime === 0 && !this.video.ended;
-
-        if (!isInitialPause) {
-            if (this.autoHideDebug && this.options.debug) console.log('Not starting timer - video paused by user');
-            return;
+        if (this.autoHideDebug || this.options.debug) {
+            console.log('Not starting timer - video is paused');
         }
-
-        if (this.autoHideDebug && this.options.debug) {
-            console.log('Video paused but at start - allowing timer (autoplay blocked)');
-        }
+        return;
     }
 
-    // Start timer
+    // Start timer only if the video is playing
     this.autoHideTimer = setTimeout(() => {
-        if (this.autoHideDebug && this.options.debug) {
+        if (this.autoHideDebug || this.options.debug) {
             console.log(`Timer expired after ${this.options.autoHideDelay}ms - hiding controls`);
         }
         this.hideControlsNow();
     }, this.options.autoHideDelay);
 
-    if (this.autoHideDebug && this.options.debug) {
+    if (this.autoHideDebug || this.options.debug) {
         console.log(`Auto-hide timer started (${this.options.autoHideDelay}ms)`);
     }
 }

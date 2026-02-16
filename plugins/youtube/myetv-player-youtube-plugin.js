@@ -1086,13 +1086,16 @@
                     console.log('[YT Plugin] Mouse entered player container');
                 }
 
-                //  show controls immediately
+                // show controls immediately
                 if (this.api.player.showControlsNow) {
                     this.api.player.showControlsNow();
                 }
                 if (this.api.player.resetAutoHideTimer) {
                     this.api.player.resetAutoHideTimer();
                 }
+
+                // reset YouTube's internal auto-hide timer
+                this.resetYouTubeAutoHideTimer();
 
                 // start monitoring
                 this.startMousePositionTracking();
@@ -1119,6 +1122,9 @@
                 if (this.api.player.resetAutoHideTimer) {
                     this.api.player.resetAutoHideTimer();
                 }
+
+                // reset youtube 's internal auto-hide timer on any mouse move
+                this.resetYouTubeAutoHideTimer();
             });
         }
 
@@ -3442,6 +3448,116 @@
             return this.availableCaptions;
         }
 
+        /**
+    * Hide controls specifically for YouTube player
+    * Bypasses the video.paused check in hideControlsNow()
+        */
+        hideControlsForYouTube() {
+            console.log('🔴 hideControlsForYouTube() called');
+
+            // Check mouse over controls (same as player)
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (this.api.player.mouseOverControls && !isTouchDevice) {
+                console.log('   ❌ Not hiding - mouse still over controls');
+                return;
+            }
+
+            // control the youtube status directly to allow hiding controls even when the video is paused (e.g. members-only paused state)
+            if (this.ytPlayer) {
+                const ytState = this.ytPlayer.getPlayerState();
+                // Se YouTube è in pausa, non nascondere
+                if (ytState === 2) { // YT.PlayerState.PAUSED
+                    console.log('   ❌ Not hiding - YouTube player is paused');
+                    return;
+                }
+            }
+
+            // hide controls
+            if (this.api.controls) {
+                console.log('   ✅ Hiding controls...');
+                this.api.controls.classList.remove('show');
+
+                // Remove has-controls class from container
+                if (this.api.container) {
+                    this.api.container.classList.remove('has-controls');
+                }
+
+                // Update controlbar height
+                if (this.api.player.updateControlbarHeight) {
+                    this.api.player.updateControlbarHeight();
+                }
+
+                // Update watermark position
+                if (this.api.player.updateWatermarkPosition) {
+                    this.api.player.updateWatermarkPosition();
+                }
+
+                // Hide title overlay (if not persistent)
+                if (this.api.player.options.showTitleOverlay && !this.api.player.options.persistentTitle) {
+                    if (this.api.player.hideTitleOverlay) {
+                        this.api.player.hideTitleOverlay();
+                    }
+                }
+
+                // Hide cursor
+                if (this.api.player.hideCursor) {
+                    this.api.player.hideCursor();
+                } else if (this.api.container) {
+                    // Fallback: hide cursor directly
+                    this.api.container.classList.add('hide-cursor');
+                }
+
+                console.log('   ✅ Controls hidden successfully');
+            }
+        }
+
+        /**
+ * Reset YouTube auto-hide timer (chiamato da mouse move)
+ */
+        resetYouTubeAutoHideTimer() {
+            // delete timer if set
+            if (this.youtubeAutoHideTimer) {
+                clearTimeout(this.youtubeAutoHideTimer);
+                this.youtubeAutoHideTimer = null;
+                if (this.api.player.options.debug) {
+                    console.log('🔄 YouTube timer reset (mouse moved)');
+                }
+            }
+
+            // check mouse over controls (same as player) - if mouse is on controls, do not start timer
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (this.api.player.mouseOverControls && !isTouchDevice) {
+                if (this.api.player.options.debug) {
+                    console.log('🔄 Not starting timer - mouse on controls');
+                }
+                return;
+            }
+
+            // check YouTube player state to allow timer even when video is paused (e.g. members-only paused state)
+            if (this.ytPlayer) {
+                const ytState = this.ytPlayer.getPlayerState();
+                // do not start timer if YouTube is paused or unstarted (e.g. members-only paused state)
+                if (ytState === 2 || ytState === -1) { // PAUSED o UNSTARTED
+                    if (this.api.player.options.debug) {
+                        console.log('🔄 Not starting timer - YouTube paused/unstarted');
+                    }
+                    return;
+                }
+            }
+
+            // start new timer
+            if (this.api.player.options.debug) {
+                console.log('🔄 Starting new YouTube timer');
+            }
+
+            this.youtubeAutoHideTimer = setTimeout(() => {
+                if (this.api.player.options.debug) {
+                    console.log('⏰ YouTube timer expired (after mouse move)');
+                }
+                this.hideControlsForYouTube();
+            }, this.api.player.options.autoHideDelay || 3000);
+        }
+
         // ===== PLAYER EVENT HANDLERS =====
 
         onPlayerStateChange(event) {
@@ -3478,22 +3594,42 @@
             }
 
             if (event.data === YT.PlayerState.PLAYING) {
-                // Video playing: remove class and restart auto-hide
+                console.log('🟢 PLAYING STATE HANDLER:');
+
                 if (this.api.container) {
                     this.api.container.classList.remove('video-paused');
                 }
-                // Restart auto-hide only if enabled
+
                 if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
+                    console.log('   - Auto-hide system is enabled and initialized');
+
                     if (this.api.player.showControlsNow) {
+                        console.log('   - Calling showControlsNow()');
                         this.api.player.showControlsNow();
                     }
-                    if (this.api.player.resetAutoHideTimer) {
-                        this.api.player.resetAutoHideTimer();
+
+                    // delete any existing timers to prevent conflicts
+                    if (this.api.player.autoHideTimer) {
+                        clearTimeout(this.api.player.autoHideTimer);
+                        this.api.player.autoHideTimer = null;
                     }
+
+                    if (this.youtubeAutoHideTimer) {
+                        clearTimeout(this.youtubeAutoHideTimer);
+                        this.youtubeAutoHideTimer = null;
+                    }
+
+                    // use a separate timer variable for YouTube auto-hide to avoid conflicts with the main player timer (which may be used for other purposes)
+                    console.log('   - Starting YouTube plugin auto-hide timer (separate variable)');
+                    this.youtubeAutoHideTimer = setTimeout(() => {
+                        console.log('   ⏰ YouTube plugin timer expired!');
+                        this.hideControlsForYouTube();
+                    }, this.api.player.options.autoHideDelay || 3000);
+
+                    console.log('   ✅ YouTube timer started:', this.youtubeAutoHideTimer);
                 }
 
-                if (this.api.player.options.debug)
-                    console.log('YT Plugin: Video playing - auto-hide restarted');
+                console.log('🟢 PLAYING handler completed');
             }
 
             // Handle when video fails to autoplay (stays in UNSTARTED)

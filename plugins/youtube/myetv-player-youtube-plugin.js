@@ -15,6 +15,8 @@
                 showYouTubeUI: options.showYouTubeUI !== undefined ? options.showYouTubeUI : false,
                 noCookie: options.noCookie !== undefined ? options.noCookie : false,
                 showNativeControlsButton: options.showNativeControlsButton !== undefined ? options.showNativeControlsButton : true,
+                rememberNativeControlsPreference: options.rememberNativeControlsPreference !== undefined ?
+                    options.rememberNativeControlsPreference : true,
                 controlBarOpacity: options.controlBarOpacity !== undefined
                     ? options.controlBarOpacity
                     : (player.options.controlBarOpacity !== undefined ? player.options.controlBarOpacity : 0.95),
@@ -42,6 +44,9 @@
                 debug: true,
                 ...options
             };
+
+            // Storage key for user preference
+            this.storageKey = 'myetv_youtube_native_controls_' + (player.video.id || 'default');
 
             // Normalize 'auto' to 'default' for YouTube API compatibility
             if (this.options.quality === 'auto') {
@@ -267,7 +272,7 @@
                     setTimeout(checkAndApply, 200);
                 } else if (found) {
                     if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] ✅ Watermark made circular successfully');
+                        console.log('[YT Plugin]  Watermark made circular successfully');
                     }
                 } else {
                     if (this.api.player.options.debug) {
@@ -280,6 +285,45 @@
             setTimeout(checkAndApply, 100);
         }
 
+/**
+* Get user preference for native controls from localStorage
+*/
+getUserNativeControlsPreference() {
+    if (!this.options.rememberNativeControlsPreference) {
+        return false;
+    }
+
+    try {
+        const stored = localStorage.getItem(this.storageKey);
+        return stored === 'true';
+    } catch (e) {
+        if (this.api.player.options.debug) {
+            console.warn('[YT Plugin] Could not read localStorage:', e);
+        }
+        return false;
+    }
+}
+
+/**
+ * Save user preference for native controls to localStorage
+ */
+saveUserNativeControlsPreference(showNative) {
+    if (!this.options.rememberNativeControlsPreference) {
+        return;
+    }
+
+    try {
+        localStorage.setItem(this.storageKey, showNative.toString());
+
+        if (this.api.player.options.debug) {
+            console.log('[YT Plugin] Saved user preference:', showNative);
+        }
+    } catch (e) {
+        if (this.api.player.options.debug) {
+            console.warn('[YT Plugin] Could not write to localStorage:', e);
+        }
+    }
+}
 
         /**
          * Set auto caption language on player initialization
@@ -1259,7 +1303,7 @@
             this.ytPlayerContainer.style.visibility = 'visible';
             this.ytPlayerContainer.style.opacity = '1';
             this.ytPlayerContainer.style.zIndex = '2';
-            if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Forced container visibility');
+            if (this.api.player.options.debug) console.log('[YT Plugin]  Forced container visibility');
             // Force visibility with !important via CSS injection
             const forceVisibilityCSS = document.createElement('style');
             forceVisibilityCSS.id = 'yt-force-visibility-' + this.player.video.id;
@@ -1413,6 +1457,17 @@
                 }
             }
 
+            // Check user preference for native controls
+            if (this.getUserNativeControlsPreference()) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] User prefers native controls - showing them');
+                }
+
+                setTimeout(() => {
+                    this.showYouTubeNativeControls();
+                }, 1000);
+            }
+
             if (this.api.player.options.debug) console.log('YT Plugin: Setup completed');
             this.api.triggerEvent('youtubeplugin:playerready', {});
 
@@ -1434,7 +1489,7 @@
             console.log('[YT Plugin] controlbar:', controlbar);
 
             if (iframe) {
-                console.log('[YT Plugin] ✅ Showing YouTube controls');
+                console.log('[YT Plugin]  Showing YouTube controls');
 
                 // Enable clicks on YouTube iframe
                 iframe.style.pointerEvents = 'auto';
@@ -1495,7 +1550,7 @@
                 controlbar.style.display = '';
             }
 
-            console.log('[YT Plugin] ✅ Custom controls restored');
+            console.log('[YT Plugin]  Custom controls restored');
         }
 
         forceHideCustomControls() {
@@ -1624,7 +1679,7 @@
                 clearInterval(this.timeUpdateInterval);
                 this.timeUpdateInterval = null;
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] ✅ Time update interval stopped');
+                    console.log('[YT Plugin]  Time update interval stopped');
                 }
             }
 
@@ -1649,7 +1704,7 @@
             }, 100); // Every 100ms to override any other updates
 
             if (this.api.player.options.debug) {
-                console.log('[YT Plugin] ✅ Live UI setup complete');
+                console.log('[YT Plugin]  Live UI setup complete');
             }
         }
 
@@ -1703,7 +1758,7 @@
                             }
 
                             if (this.api.player.options.debug) {
-                                console.log('[YT Plugin] ✅ DVR ENABLED - progress bar active with theme color');
+                                console.log('[YT Plugin]  DVR ENABLED - progress bar active with theme color');
                             }
 
                             this.ytPlayer.seekTo(duration, true);
@@ -2005,7 +2060,7 @@
                 }, 5000);
 
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] ✅ Badge updated to REPLAY mode');
+                    console.log('[YT Plugin]  Badge updated to REPLAY mode');
                 }
             }
 
@@ -2025,7 +2080,7 @@
             }
 
             if (this.api.player.options.debug) {
-                console.log('[YT Plugin] ✅ Transitioned from LIVE to REPLAY mode');
+                console.log('[YT Plugin]  Transitioned from LIVE to REPLAY mode');
             }
         }
 
@@ -2231,7 +2286,7 @@
                     value: quality
                 }));
 
-                if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Qualities loaded:', this.availableQualities);
+                if (this.api.player.options.debug) console.log('[YT Plugin]  Qualities loaded:', this.availableQualities);
                 this.api.triggerEvent('youtubeplugin:qualitiesloaded', { qualities: this.availableQualities });
                 this.injectFakeQualities();
                 this.createQualityControl();
@@ -2406,7 +2461,7 @@
 
             if (iframe) {
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] ✅ Showing YouTube controls');
+                    console.log('[YT Plugin]  Showing YouTube controls');
                 }
 
                 // Bring iframe to front
@@ -2465,64 +2520,237 @@
             }
 
             if (this.api.player.options.debug) {
-                console.log('[YT Plugin] ✅ Custom controls restored');
+                console.log('[YT Plugin]  Custom controls restored');
             }
         }
 
-        createYouTubeControlsButton() {
-            // Check if button is enabled
-            if (!this.options.showNativeControlsButton) {
+createYouTubeControlsButton() {
+    // Check if button is enabled
+    if (!this.options.showNativeControlsButton) {
+        if (this.api.player.options.debug) {
+            console.log('[YT Plugin] Native controls button disabled by option');
+        }
+        return;
+    }
+
+    // Check if button already exists
+    if (this.api.container.querySelector('.youtube-controls-btn')) {
+        return;
+    }
+
+    const controlsRight = this.api.container.querySelector('.controls-right');
+    if (!controlsRight) return;
+
+    const buttonHTML = `
+    <button class="control-btn youtube-controls-btn" title="Show YouTube Controls">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+            <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
+        </svg>
+    </button>
+`;
+
+    // Insert before quality control
+    const qualityControl = controlsRight.querySelector('.quality-control');
+    if (qualityControl) {
+        qualityControl.insertAdjacentHTML('beforebegin', buttonHTML);
+    } else {
+        const fullscreenBtn = controlsRight.querySelector('.fullscreen-btn');
+        if (fullscreenBtn) {
+            fullscreenBtn.insertAdjacentHTML('beforebegin', buttonHTML);
+        } else {
+            controlsRight.insertAdjacentHTML('beforeend', buttonHTML);
+        }
+    }
+
+    // Add click listener
+    const btn = this.api.container.querySelector('.youtube-controls-btn');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] YouTube controls button clicked');
+            }
+            //  CHANGED: Call the new method instead
+            this.showYouTubeNativeControls();
+        });
+
+        // Add custom styling to make it red like YouTube
+        btn.style.color = '#ff0000';
+
+        if (this.api.player.options.debug) {
+            console.log('[YT Plugin] YouTube controls button created');
+        }
+    }
+        }
+
+        /**
+         * Show YouTube native controls and hide custom controls
+         */
+        showYouTubeNativeControls() {
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Showing YouTube native controls');
+            }
+
+            // Save user preference
+            this.saveUserNativeControlsPreference(true);
+
+            // Hide custom controls
+            if (this.api.controls) {
+                this.api.controls.style.opacity = '0';
+                this.api.controls.style.visibility = 'hidden';
+                this.api.controls.style.pointerEvents = 'none';
+            }
+
+            // Hide player-top-bar
+            const topBar = this.api.container.querySelector('.player-top-bar');
+            if (topBar) {
+                topBar.style.opacity = '0';
+                topBar.style.visibility = 'hidden';
+                topBar.style.pointerEvents = 'none';
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Native controls button disabled by option');
+                    console.log('[YT Plugin] player-top-bar hidden');
                 }
-                return;
             }
 
-            // Check if button already exists
-            if (this.api.container.querySelector('.youtube-controls-btn')) {
-                return;
+            // Hide overlay
+            if (this.mouseMoveOverlay) {
+                this.mouseMoveOverlay.style.pointerEvents = 'none';
             }
 
-            const controlsRight = this.api.container.querySelector('.controls-right');
-            if (!controlsRight) return;
+            // Enable YouTube iframe clicks
+            const iframe = this.ytPlayerContainer?.querySelector('iframe');
+            if (iframe) {
+                iframe.style.pointerEvents = 'auto';
+            }
 
-            const buttonHTML = `
-        <button class="control-btn youtube-controls-btn" title="Show YouTube Controls">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
-            </svg>
-        </button>
+            // Set flag to block control bar from showing
+            this.nativeControlsActive = true;
+
+            // Create Return to Custom Controls button
+            this.createReturnButton();
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] YouTube native controls shown');
+            }
+        }
+
+        /**
+         * Hide YouTube native controls and show custom controls
+         */
+        hideYouTubeNativeControls() {
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Hiding YouTube native controls, showing custom controls');
+            }
+
+            // Save user preference
+            this.saveUserNativeControlsPreference(false);
+
+            // Show custom controls
+            if (this.api.controls) {
+                this.api.controls.style.opacity = '';
+                this.api.controls.style.visibility = '';
+                this.api.controls.style.pointerEvents = '';
+            }
+
+            // Show player-top-bar
+            const topBar = this.api.container.querySelector('.player-top-bar');
+            if (topBar) {
+                topBar.style.opacity = '';
+                topBar.style.visibility = '';
+                topBar.style.pointerEvents = '';
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] player-top-bar shown');
+                }
+            }
+
+            // Restore overlay
+            if (this.mouseMoveOverlay) {
+                this.mouseMoveOverlay.style.pointerEvents = 'auto';
+            }
+
+            // Disable YouTube iframe clicks (only if mouseClick is false)
+            if (!this.options.mouseClick) {
+                const iframe = this.ytPlayerContainer?.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.pointerEvents = 'none';
+                }
+            }
+
+            // Clear flag to re-enable control bar behavior
+            this.nativeControlsActive = false;
+
+            // Remove return button
+            if (this.returnButton) {
+                this.returnButton.remove();
+                this.returnButton = null;
+            }
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Custom controls restored');
+            }
+        }
+
+        /**
+         * Create button to return to custom controls
+         */
+        createReturnButton() {
+            // Remove existing button if any
+            if (this.returnButton) {
+                this.returnButton.remove();
+            }
+
+            this.returnButton = document.createElement('button');
+            this.returnButton.className = 'youtube-return-btn';
+            this.returnButton.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+        </svg>
+    `;
+            this.returnButton.title = 'Return to Custom Controls';
+
+            // Style the button - square and lower height
+            this.returnButton.style.cssText = `
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        width: 50px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.3s, background 0.3s;
+        padding: 0;
+        color: white;
     `;
 
-            // Insert before quality control
-            const qualityControl = controlsRight.querySelector('.quality-control');
-            if (qualityControl) {
-                qualityControl.insertAdjacentHTML('beforebegin', buttonHTML);
-            } else {
-                const fullscreenBtn = controlsRight.querySelector('.fullscreen-btn');
-                if (fullscreenBtn) {
-                    fullscreenBtn.insertAdjacentHTML('beforebegin', buttonHTML);
-                } else {
-                    controlsRight.insertAdjacentHTML('beforeend', buttonHTML);
-                }
-            }
+            // Hover effect
+            this.returnButton.addEventListener('mouseenter', () => {
+                this.returnButton.style.opacity = '1';
+                this.returnButton.style.background = 'rgba(0, 0, 0, 0.8)';
+            });
 
-            // Add click listener
-            const btn = this.api.container.querySelector('.youtube-controls-btn');
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    if (this.api.player.options.debug) {
-                        console.log('[YT Plugin] YouTube controls button clicked');
-                    }
-                    this.showYouTubeControls();
-                });
+            this.returnButton.addEventListener('mouseleave', () => {
+                this.returnButton.style.opacity = '0.7';
+                this.returnButton.style.background = 'rgba(0, 0, 0, 0.6)';
+            });
 
-                // Add custom styling to make it red like YouTube
-                btn.style.color = '#ff0000';
+            // Click handler
+            this.returnButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.hideYouTubeNativeControls();
+            });
 
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] YouTube controls button created');
-                }
+            // Add to container
+            this.api.container.appendChild(this.returnButton);
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Return button created');
             }
         }
 
@@ -2659,7 +2887,7 @@
                 console.log('[YT Plugin] 🎬 Quality AFTER trick:', actualQuality);
 
                 if (actualQuality === quality || quality === 'default') {
-                    console.log('[YT Plugin] ✅ CSS TRICK WORKED!');
+                    console.log('[YT Plugin]  CSS TRICK WORKED!');
                 } else {
                     console.log('[YT Plugin] ⚠️ Partially worked - got:', actualQuality);
                 }
@@ -2770,7 +2998,7 @@
                                 if (this.ytPlayer && this.ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
                                     consecutiveBuffers = Math.max(0, consecutiveBuffers - 1);
                                     if (this.api.player.options.debug) {
-                                        console.log('[YT Plugin] ✅ Smooth playback - buffer count reduced to:', consecutiveBuffers);
+                                        console.log('[YT Plugin]  Smooth playback - buffer count reduced to:', consecutiveBuffers);
                                     }
                                 }
                             }, 15000);
@@ -2820,7 +3048,7 @@
                         };
                     });
 
-                    if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Captions loaded:', this.availableCaptions);
+                    if (this.api.player.options.debug) console.log('[YT Plugin]  Captions loaded:', this.availableCaptions);
                     this.createSubtitlesControl();
                     this.subtitlesMenuCreated = true;
 
@@ -3156,7 +3384,7 @@
                 this.captionsEnabled = true;
                 this.currentTranslation = translationLanguageCode;
 
-                if (this.api.player.options.debug) console.log('[YT Plugin] ✅ Translation applied');
+                if (this.api.player.options.debug) console.log('[YT Plugin]  Translation applied');
 
                 return true;
             } catch (error) {
@@ -3480,7 +3708,7 @@
             // hide controls
             if (this.api.controls) {
                 if (this.api.player.options.debug) {
-                console.log('   ✅ Hiding controls...');
+                console.log('    Hiding controls...');
             }
                 this.api.controls.classList.remove('show');
 
@@ -3514,7 +3742,7 @@
                     this.api.container.classList.add('hide-cursor');
                 }
                 if (this.api.player.options.debug) {
-                    console.log('   ✅ Controls hidden successfully');
+                    console.log('    Controls hidden successfully');
                 }
             }
         }
@@ -3583,6 +3811,13 @@
 
             // Handle auto-hide based on YouTube state
             if (event.data === YT.PlayerState.PAUSED) {
+                // Don't show controls if native controls are active
+                if (this.nativeControlsActive) {
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] Video paused but native controls active - not showing custom controls');
+                    }
+                    return; // Exit early
+                }
                 // Video paused: show controls and CANCEL timer
                 if (this.api.player.showControlsNow) {
                     this.api.player.showControlsNow();
@@ -3642,7 +3877,7 @@
                         this.hideControlsForYouTube();
                     }, this.api.player.options.autoHideDelay || 3000);
                 if (this.api.player.options.debug) {
-                console.log('   ✅ YouTube timer started:', this.youtubeAutoHideTimer);
+                console.log('    YouTube timer started:', this.youtubeAutoHideTimer);
             }
                 }
             if (this.api.player.options.debug) {
@@ -4592,7 +4827,7 @@
             // Validate: at least 3 chapters and first starts at 0:00
             if (chapters.length >= 3 && chapters[0].time === 0) {
                 if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] ✅ Found', chapters.length, 'valid chapters');
+                    console.log('[YT Plugin]  Found', chapters.length, 'valid chapters');
                 }
                 return chapters;
             }

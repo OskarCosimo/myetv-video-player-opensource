@@ -113,6 +113,9 @@ const player = new MYETVPlayer('myVideo', {
             // Show the button on the controlbar to enable the YouTube native controls temporarily
             showNativeControlsButton: true,
 
+            // To remember the user preferences when click on the native button
+            rememberNativeControlsPreference: true
+
             // Extract and show the Youtube chapters (API Key is required)
             showYoutubeChapters : true,
 

@@ -3453,12 +3453,15 @@
     * Bypasses the video.paused check in hideControlsNow()
         */
         hideControlsForYouTube() {
+            if (this.api.player.options.debug) {
             console.log('🔴 hideControlsForYouTube() called');
-
+        }
             // Check mouse over controls (same as player)
             const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
             if (this.api.player.mouseOverControls && !isTouchDevice) {
+                if (this.api.player.options.debug) {
                 console.log('   ❌ Not hiding - mouse still over controls');
+            }
                 return;
             }
 
@@ -3467,14 +3470,18 @@
                 const ytState = this.ytPlayer.getPlayerState();
                 // Se YouTube è in pausa, non nascondere
                 if (ytState === 2) { // YT.PlayerState.PAUSED
+                    if (this.api.player.options.debug) {
                     console.log('   ❌ Not hiding - YouTube player is paused');
+                }
                     return;
                 }
             }
 
             // hide controls
             if (this.api.controls) {
+                if (this.api.player.options.debug) {
                 console.log('   ✅ Hiding controls...');
+            }
                 this.api.controls.classList.remove('show');
 
                 // Remove has-controls class from container
@@ -3506,8 +3513,9 @@
                     // Fallback: hide cursor directly
                     this.api.container.classList.add('hide-cursor');
                 }
-
-                console.log('   ✅ Controls hidden successfully');
+                if (this.api.player.options.debug) {
+                    console.log('   ✅ Controls hidden successfully');
+                }
             }
         }
 
@@ -3593,18 +3601,22 @@
                     console.log('YT Plugin: Video paused - controls locked visible');
             }
 
-            if (event.data === YT.PlayerState.PLAYING) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            if (this.api.player.options.debug) {
                 console.log('🟢 PLAYING STATE HANDLER:');
-
+        }
                 if (this.api.container) {
                     this.api.container.classList.remove('video-paused');
                 }
 
-                if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
+            if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
+                if (this.api.player.options.debug) {
                     console.log('   - Auto-hide system is enabled and initialized');
-
-                    if (this.api.player.showControlsNow) {
-                        console.log('   - Calling showControlsNow()');
+            }
+                if (this.api.player.showControlsNow) {
+                    if (this.api.player.options.debug) {
+                    console.log('   - Calling showControlsNow()');
+                }
                         this.api.player.showControlsNow();
                     }
 
@@ -3619,17 +3631,23 @@
                         this.youtubeAutoHideTimer = null;
                     }
 
-                    // use a separate timer variable for YouTube auto-hide to avoid conflicts with the main player timer (which may be used for other purposes)
-                    console.log('   - Starting YouTube plugin auto-hide timer (separate variable)');
-                    this.youtubeAutoHideTimer = setTimeout(() => {
-                        console.log('   ⏰ YouTube plugin timer expired!');
+                // use a separate timer variable for YouTube auto-hide to avoid conflicts with the main player timer (which may be used for other purposes)
+                if (this.api.player.options.debug) {
+                console.log('   - Starting YouTube plugin auto-hide timer (separate variable)');
+            }
+                this.youtubeAutoHideTimer = setTimeout(() => {
+                    if (this.api.player.options.debug) {
+                    console.log('   ⏰ YouTube plugin timer expired!');
+                }
                         this.hideControlsForYouTube();
                     }, this.api.player.options.autoHideDelay || 3000);
-
-                    console.log('   ✅ YouTube timer started:', this.youtubeAutoHideTimer);
+                if (this.api.player.options.debug) {
+                console.log('   ✅ YouTube timer started:', this.youtubeAutoHideTimer);
+            }
                 }
-
-                console.log('🟢 PLAYING handler completed');
+            if (this.api.player.options.debug) {
+            console.log('🟢 PLAYING handler completed');
+        }
             }
 
             // Handle when video fails to autoplay (stays in UNSTARTED)

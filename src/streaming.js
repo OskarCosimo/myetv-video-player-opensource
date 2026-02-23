@@ -143,6 +143,7 @@
         });
 
         // Initialize player
+        this.video.dataset.mpdUrl = src;
         this.dashPlayer.initialize(this.video, src, this.options.autoplay);
 
         // Ensure text tracks remain disabled after initialization

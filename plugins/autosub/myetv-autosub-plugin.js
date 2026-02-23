@@ -284,18 +284,18 @@
                 modelSize: 'base',
                 autoGenerate: false,
                 showButton: true,
-                position: 'topbar',      // 'left' | 'right' | 'topbar'
+                position: 'right',    // 'left' | 'right' | 'topbar'
                 subtitleStyle: {},
                 cacheEnabled: true,
                 idCache: null,
-                autoTranslation: null,  // ISO 2-letter code, e.g. 'en', 'it'
+                autoTranslation: null,      // ISO 2-letter code, e.g. 'en', 'it'
             }, options);
 
             this.isGenerating = false;
-            this.subtitles = [];        // { start, end, text }  original segments
-            this.subtitlesTrans = [];   // { start, end, text }  translated segments (in-memory cache)
-            this.translateLang = 'off'; // currently active translation language
-            this._transCache = {};      // { langCode: [{start,end,text}] }
+            this.subtitles = [];       // { start, end, text }  original segments
+            this.subtitlesTrans = [];       // { start, end, text }  translated segments (in-memory cache)
+            this.translateLang = 'off';    // currently active translation language
+            this._transCache = {};       // { langCode: [{start,end,text}] }
             this.subVisible = false;
             this.updateInterval = null;
             this.btnWrapEl = null;
@@ -369,20 +369,16 @@
 
         async generate() {
             if (this.isGenerating) return;
-
-            // Check cache before doing anything
-            if (this.subtitles.length === 0) {
-                const cached = this._loadFromCache();
-                if (cached) {
-                    this.subtitles = cached;
-                    this.subVisible = true;
-                    this._startDisplay();
-                    this._setBtnActive(true);
-                    this._updateMenu();
-                    if (this.player.options.debug)
-                        console.log('[AutoSub] generate() — cache hit, skipping transcription');
-                    return;
-                }
+            const cached = this._loadFromCache();
+            if (cached) {
+                this.subtitles = cached;
+                this.subVisible = true;
+                this._startDisplay();
+                this._setBtnActive(true);
+                this._updateMenu();
+                if (this.player.options.debug)
+                    console.log('[AutoSub] generate cache hit, skipping transcription');
+                return;
             }
 
             this.isGenerating = true;
@@ -391,21 +387,23 @@
 
             try {
                 const audioData = await this._extractAudio();
-                this._updatePanel('Downloading Transformers.js bundle...', 30);
+                console.log('[AutoSub] extractAudio done — type:', typeof audioData, 'length:', audioData?.length, 'captureMode:', audioData?.captureMode);
+
                 await this._ensureBundle();
-                this._updatePanel('Preparing Whisper worker...', 38);
+                console.log('[AutoSub] ensureBundle done');
+
                 await this._transcribeChunksStreaming(audioData);
+                console.log('[AutoSub] transcribeChunksStreaming done — subtitles:', this.subtitles.length);
+
                 this._saveToCache(this.subtitles);
+                console.log('[AutoSub] saveToCache done');
+
                 this._updatePanel('Subtitles ready!', 100);
-                setTimeout(() => {
-                    this._closePanel();
-                    this._setBtnActive(true);
-                    this._updateMenu();
-                    if (this.player.options.debug)
-                        console.log('[AutoSub] Generation complete:', this.subtitles.length, 'segments');
-                }, 800);
+                setTimeout(() => this._closePanel(), 800);
+                this._setBtnActive(true);
+                this._updateMenu();
             } catch (err) {
-                console.error('[AutoSub] Generation error:', err);
+                console.error('[AutoSub] generate FAILED:', err);
                 this._updatePanel('Error: ' + (err.message || String(err)), 0);
             } finally {
                 this.isGenerating = false;
@@ -423,11 +421,12 @@
         dispose() {
             this._stopDisplay();
             this._destroyDrag();
+            if (this._captureTimer) { clearTimeout(this._captureTimer); this._captureTimer = null; }
+            if (this._captureProgressInterval) { clearInterval(this._captureProgressInterval); this._captureProgressInterval = null; }
             if (this._worker) { this._worker.terminate(); this._worker = null; }
             if (this.overlayEl) this.overlayEl.remove();
             if (this.panelEl) this.panelEl.remove();
             if (this.btnWrapEl) this.btnWrapEl.remove();
-            // Remove menu from body and clean up global listeners
             if (this.menuEl) this.menuEl.remove();
             if (this._menuOutsideHandler) document.removeEventListener('click', this._menuOutsideHandler);
             if (this._menuEscHandler) document.removeEventListener('keydown', this._menuEscHandler);
@@ -1007,20 +1006,262 @@
         // PRIVATE — AUDIO EXTRACTION
         // ─────────────────────────────────────────────────────────────────────────
 
-        _isAdaptiveStream() {
-            const src = this.video.currentSrc || this.video.src || '';
-            return src.includes('.mpd') || src.includes('.m3u8') ||
-                (this.player.adaptiveStreamingType != null);
+        _resolveMpdUrl() {
+            try {
+                const url = this.video.dataset?.mpdUrl || this.container.dataset?.mpdUrl || null;
+                if (url && !url.startsWith('blob:')) {
+                    if (this.player.options.debug) console.log('[AutoSub] mpdUrl resolved:', url);
+                    return url;
+                }
+            } catch (_) { }
+
+            try {
+                const src = this.player.options?.src || '';
+                if (src && !src.startsWith('blob:')) return src;
+            } catch (_) { }
+
+            return null;
         }
 
         async _extractAudio() {
-            if (!this._isAdaptiveStream()) {
-                try { return await this._extractAudioFromFetch(); }
-                catch (err) {
-                    console.warn('[AutoSub] Fetch strategy failed:', err.message, '— switching to captureStream');
+            if (this._captureTimer) { clearTimeout(this._captureTimer); this._captureTimer = null; }
+            if (this._captureProgressInterval) { clearInterval(this._captureProgressInterval); this._captureProgressInterval = null; }
+
+            const mpdUrl = this._resolveMpdUrl();
+            console.log('[AutoSub DEBUG] mpdUrl:', mpdUrl);
+            console.log('[AutoSub DEBUG] adaptiveStreamingType:', this.player.adaptiveStreamingType);
+            console.log('[AutoSub DEBUG] video.dataset.mpdUrl:', this.video.dataset?.mpdUrl);
+
+            if (mpdUrl) {
+                console.log('[AutoSub DEBUG] → trying DASH path');
+                try {
+                    const result = await this._extractAudioFromDash(mpdUrl);
+                    console.log('[AutoSub DEBUG] → DASH OK');
+                    return result;
+                } catch (err) {
+                    console.error('[AutoSub DEBUG] → DASH FAILED:', err.message);
                 }
+            } else {
+                console.warn('[AutoSub DEBUG] → mpdUrl is null, skipping DASH');
             }
+
+            console.warn('[AutoSub DEBUG] → falling back to captureStream');
             return await this._extractAudioFromCaptureStream();
+        }
+
+
+        async _extractAudioFromDash(mpdUrl) {
+            this._updatePanel('Fetching DASH manifest...', 8);
+            const resp = await fetch(mpdUrl, { mode: 'cors', credentials: 'omit' });
+            if (!resp.ok) throw new Error('MPD fetch failed HTTP ' + resp.status);
+            let mpdText = await resp.text();
+            console.log('[AutoSub] MPD fetched, size:', mpdText.length);
+
+            const xmlStart = mpdText.indexOf('<?xml');
+            const mpdStart = mpdText.indexOf('<MPD');
+            const startIdx = xmlStart !== -1 ? xmlStart : (mpdStart !== -1 ? mpdStart : 0);
+            mpdText = mpdText.slice(startIdx);
+            mpdText = mpdText.replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+
+            const parser = new DOMParser();
+            const mpdDoc = parser.parseFromString(mpdText, 'application/xml');
+            const parseErr = mpdDoc.querySelector('parsererror');
+            if (parseErr) throw new Error('MPD XML parse error: ' + parseErr.textContent.slice(0, 100));
+            console.log('[AutoSub] MPD parsed OK');
+
+            const baseUrl = mpdUrl.substring(0, mpdUrl.lastIndexOf('/') + 1);
+            const audioSet = this._findAudioAdaptationSet(mpdDoc);
+            if (!audioSet) throw new Error('No audio AdaptationSet found in MPD');
+            const representation = this._findLowestBitrateRepresentation(audioSet);
+            if (!representation) throw new Error('No audio Representation found');
+
+            const segmentUrls = this._buildSegmentUrlList(mpdDoc, audioSet, representation, baseUrl);
+            console.log('[AutoSub] segmentUrls count:', segmentUrls.length);
+            console.log('[AutoSub] first 3 urls:', segmentUrls.slice(0, 3));
+            if (segmentUrls.length === 0) throw new Error('No audio segments found in MPD');
+
+            if (this.player.options.debug)
+                console.log('[AutoSub] DASH segments:', segmentUrls.length);
+
+            const initUrl = segmentUrls[0];
+            const mediaUrls = segmentUrls.slice(1);
+            console.log('[AutoSub] initUrl:', initUrl);
+            console.log('[AutoSub] mediaUrls count:', mediaUrls.length);
+
+            this._updatePanel('Downloading audio segments (0/' + mediaUrls.length + ')...', 10);
+
+            const initBuf = await fetch(initUrl, { mode: 'cors', credentials: 'omit' })
+                .then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error('HTTP ' + r.status)));
+            console.log('[AutoSub] initBuf size:', initBuf.byteLength);
+
+            const BATCH = 5;
+            const mediaBufs = new Array(mediaUrls.length);
+            for (let i = 0; i < mediaUrls.length; i += BATCH) {
+                const results = await Promise.all(
+                    mediaUrls.slice(i, i + BATCH).map(url =>
+                        fetch(url, { mode: 'cors', credentials: 'omit' })
+                            .then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error('HTTP ' + r.status)))
+                    )
+                );
+                results.forEach((buf, j) => { mediaBufs[i + j] = buf; });
+                const pct = 10 + Math.round(((i + BATCH) / mediaUrls.length) * 20);
+                this._updatePanel(
+                    'Downloading audio segments (' + Math.min(i + BATCH, mediaUrls.length) + '/' + mediaUrls.length + ')...',
+                    Math.min(30, pct)
+                );
+            }
+            console.log('[AutoSub] all segments downloaded, mediaBufs:', mediaBufs.length);
+
+            this._updatePanel('Decoding audio...', 30);
+            const totalBytes = initBuf.byteLength + mediaBufs.reduce((s, b) => s + b.byteLength, 0);
+            const combined = new Uint8Array(totalBytes);
+            combined.set(new Uint8Array(initBuf), 0);
+            let offset = initBuf.byteLength;
+            for (const buf of mediaBufs) {
+                combined.set(new Uint8Array(buf), offset);
+                offset += buf.byteLength;
+            }
+            console.log('[AutoSub] combined size:', combined.byteLength);
+
+            const nativeCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let nativeBuf;
+            try {
+                nativeBuf = await nativeCtx.decodeAudioData(combined.buffer);
+                console.log('[AutoSub] decodeAudioData OK — duration:', nativeBuf.duration, 'sampleRate:', nativeBuf.sampleRate);
+            } catch (e) {
+                console.error('[AutoSub] decodeAudioData FAILED:', e);
+                nativeCtx.close();
+                throw new Error('Audio decode failed: ' + e.message);
+            }
+            nativeCtx.close();
+
+            this._updatePanel('Resampling audio to 16kHz...', 34);
+            const totalSamples = Math.ceil(nativeBuf.duration * 16000);
+            console.log('[AutoSub] resampling — totalSamples:', totalSamples);
+            const offlineCtx = new OfflineAudioContext(1, totalSamples, 16000);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = nativeBuf;
+            source.connect(offlineCtx.destination);
+            source.start(0);
+            const resampled = await offlineCtx.startRendering();
+            console.log('[AutoSub] resample done — samples:', resampled.getChannelData(0).length);
+
+            return Float32Array.from(resampled.getChannelData(0));
+        }
+
+
+        _findAudioAdaptationSet(mpdDoc) {
+            const sets = Array.from(mpdDoc.querySelectorAll('AdaptationSet'));
+            // Prefer explicit audio contentType or mimeType
+            return sets.find(s =>
+                s.getAttribute('contentType') === 'audio' ||
+                (s.getAttribute('mimeType') || '').startsWith('audio') ||
+                s.querySelector('Representation[mimeType^="audio"]') !== null
+            ) || sets.find(s =>
+                // Fallback: AdaptationSet that is not video
+                !(s.getAttribute('mimeType') || '').startsWith('video') &&
+                s.getAttribute('contentType') !== 'video'
+            );
+        }
+
+        _findLowestBitrateRepresentation(adaptationSet) {
+            const reps = Array.from(adaptationSet.querySelectorAll('Representation'));
+            if (reps.length === 0) return null;
+            return reps.reduce((best, r) => {
+                const bw = parseInt(r.getAttribute('bandwidth') || '999999999', 10);
+                const bestBw = parseInt(best.getAttribute('bandwidth') || '999999999', 10);
+                return bw < bestBw ? r : best;
+            }, reps[0]);
+        }
+
+        _buildSegmentUrlList(mpdDoc, adaptationSet, representation, baseUrl) {
+            const urls = [];
+
+            // ── SegmentList ──────────────────────────────────────────────────────
+            const segList = representation.querySelector('SegmentList')
+                || adaptationSet.querySelector('SegmentList');
+            if (segList) {
+                const init = segList.querySelector('Initialization');
+                if (init) {
+                    const src = init.getAttribute('sourceURL') || init.getAttribute('range');
+                    if (src && !src.includes('range=')) urls.push(this._resolveUrl(src, baseUrl));
+                }
+                segList.querySelectorAll('SegmentURL').forEach(s => {
+                    const media = s.getAttribute('media');
+                    if (media) urls.push(this._resolveUrl(media, baseUrl));
+                });
+                return urls;
+            }
+
+            // ── SegmentTemplate ──────────────────────────────────────────────────
+            const segTpl = representation.querySelector('SegmentTemplate') || adaptationSet.querySelector('SegmentTemplate');
+            if (segTpl) {
+                const media = segTpl.getAttribute('media');
+                const init = segTpl.getAttribute('initialization');
+                const startNum = parseInt(segTpl.getAttribute('startNumber') || '1', 10);
+                const repId = representation.getAttribute('id');
+                const bandwidth = representation.getAttribute('bandwidth');
+
+                const makeUrl = (tpl, num) => tpl
+                    .replace('$RepresentationID$', repId)
+                    .replace('$Bandwidth$', bandwidth)
+                    .replace(/\$Number(%0(\d+)d)?\$/, (_, fmt, pad) =>
+                        pad ? String(num).padStart(parseInt(pad), '0') : String(num)
+                    );
+
+                // Init segment
+                if (init) urls.push(this._resolveUrl(makeUrl(init, startNum), baseUrl));
+
+                // Media segments da SegmentTimeline
+                const timeline = segTpl.querySelector('SegmentTimeline');
+                if (timeline) {
+                    let segNum = startNum;
+                    timeline.querySelectorAll('S').forEach(s => {
+                        const r = parseInt(s.getAttribute('r') || '0', 10); // repeat count
+                        for (let i = 0; i <= r; i++) {
+                            urls.push(this._resolveUrl(makeUrl(media, segNum), baseUrl));
+                            segNum++;
+                        }
+                    });
+                } else {
+                    // Fallback: calcola segmenti da duration + mediaPresentationDuration
+                    const timescale = parseInt(segTpl.getAttribute('timescale') || '1', 10);
+                    const duration = parseInt(segTpl.getAttribute('duration') || '0', 10);
+                    const mpdRoot = mpdDoc.querySelector('MPD');
+                    const totalDur = this._parseDuration(mpdRoot?.getAttribute('mediaPresentationDuration') || 'PT0S');
+                    const segDurSec = duration / timescale;
+                    const segCount = segDurSec > 0 ? Math.ceil(totalDur / segDurSec) : 0;
+                    for (let i = 0; i < segCount; i++) {
+                        urls.push(this._resolveUrl(makeUrl(media, startNum + i), baseUrl));
+                    }
+                }
+                return urls;
+            }
+
+            // ── BaseURL (single audio file) ───────────────────────────────────────
+            const baseURLEl = representation.querySelector('BaseURL')
+                || adaptationSet.querySelector('BaseURL');
+            if (baseURLEl) {
+                urls.push(this._resolveUrl(baseURLEl.textContent.trim(), baseUrl));
+            }
+
+            return urls;
+        }
+
+        _resolveUrl(url, baseUrl) {
+            if (!url) return '';
+            if (url.startsWith('http://') || url.startsWith('https://')) return url;
+            if (url.startsWith('/')) return new URL(url, baseUrl).href;
+            return baseUrl + url;
+        }
+
+        _parseDuration(iso) {
+            // Parse ISO 8601 duration: PT1H2M3.5S
+            const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?/);
+            if (!m) return 0;
+            return (parseFloat(m[1] || 0) * 3600) +
+                (parseFloat(m[2] || 0) * 60) +
+                parseFloat(m[3] || 0);
         }
 
         async _extractAudioFromFetch() {
@@ -1051,55 +1292,99 @@
 
         async _extractAudioFromCaptureStream() {
             return new Promise((resolve, reject) => {
-                this._updatePanel('Capturing audio (video will replay)...', 8);
-                const wasPaused = this.video.paused;
-                const savedTime = this.video.currentTime;
-                const duration = this.video.duration || 0;
-                const blockPause = () => { this.video.play().catch(() => { }); };
-                this.video.addEventListener('pause', blockPause);
+                this._updatePanel('Starting audio capture...', 8);
+
                 let stream;
                 try {
                     stream = this.video.captureStream?.() ?? this.video.mozCaptureStream?.() ?? null;
-                } catch (err) {
-                    this.video.removeEventListener('pause', blockPause);
-                    reject(new Error('captureStream() failed: ' + err.message)); return;
-                }
-                if (!stream) { this.video.removeEventListener('pause', blockPause); reject(new Error('captureStream() not supported')); return; }
+                } catch (err) { reject(new Error('captureStream() failed: ' + err.message)); return; }
+                if (!stream) { reject(new Error('captureStream() not supported')); return; }
+
                 const audioTracks = stream.getAudioTracks();
-                if (audioTracks.length === 0) { this.video.removeEventListener('pause', blockPause); reject(new Error('No audio track found')); return; }
+                if (audioTracks.length === 0) { reject(new Error('No audio track found')); return; }
+
+                const CHUNK_SEC = 30;
                 const audioOnlyStream = new MediaStream(audioTracks);
-                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                    ? 'audio/webm;codecs=opus' : '';
                 const recorder = new MediaRecorder(audioOnlyStream, mimeType ? { mimeType } : {});
-                const chunks = [];
-                recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-                recorder.onstop = async () => {
-                    this.video.removeEventListener('pause', blockPause);
-                    try {
-                        this.video.currentTime = savedTime;
-                        if (wasPaused) this.video.pause();
-                        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-                        const arrayBuffer = await blob.arrayBuffer();
-                        const nativeCtx = new (window.AudioContext || window.webkitAudioContext)();
-                        const nativeBuf = await nativeCtx.decodeAudioData(arrayBuffer);
-                        nativeCtx.close();
-                        if (nativeBuf.sampleRate === 16000) { resolve(Float32Array.from(nativeBuf.getChannelData(0))); return; }
-                        const totalSamples = Math.ceil(nativeBuf.duration * 16000);
-                        const offlineCtx = new OfflineAudioContext(1, totalSamples, 16000);
-                        const s = offlineCtx.createBufferSource();
-                        s.buffer = nativeBuf;
-                        s.connect(offlineCtx.destination);
-                        s.start(0);
-                        const resampled = await offlineCtx.startRendering();
-                        resolve(Float32Array.from(resampled.getChannelData(0)));
-                    } catch (err) { reject(err); }
+
+                const chunkQueue = [];
+                let stopped = false;
+                let timeOffset = 0;
+
+                const stop = () => {
+                    if (stopped) return;
+                    stopped = true;
+                    if (this._captureProgressInterval) {
+                        clearInterval(this._captureProgressInterval);
+                        this._captureProgressInterval = null;
+                    }
+                    if (recorder.state !== 'inactive') recorder.stop();
                 };
-                recorder.onerror = e => { this.video.removeEventListener('pause', blockPause); reject(e.error || new Error('MediaRecorder error')); };
-                this.video.currentTime = 0;
-                recorder.start(500);
-                this.video.play().catch(() => { });
-                const stop = () => { if (recorder.state !== 'inactive') recorder.stop(); };
+
+                this._onAudioChunkReady = null;
+                this._onCaptureStop = null;
+
+                recorder.ondataavailable = async (e) => {
+                    if (e.data.size === 0) return;
+                    chunkQueue.push(e.data);
+
+                    // Estimate accumulated seconds using rough bitrate of 16 kbps (opus)
+                    const totalSize = chunkQueue.reduce((s, b) => s + b.size, 0);
+                    const estimatedSec = totalSize / (16000 / 8);
+
+                    if (estimatedSec >= CHUNK_SEC && this._onAudioChunkReady) {
+                        const blob = new Blob([...chunkQueue], { type: recorder.mimeType || 'audio/webm' });
+                        chunkQueue.length = 0;
+                        const offset = timeOffset;
+                        timeOffset += CHUNK_SEC;
+                        this._onAudioChunkReady(blob, offset, false);
+                    }
+                };
+
+                recorder.onstop = async () => {
+                    // Flush any remaining audio as the last chunk
+                    if (chunkQueue.length > 0 && this._onAudioChunkReady) {
+                        const blob = new Blob([...chunkQueue], { type: recorder.mimeType || 'audio/webm' });
+                        chunkQueue.length = 0;
+                        this._onAudioChunkReady(blob, timeOffset, true);
+                    } else if (this._onCaptureStop) {
+                        this._onCaptureStop();
+                    }
+                };
+
+                recorder.onerror = e => reject(e.error || new Error('MediaRecorder error'));
+
+                // Update capture progress based on video currentTime
+                const duration = isFinite(this.video.duration) && this.video.duration > 0
+                    ? this.video.duration : null;
+
+                if (duration) {
+                    const captureStart = this.video.currentTime;
+                    this._captureProgressInterval = setInterval(() => {
+                        const elapsed = this.video.currentTime - captureStart;
+                        const pct = Math.min(30, 8 + Math.round((elapsed / duration) * 22));
+                        this._updatePanel(
+                            `Capturing audio... ${Math.round((elapsed / duration) * 100)}%`, pct
+                        );
+                        if (elapsed >= duration - 0.5) {
+                            clearInterval(this._captureProgressInterval);
+                            this._captureProgressInterval = null;
+                            stop();
+                        }
+                    }, 500);
+
+                    this._captureTimer = setTimeout(stop, (duration + 3) * 1000);
+                }
+
                 this.video.addEventListener('ended', stop, { once: true });
-                if (duration > 0) setTimeout(stop, (duration + 5) * 1000);
+
+                // Slice every 2s so ondataavailable fires frequently
+                recorder.start(2000);
+
+                // Resolve immediately with sentinel — actual transcription flows via callbacks
+                resolve({ _captureMode: true, stop });
             });
         }
 
@@ -1153,7 +1438,9 @@ self.onmessage = async function(e) {
       if (payload.lang) opts.language = payload.lang;
       const result = await transcriber(audio, opts);
       self.postMessage({ type: 'chunk_done', payload: {
-        result, timeOffset: payload.timeOffset, chunkIndex: payload.chunkIndex, totalChunks: payload.totalChunks
+        result, timeOffset: payload.timeOffset,
+        chunkIndex: payload.chunkIndex, totalChunks: payload.totalChunks,
+        isLast: payload.isLast
       }});
     } catch(err) {
       self.postMessage({ type: 'error', payload: err.message || String(err) });
@@ -1174,12 +1461,167 @@ self.onmessage = async function(e) {
             const offset = index * chunkSize;
             const chunk = float32Audio.slice(offset, offset + chunkSize);
             worker.postMessage(
-                { type: 'transcribe', payload: { audio: chunk.buffer, timeOffset: index * chunkSec, chunkIndex: index, totalChunks, lang, chunkSec } },
+                {
+                    type: 'transcribe', payload: {
+                        audio: chunk.buffer, timeOffset: index * chunkSec,
+                        chunkIndex: index, totalChunks, lang, chunkSec
+                    }
+                },
                 [chunk.buffer]
             );
         }
 
-        async _transcribeChunksStreaming(float32Audio) {
+        async _transcribeChunksStreaming(audioData) {
+
+            // ── CAPTURE STREAM MODE (HLS or DASH fallback) ───────────────────────
+            if (audioData?._captureMode) {
+                const SAMPLE_RATE = 16000;
+                const lang = this._resolveLanguage(this.opts.language);
+                const modelId = WHISPER_MODELS[this.opts.modelSize] || WHISPER_MODELS.base;
+
+                if (!this.subVisible) { this.subVisible = true; this._startDisplay(); }
+
+                const worker = this._createTranscriberWorker();
+                this._worker = worker;
+
+                let workerReady = false;
+                let pendingChunks = [];
+                let activeJob = false;
+                let jobQueue = [];
+                let resolveAll, rejectAll;
+
+                const promise = new Promise((res, rej) => { resolveAll = res; rejectAll = rej; });
+
+                const decodeAndTranscribe = async (blob, offset, isLast) => {
+                    try {
+                        const arrayBuffer = await blob.arrayBuffer();
+                        const nativeCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const nativeBuf = await nativeCtx.decodeAudioData(arrayBuffer);
+                        nativeCtx.close();
+
+                        let float32;
+                        if (nativeBuf.sampleRate === SAMPLE_RATE) {
+                            float32 = Float32Array.from(nativeBuf.getChannelData(0));
+                        } else {
+                            const totalSamples = Math.ceil(nativeBuf.duration * SAMPLE_RATE);
+                            const offCtx = new OfflineAudioContext(1, totalSamples, SAMPLE_RATE);
+                            const src = offCtx.createBufferSource();
+                            src.buffer = nativeBuf;
+                            src.connect(offCtx.destination);
+                            src.start(0);
+                            const resampled = await offCtx.startRendering();
+                            float32 = Float32Array.from(resampled.getChannelData(0));
+                        }
+
+                        worker.postMessage(
+                            {
+                                type: 'transcribe', payload: {
+                                    audio: float32.buffer, timeOffset: offset,
+                                    chunkIndex: 0, totalChunks: 1,
+                                    lang, chunkSec: nativeBuf.duration, isLast
+                                }
+                            },
+                            [float32.buffer]
+                        );
+                    } catch (err) {
+                        console.warn('[AutoSub] Decode error for capture chunk:', err.message);
+                        if (isLast) resolveAll();
+                        else { activeJob = false; processNext(); }
+                    }
+                };
+
+                const processNext = () => {
+                    if (activeJob || jobQueue.length === 0) return;
+                    activeJob = true;
+                    const job = jobQueue.shift();
+                    decodeAndTranscribe(job.blob, job.offset, job.isLast);
+                };
+
+                worker.onerror = e => {
+                    console.error('[AutoSub] worker.onerror (capture):', e.message, e.filename, e.lineno);
+                    worker.terminate(); this._worker = null;
+                    rejectAll(new Error('Worker error: ' + (e.message || String(e))));
+                };
+
+                worker.onmessageerror = e => {
+                    console.error('[AutoSub] worker.onmessageerror (capture):', e);
+                };
+
+                worker.onmessage = ({ data }) => {
+                    const { type, payload } = data;
+
+                    if (type === 'progress' && payload.total) {
+                        const pct = Math.round((payload.loaded / payload.total) * 15);
+                        this._updatePanel('Downloading model: ' + (payload.file || ''), 35 + pct);
+                    }
+
+                    if (type === 'ready') {
+                        URL.revokeObjectURL(worker._bundleURL);
+                        URL.revokeObjectURL(worker._workerURL);
+                        workerReady = true;
+                        this._updatePanel('Worker ready — waiting for audio chunks...', 55);
+                        pendingChunks.forEach(j => jobQueue.push(j));
+                        pendingChunks = [];
+                        processNext();
+                    }
+
+                    if (type === 'chunk_done') {
+                        const { result, timeOffset, isLast } = payload;
+                        console.log('[AutoSub] chunk_done (capture) raw:', JSON.stringify(result).slice(0, 300));
+
+                        let rawChunks = (result.chunks || [])
+                            .filter(c => c.text?.trim())
+                            .map(c => {
+                                const ts0 = (c.timestamp?.[0] != null) ? c.timestamp[0] : 0;
+                                const ts1 = (c.timestamp?.[1] != null) ? c.timestamp[1] : ts0 + 5;
+                                return { text: c.text.trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
+                            });
+
+                        if (rawChunks.length === 0 && result.text?.trim()) {
+                            rawChunks = [{
+                                text: result.text.trim(),
+                                start: timeOffset,
+                                end: timeOffset + 30
+                            }];
+                        }
+
+                        this.subtitles.push(...this._normalizeChunks(rawChunks));
+                        if (this.opts.cacheEnabled) this._saveToCache(this.subtitles);
+
+                        activeJob = false;
+
+                        if (isLast) {
+                            worker.terminate(); this._worker = null;
+                            resolveAll();
+                        } else {
+                            processNext();
+                        }
+                    }
+
+                    if (type === 'error') {
+                        URL.revokeObjectURL(worker._bundleURL);
+                        URL.revokeObjectURL(worker._workerURL);
+                        worker.terminate(); this._worker = null;
+                        rejectAll(new Error(payload));
+                    }
+                };
+
+                this._onAudioChunkReady = (blob, offset, isLast) => {
+                    const job = { blob, offset, isLast };
+                    if (!workerReady) pendingChunks.push(job);
+                    else { jobQueue.push(job); processNext(); }
+                };
+
+                this._onCaptureStop = () => resolveAll();
+
+                worker.postMessage({ type: 'init', payload: { modelId } });
+                console.log('[AutoSub] init sent (capture), modelId:', modelId);
+
+                return promise;
+            }
+
+            // ── NORMAL MODE (Float32Array from fetch or DASH) ─────────────────────
+            const float32Audio = audioData;
             const SAMPLE_RATE = 16000;
             const CHUNK_SEC = 30;
             const chunkSize = SAMPLE_RATE * CHUNK_SEC;
@@ -1194,10 +1636,15 @@ self.onmessage = async function(e) {
 
             return new Promise((resolve, reject) => {
                 worker.onerror = e => {
+                    console.error('[AutoSub] worker.onerror (normal):', e.message, e.filename, e.lineno);
                     URL.revokeObjectURL(worker._bundleURL);
                     URL.revokeObjectURL(worker._workerURL);
                     worker.terminate(); this._worker = null;
                     reject(new Error('Worker error: ' + (e.message || String(e))));
+                };
+
+                worker.onmessageerror = e => {
+                    console.error('[AutoSub] worker.onmessageerror (normal):', e);
                 };
 
                 worker.onmessage = ({ data }) => {
@@ -1211,19 +1658,32 @@ self.onmessage = async function(e) {
                     if (type === 'ready') {
                         URL.revokeObjectURL(worker._bundleURL);
                         URL.revokeObjectURL(worker._workerURL);
+                        console.log('[AutoSub] worker ready (normal) — sending chunk 1 of', totalChunks);
                         this._updatePanel('Transcribing chunk 1 of ' + totalChunks + '...', 64);
                         this._sendChunk(worker, float32Audio, 0, chunkSize, totalChunks, lang, CHUNK_SEC);
                     }
 
                     if (type === 'chunk_done') {
                         const { result, timeOffset, chunkIndex } = payload;
-                        const rawChunks = (result.chunks || []).map(c => {
-                            const ts0 = c.timestamp?.[0] ?? 0;
-                            const ts1 = c.timestamp?.[1] ?? ts0 + 3;
-                            return { text: (c.text || '').trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
-                        });
-                        const normalized = this._normalizeChunks(rawChunks);
-                        this.subtitles.push(...normalized);
+                        console.log('[AutoSub] chunk_done index:', chunkIndex, 'timeOffset:', timeOffset, 'raw:', JSON.stringify(result).slice(0, 300));
+
+                        let rawChunks = (result.chunks || [])
+                            .filter(c => c.text?.trim())
+                            .map(c => {
+                                const ts0 = (c.timestamp?.[0] != null) ? c.timestamp[0] : 0;
+                                const ts1 = (c.timestamp?.[1] != null) ? c.timestamp[1] : ts0 + 5;
+                                return { text: c.text.trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
+                            });
+
+                        if (rawChunks.length === 0 && result.text?.trim()) {
+                            rawChunks = [{
+                                text: result.text.trim(),
+                                start: timeOffset,
+                                end: timeOffset + CHUNK_SEC
+                            }];
+                        }
+
+                        this.subtitles.push(...this._normalizeChunks(rawChunks));
                         if (this.opts.cacheEnabled) this._saveToCache(this.subtitles);
 
                         const next = chunkIndex + 1;
@@ -1232,11 +1692,13 @@ self.onmessage = async function(e) {
                             this._updatePanel('Transcribing chunk ' + (next + 1) + ' of ' + totalChunks + '...', pct);
                             this._sendChunk(worker, float32Audio, next, chunkSize, totalChunks, lang, CHUNK_SEC);
                         } else {
+                            console.log('[AutoSub] all chunks done, subtitles:', this.subtitles.length);
                             worker.terminate(); this._worker = null; resolve();
                         }
                     }
 
                     if (type === 'error') {
+                        console.error('[AutoSub] worker error (normal):', payload);
                         URL.revokeObjectURL(worker._bundleURL);
                         URL.revokeObjectURL(worker._workerURL);
                         worker.terminate(); this._worker = null;
@@ -1245,8 +1707,10 @@ self.onmessage = async function(e) {
                 };
 
                 worker.postMessage({ type: 'init', payload: { modelId } });
+                console.log('[AutoSub] init sent (normal), modelId:', modelId, 'totalChunks:', totalChunks);
             });
         }
+
 
         // ─────────────────────────────────────────────────────────────────────────
         // PRIVATE — TEXT
@@ -1275,8 +1739,9 @@ self.onmessage = async function(e) {
             if (/^[\W\d\s]+$/.test(t)) return true;
             if (t.length > 4 && (t.match(/[aeiouàèéìòùáéíóúäëïöü]/gi) || []).length === 0) return true;
             if (t.length > 5 && /^(.)\1+$/.test(t.replace(/\s/g, ''))) return true;
-            const junk = ['amara.org', 'www.', 'http', '[ _ ]', '[music]', '[silence]',
-                '[applause]', '♪', 'subtitles by', 'captions by', 'transcript', 'transcribed by'];
+            // Allucinazioni pure di Whisper — nessun contenuto utile
+            const junk = ['amara.org', 'www.', 'http', '[ _ ]',
+                'subtitles by', 'captions by', 'transcript', 'transcribed by'];
             return junk.some(j => t.toLowerCase().includes(j));
         }
 
@@ -1289,7 +1754,12 @@ self.onmessage = async function(e) {
                 const safe = String(this.opts.idCache).replace(/[^a-zA-Z0-9_-]/g, '_');
                 return CACHE_PREFIX + safe;
             }
-            const src = this.video.currentSrc || this.video.src || '';
+            // Use the MPD URL or player.options.src as stable key — currentSrc may be a blob URL
+            const src = this._resolveMpdUrl()
+                || this.player.options?.src
+                || this.video.currentSrc
+                || this.video.src
+                || '';
             try {
                 const pathname = new URL(src).pathname;
                 return CACHE_PREFIX + btoa(unescape(encodeURIComponent(pathname))).replace(/[=+/]/g, '');

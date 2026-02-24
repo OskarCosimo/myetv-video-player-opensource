@@ -388,6 +388,42 @@ body {
   animation: spin 1s linear infinite;
 }
 
+.loading-spinner-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner-wrap .loading-spinner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid var(--player-primary-color);
+  animation: spin 1s linear infinite;
+  box-sizing: border-box;
+}
+
+.loading-spinner-logo {
+  position: relative;
+  z-index: 1;
+  max-width: 34px;
+  max-height: 34px;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);

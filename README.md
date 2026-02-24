@@ -143,6 +143,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `brandLogoUrl` | string | `''` | Brand logo url in the controlbar (png, jpg, gif) - image height 44px - image width 120px |
 | `brandLogoLinkUrl` | string | `''` | Optional URL to open in a new page when clicking the brand logo in the controlbar
 | `brandLogoTooltipText` | string | `''` | Optional Custom tooltip of the brand logo (the default is the url of the brand logo, if present)
+| `loadingLogo` | string | `''` | Optional Custom image logo url to show it inside the loading spinner
 | `watermarkUrl` | string | `''` | Optional URL of the image watermark over the video, reccomended dimension: width: 180px, height: 100px
 | `watermarkLink` | string | `''` | Optional URL to open in a new page when clicking the watermark logo in the video
 | `watermarkPosition` | string | `''` | Optional where to show the watermark logo in the video (values are: top-left, top-right, bottom-left, bottom-right)

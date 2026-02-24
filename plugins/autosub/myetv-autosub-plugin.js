@@ -326,25 +326,30 @@
         }
 
         _scheduleAutoTranslation() {
-            // Light polling: waits until this.subtitles is populated (from cache or transcription),
-            // then triggers translation automatically
             const lang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
-            let tries = 0;
 
+            // Set translateLang immediately so chunk_done incremental translation kicks in right away
+            this.translateLang = lang;
+
+            let tries = 0;
             const check = setInterval(() => {
                 tries++;
-                if (this.subtitles.length > 0) {
+                // Wait until transcription is fully complete, then do a full translation pass
+                // to catch any chunks that may have been missed or arrived out of order
+                if (this.subtitles.length > 0 && !this.isGenerating) {
                     clearInterval(check);
-                    if (this.player.options.debug)
-                        console.log('[AutoSub] autoTranslation → triggering lang:', lang);
+                    if (this.player.options.debug) console.log('[AutoSub] autoTranslation final pass, lang:', lang);
+                    // Reset and retranslate everything cleanly at the end
+                    this.subtitlesTrans = [];
+                    this._transCache = {};
                     this._setTranslationLang(lang);
                     this._updateMenu();
                     return;
                 }
-                // Stop waiting after 5 minutes (enough for any transcription, even large videos with slow models)
                 if (tries > 300) clearInterval(check);
             }, 1000);
         }
+
 
         async handleButtonClick() {
             // If cache is enabled and no subtitles are loaded yet, try loading from cache first
@@ -370,40 +375,71 @@
         async generate() {
             if (this.isGenerating) return;
 
-            // Check cache before doing anything
+            let partialCache = null;
+
             if (this.subtitles.length === 0) {
                 const cached = this._loadFromCache();
                 if (cached) {
-                    this.subtitles = cached;
+                    this.subtitles = cached.subtitles;
                     this.subVisible = true;
                     this._startDisplay();
                     this._setBtnActive(true);
                     this._updateMenu();
+
+                    if (cached.chunksCompleted === null || cached.chunksCompleted >= cached.totalChunks) {
+                        if (this.player.options.debug) console.log('[AutoSub] Full cache hit, skipping transcription');
+                        return;
+                    }
+
+                    partialCache = cached; // Pass to transcribeChunksStreaming
                     if (this.player.options.debug)
-                        console.log('[AutoSub] generate() — cache hit, skipping transcription');
-                    return;
+                        console.log('[AutoSub] Partial cache found — resuming from chunk', cached.chunksCompleted, 'of', cached.totalChunks);
                 }
             }
 
             this.isGenerating = true;
             this._setBtnGenerating(true);
             this._updatePanel('Extracting audio...', 5);
-
             try {
-                const audioData = await this._extractAudio();
-                this._updatePanel('Downloading Transformers.js bundle...', 30);
-                await this._ensureBundle();
-                this._updatePanel('Preparing Whisper worker...', 38);
-                await this._transcribeChunksStreaming(audioData);
-                this._saveToCache(this.subtitles);
-                this._updatePanel('Subtitles ready!', 100);
-                setTimeout(() => {
-                    this._closePanel();
+                this.isGenerating = true;
+                this._setBtnGenerating(true);
+                this._updatePanel('Extracting audio...', 5);
+                try {
+                    const audioData = await this._extractAudio();
+                    this._updatePanel('Downloading Transformers.js bundle...', 30);
+                    await this._ensureBundle();
+                    this._updatePanel('Preparing Whisper worker...', 38);
+                    await this._transcribeChunksStreaming(audioData, partialCache);
+
+                    // Sort subtitles by start time — partial cache + new chunks may be unsorted
+                    this.subtitles.sort((a, b) => a.start - b.start);
+
+                    // Mark cache as complete
+                    this._saveToCache(this.subtitles, null, null, this._lastDetectedLang || null);
+                    this._updatePanel('Subtitles ready!', 100);
                     this._setBtnActive(true);
                     this._updateMenu();
-                    if (this.player.options.debug)
-                        console.log('[AutoSub] Generation complete:', this.subtitles.length, 'segments');
-                }, 800);
+
+                    // Re-trigger translation if one was active, using the now-complete subtitles
+                    if (this.translateLang && this.translateLang !== 'off') {
+                        const lang = this.translateLang;
+                        this.translateLang = 'off';       // reset so setTranslationLang doesn't skip
+                        this.subtitlesTrans = [];
+                        this._transCache = {};
+                        await this._setTranslationLang(lang); // re-translate with full subtitles
+                    }
+
+                    setTimeout(() => { this._closePanel(); }, 800);
+
+                    if (this.player.options.debug) console.log('[AutoSub] Generation complete:', this.subtitles.length, 'segments');
+                } catch (err) {
+                    if (this.player.options.debug) console.error('[AutoSub] Generation error:', err);
+                    this._updatePanel('Error: ' + (err.message || String(err)), 0);
+                } finally {
+                    this.isGenerating = false;
+                    this._setBtnGenerating(false);
+                }
+
             } catch (err) {
                 if (this.player.options.debug) console.error('[AutoSub] Generation error:', err);
                 this._updatePanel('Error: ' + (err.message || String(err)), 0);
@@ -1417,19 +1453,18 @@ self.onmessage = async function(e) {
   }
   if (type === 'transcribe') {
     try {
-      const audio  = new Float32Array(payload.audio);
-      const opts   = { return_timestamps: true, task: 'transcribe', chunk_length_s: payload.chunkSec };
-      if (payload.lang) opts.language = payload.lang;
-      const result = await transcriber(audio, opts);
-      self.postMessage({ type: 'chunk_done', payload: {
-        result, timeOffset: payload.timeOffset,
-        chunkIndex: payload.chunkIndex, totalChunks: payload.totalChunks,
-        isLast: payload.isLast
-      }});
+        const audio = new Float32Array(payload.audio);
+        const opts = { return_timestamps: true, task: 'transcribe', chunk_length_s: payload.chunkSec };
+        if (payload.lang) opts.language = payload.lang;
+        const result = await transcriber(audio, opts);
+        // Include detected language in the response so the main thread can reuse it
+        const detectedLang = result.language || payload.lang || null;
+        self.postMessage({ type: 'chunk_done', payload: { result, timeOffset: payload.timeOffset, chunkIndex: payload.chunkIndex, totalChunks: payload.totalChunks, isLast: payload.isLast, detectedLang } });
     } catch(err) {
-      self.postMessage({ type: 'error', payload: err.message || String(err) });
+        self.postMessage({ type: 'error', payload: err.message || String(err) });
     }
-  }
+}
+
 };
       `;
 
@@ -1455,7 +1490,7 @@ self.onmessage = async function(e) {
             );
         }
 
-        async _transcribeChunksStreaming(audioData) {
+        async _transcribeChunksStreaming(audioData, partialCache = null) {
 
             // ── CAPTURE STREAM MODE (HLS or DASH fallback) ───────────────────────
             if (audioData?._captureMode) {
@@ -1547,13 +1582,21 @@ self.onmessage = async function(e) {
 
                     if (type === 'chunk_done') {
                         const { result, timeOffset, isLast } = payload;
-                        const rawChunks = (result.chunks || []).map(c => {
-                            const ts0 = c.timestamp?.[0] ?? 0;
-                            const ts1 = c.timestamp?.[1] ?? ts0 + 3;
-                            return { text: (c.text || '').trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
-                        });
+
+                        let rawChunks = (result.chunks || [])
+                            .filter(c => c.text?.trim())
+                            .map(c => {
+                                const ts0 = (c.timestamp?.[0] != null) ? c.timestamp[0] : 0;
+                                const ts1 = (c.timestamp?.[1] != null) ? c.timestamp[1] : ts0 + 5;
+                                return { text: c.text.trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
+                            });
+
+                        if (rawChunks.length === 0 && result.text?.trim()) {
+                            rawChunks = [{ text: result.text.trim(), start: timeOffset, end: timeOffset + 30 }];
+                        }
+
                         this.subtitles.push(...this._normalizeChunks(rawChunks));
-                        if (this.opts.cacheEnabled) this._saveToCache(this.subtitles);
+                        if (this.opts.cacheEnabled) this._saveToCache(this.subtitles, null, null);
 
                         activeJob = false;
 
@@ -1593,7 +1636,16 @@ self.onmessage = async function(e) {
             const chunkSize = SAMPLE_RATE * CHUNK_SEC;
             const totalChunks = Math.ceil(float32Audio.length / chunkSize);
             const lang = this._resolveLanguage(this.opts.language);
+            let detectedLang = lang || partialCache?.detectedLang || null;
             const modelId = WHISPER_MODELS[this.opts.modelSize] || WHISPER_MODELS.base;
+
+            // Use partialCache passed from generate() — no second localStorage read
+            const startChunk = (partialCache?.chunksCompleted != null && partialCache.chunksCompleted < totalChunks)
+                ? partialCache.chunksCompleted
+                : 0;
+
+            if (this.player.options.debug && startChunk > 0)
+                console.log('[AutoSub] Resuming transcription from chunk', startChunk + 1, 'of', totalChunks);
 
             if (!this.subVisible) { this.subVisible = true; this._startDisplay(); }
 
@@ -1619,28 +1671,73 @@ self.onmessage = async function(e) {
                     if (type === 'ready') {
                         URL.revokeObjectURL(worker._bundleURL);
                         URL.revokeObjectURL(worker._workerURL);
-                        this._updatePanel('Transcribing chunk 1 of ' + totalChunks + '...', 64);
-                        this._sendChunk(worker, float32Audio, 0, chunkSize, totalChunks, lang, CHUNK_SEC);
+                        if (this.player.options.debug) console.log('[AutoSub] Worker ready — sending chunk', startChunk + 1, 'of', totalChunks);
+                        this._updatePanel('Transcribing chunk ' + (startChunk + 1) + ' of ' + totalChunks + '...', 64);
+                        this._sendChunk(worker, float32Audio, startChunk, chunkSize, totalChunks, detectedLang, CHUNK_SEC);
                     }
 
                     if (type === 'chunk_done') {
                         const { result, timeOffset, chunkIndex } = payload;
-                        const rawChunks = (result.chunks || []).map(c => {
-                            const ts0 = c.timestamp?.[0] ?? 0;
-                            const ts1 = c.timestamp?.[1] ?? ts0 + 3;
-                            return { text: (c.text || '').trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
-                        });
-                        this.subtitles.push(...this._normalizeChunks(rawChunks));
-                        if (this.opts.cacheEnabled) this._saveToCache(this.subtitles);
+
+                        // On first processed chunk, save the detected language and reuse it for all subsequent chunks
+                        if (chunkIndex === startChunk && payload.detectedLang && !detectedLang) {
+                            detectedLang = payload.detectedLang;
+                            if (this.player.options.debug) console.log('[AutoSub] Language auto-detected:', detectedLang);
+                        }
+                        this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
+
+                        let rawChunks = (result.chunks || [])
+                            .filter(c => c.text?.trim())
+                            .map(c => {
+                                const ts0 = (c.timestamp?.[0] != null) ? c.timestamp[0] : 0;
+                                const ts1 = (c.timestamp?.[1] != null) ? c.timestamp[1] : ts0 + 5;
+                                return { text: c.text.trim(), start: ts0 + timeOffset, end: ts1 + timeOffset };
+                            });
+
+                        if (rawChunks.length === 0 && result.text?.trim()) {
+                            rawChunks = [{ text: result.text.trim(), start: timeOffset, end: timeOffset + CHUNK_SEC }];
+                        }
+
+                        const normalized = this._normalizeChunks(rawChunks);
+                        this.subtitles.push(...normalized);
+
+                        // Save partial progress after every chunk
+                        this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
+
+                        // If translation is active, translate this chunk immediately and append
+                        if (this.translateLang && this.translateLang !== 'off' && normalized.length > 0) {
+                            const currentLang = this.translateLang;
+                            this._translateBatch(normalized, currentLang).then(translated => {
+                                // Only append if translation lang hasn't changed in the meantime
+                                if (this.translateLang === currentLang) {
+                                    this.subtitlesTrans.push(...translated);
+                                    this.subtitlesTrans.sort((a, b) => a.start - b.start);
+                                }
+                            }).catch(() => {
+                                // On error push originals so display doesn't go blank
+                                if (this.translateLang === currentLang) {
+                                    this.subtitlesTrans.push(...normalized);
+                                    this.subtitlesTrans.sort((a, b) => a.start - b.start);
+                                }
+                            });
+                        }
+
 
                         const next = chunkIndex + 1;
                         if (next < totalChunks) {
                             const pct = 64 + Math.round((next / totalChunks) * 33);
                             this._updatePanel('Transcribing chunk ' + (next + 1) + ' of ' + totalChunks + '...', pct);
-                            this._sendChunk(worker, float32Audio, next, chunkSize, totalChunks, lang, CHUNK_SEC);
+                            // Use detectedLang instead of lang so all chunks use the same detected language
+                            this._sendChunk(worker, float32Audio, next, chunkSize, totalChunks, detectedLang, CHUNK_SEC);
                         } else {
-                            worker.terminate(); this._worker = null; resolve();
+                            if (this.player.options.debug) console.log('[AutoSub] All chunks done, subtitles:', this.subtitles.length);
+                            worker.terminate(); this._worker = null;
+                            resolve();
+                            // generate() chiamerà _saveToCache(subtitles, null, null, detectedLang)
+                            // ma detectedLang non è accessibile lì — salvalo su this
+                            this._lastDetectedLang = detectedLang;
                         }
+
                     }
 
                     if (type === 'error') {
@@ -1652,6 +1749,7 @@ self.onmessage = async function(e) {
                 };
 
                 worker.postMessage({ type: 'init', payload: { modelId } });
+                if (this.player.options.debug) console.log('[AutoSub] Init sent (normal), modelId:', modelId, 'totalChunks:', totalChunks, 'startChunk:', startChunk);
             });
         }
 
@@ -1720,18 +1818,35 @@ self.onmessage = async function(e) {
                 if (!raw) return null;
                 const parsed = JSON.parse(raw);
                 if (!Array.isArray(parsed.subtitles) || !parsed.subtitles.length) return null;
-                return parsed.subtitles;
-            } catch (_) { return null; }
+                return {
+                    subtitles: parsed.subtitles,
+                    chunksCompleted: parsed.chunksCompleted ?? null,
+                    totalChunks: parsed.totalChunks ?? null,
+                    detectedLang: parsed.detectedLang ?? null   // ← aggiunto
+                };
+            } catch {
+                return null;
+            }
         }
 
-        _saveToCache(subtitles) {
+        _saveToCache(subtitles, chunksCompleted = null, totalChunks = null, detectedLang = null) {
             if (!this.opts.cacheEnabled || !subtitles.length) return;
             try {
                 const key = this._getCacheKey();
-                const data = JSON.stringify({ subtitles, savedAt: Date.now() });
-                try { localStorage.setItem(key, data); }
-                catch (_) { this._evictOldestCache(); try { localStorage.setItem(key, data); } catch (_) { } }
-            } catch (_) { }
+                const data = JSON.stringify({
+                    subtitles,
+                    chunksCompleted,
+                    totalChunks,
+                    detectedLang,
+                    savedAt: Date.now()
+                });
+                try {
+                    localStorage.setItem(key, data);
+                } catch {
+                    this._evictOldestCache();
+                    try { localStorage.setItem(key, data); } catch { /* storage full */ }
+                }
+            } catch { /* ignore */ }
         }
 
         _evictOldestCache() {

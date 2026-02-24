@@ -220,7 +220,16 @@
 `;
 
     const ICON_CC = `<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>`;
-    const ICON_LOADING = `<svg viewBox="0 0 24 24"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/></path></svg>`;
+    const ICON_LOADING = `<svg viewBox="0 0 24 24">
+  <!-- cerchio rotante -->
+  <path d="M12 2A10 10 0 0 1 22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
+    <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+  </path>
+  <!-- icona CC fissa al centro, scala ridotta -->
+  <g transform="translate(4, 5) scale(0.65)">
+    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/>
+  </g>
+</svg>`;
 
     const WHISPER_MODELS = {
         tiny: 'Xenova/whisper-tiny',
@@ -779,11 +788,12 @@
 
             const genLabel = isGenerating ? '⏳ Generating...' : hasSubs ? '🔄 Regenerate transcription' : '🎙️ Generate subtitles';
             const itemGen = this._menuItem(genLabel, false, isGenerating, () => {
+                this._deleteCache();
                 this.subtitles = [];
                 this.subtitlesTrans = [];
-                this._transCache = {};
-                this._closeMenuNow();
-                this.generate();
+                this.transCache = {};
+                this.closeMenuNow();
+                this._generate();
             });
 
             const itemPanel = this._menuItem('📊 Show progress', false, !isGenerating, () => {
@@ -1924,6 +1934,13 @@ self.onmessage = async function(e) {
                     try { localStorage.setItem(key, data); } catch { /* storage full */ }
                 }
             } catch { /* ignore */ }
+        }
+
+        _deleteCache() {
+            if (!this.opts.cacheEnabled) return;
+            try {
+                localStorage.removeItem(this._getCacheKey());
+            } catch { }
         }
 
         _evictOldestCache() {

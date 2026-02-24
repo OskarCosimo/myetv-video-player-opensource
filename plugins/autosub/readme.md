@@ -8,7 +8,7 @@
 
 - 🧠 **100% client-side** — transcription runs in a Web Worker, never leaves the browser
 - ⚡ **Streaming transcription** — subtitles appear chunk by chunk while the model processes audio
-- 🌍 **Auto-translation** — translate subtitles into 17+ languages via [MyMemory API](https://mymemory.translated.net/) (free, no key)
+- 🌍 **Auto-translation** — translate subtitles via [MyMemory API](https://mymemory.translated.net/) (free, no key) or self-hosted [LibreTranslate](https://libretranslate.com/) / MarianMT (no limits)
 - 🖱️ **Draggable subtitles** — reposition subtitles anywhere on the video (mouse & touch)
 - 📱 **Responsive text** — font size adapts automatically to screen size via `clamp()`
 - 💾 **localStorage cache** — transcriptions are cached and reloaded instantly on next visit
@@ -62,7 +62,7 @@ npm install myetv-autosub-plugin
 
   player.on('playerready', () => {
     player.usePlugin('autoSubtitles', {
-      language:  'en',   // source language of the video
+      language:  'en',        // source language of the video
       modelSize: 'tiny',      // whisper model size
       position:  'topbar',    // button position
       idCache:   'video-123', // stable cache key (recommended)
@@ -82,11 +82,92 @@ npm install myetv-autosub-plugin
 | `modelSize` | `string` | `'base'` | Whisper model size: `'tiny'` (~39 MB), `'base'` (~74 MB), `'small'` (~244 MB). Larger = more accurate but slower. |
 | `autoGenerate` | `boolean` | `false` | Automatically start transcription and show subtitles when the video player is loaded. |
 | `autoTranslation` | `string` | `null` | Automatically translate subtitles into this language on load (ISO 2-letter code, e.g. `'en'`, `'it'`, `'fr'`). Requires subtitles to be ready first. |
+| `translationEngine` | `object` | `null` | Translation engine configuration. If `null`, uses MyMemory (free, limited). See [Translation Engines](#-translation-engines) below. |
 | `showButton` | `boolean` | `true` | Show the CC button in the player interface. |
 | `position` | `string` | `'topbar'` | Button position: `'right'` or `'left'` (control bar) or `'topbar'` (next to the ⚙️ settings icon). |
 | `subtitleStyle` | `object` | `{}` | Custom inline CSS style object applied to the subtitle text element. |
 | `cacheEnabled` | `boolean` | `true` | Cache transcription in `localStorage` for instant reload. |
 | `idCache` | `string` | `null` | Stable unique key used for the localStorage cache entry (recommended: your video's database ID). Falls back to a hash of the video URL if not set. |
+
+
+---
+
+## 🌐 Translation Engines
+
+The plugin supports three translation backends. By default it uses **MyMemory** (no configuration needed).
+
+### Comparison
+
+| Engine | Limit | Privacy | Setup |
+| :-- | :-- | :-- | :-- |
+| **MyMemory** (default) | ⚠️ ~5.000 chars/day per IP | ☁️ External API | None |
+| **LibreTranslate** (self-hosted) | ✅ No limits | 🔒 Your server | Easy |
+| **MarianMT** (self-hosted) | ✅ No limits | 🔒 Your server | Medium |
+
+
+---
+
+### MyMemory (default)
+
+Free public API, no configuration required. Limit is approximately **5.000 characters/day per IP**. Suitable for low-traffic or development use.
+
+```javascript
+// Default — no translationEngine needed
+player.usePlugin('autoSubtitles', {
+  autoTranslation: 'it',
+});
+```
+
+
+---
+
+### LibreTranslate (recommended for production)
+
+Self-hosted, no limits, supports **native array batch translation** — each subtitle segment is translated individually with guaranteed 1:1 index mapping, eliminating any desync issues.
+
+```javascript
+player.usePlugin('autoSubtitles', {
+  autoTranslation: 'it',
+  translationEngine: {
+    type:   'libretranslate',
+    url:    'https://your-libretranslate-server.com',
+    apiKey: 'your-api-key', // optional, required if --api-keys is enabled
+  },
+});
+```
+
+**Self-hosting with Docker:**
+
+```bash
+docker run -p 5000:5000 libretranslate/libretranslate --disable-web-ui --api-keys
+```
+LibreTranslate: [https://github.com/LibreTranslate/LibreTranslate](https://github.com/LibreTranslate/LibreTranslate)
+---
+
+### MarianMT
+
+Custom self-hosted REST endpoint compatible with MarianMT or Argos Translate.
+
+```javascript
+player.usePlugin('autoSubtitles', {
+  autoTranslation: 'it',
+  translationEngine: {
+    type: 'marianmt',
+    url:  'https://your-marianmt-server.com',
+  },
+});
+```
+
+Expected request/response format:
+
+```json
+// POST /translate
+// Request
+{ "q": "Hello world", "source": "en", "target": "it" }
+
+// Response
+{ "translatedText": "Ciao mondo" }
+```
 
 
 ---
@@ -101,10 +182,10 @@ Clicking the **CC button** opens a context menu with three sections:
 - **✕ Disable** — hide subtitles
 
 
-### Gestione
+### Management
 
 - **🎙️ Generate subtitles** — start transcription (first time)
-- **🔄 Regenerate trnascription** — force re-transcription (discards cache)
+- **🔄 Regenerate transcription** — force re-transcription (discards cache)
 - **📊 Show progress** — open the transcription progress panel (visible while generating)
 
 
@@ -159,9 +240,15 @@ If your site uses a Content Security Policy, add the following:
 Content-Security-Policy:
   worker-src blob:;
   script-src blob: https://cdn.jsdelivr.net;
-  connect-src https://cdn.jsdelivr.net https://huggingface.co https://api.mymemory.translated.net;
+  connect-src https://cdn.jsdelivr.net
+              https://huggingface.co
+              https://api.mymemory.translated.net
+              https://your-libretranslate-server.com;
 ```
-Use crossorigin="anonymous" on the <video> element.
+
+> If using LibreTranslate or MarianMT, replace `https://api.mymemory.translated.net` with your server URL (or add both if using MyMemory as fallback).
+
+Use `crossorigin="anonymous"` on the `<video>` element.
 
 ---
 
@@ -190,13 +277,18 @@ Hover over the subtitle text to reveal the **⠿ sposta** drag handle. Click and
 ```javascript
 player.on('playerready', () => {
   player.usePlugin('autoSubtitles', {
-    language:        'english', // language of the audio: "english" or "en" (if empty auto-detect)
-    modelSize:       'base',     // ai model to use: 'tiny', 'base', 'small'
-    autoGenerate:    true,       // start transcription and view subtitles automatically without user interacton
-    autoTranslation: 'en',       // auto-translate to English when ready
-    position:        'topbar',   // CC button next to ⚙️ settings icon; options are: 'left', 'right', 'topbar'
-    cacheEnabled:    true,       // cache client-side with localstorage
-    idCache:         `video-${videoId}`, // id of the key for the cache (if empty hased url will be used)
+    language:        'english',          // language of the audio: "english" or "en" (if empty auto-detect)
+    modelSize:       'base',             // AI model: 'tiny', 'base', 'small'
+    autoGenerate:    true,               // start transcription automatically
+    autoTranslation: 'it',              // auto-translate to Italian when ready
+    position:        'topbar',           // CC button position: 'left', 'right', 'topbar'
+    cacheEnabled:    true,
+    idCache:         `video-${videoId}`,
+    translationEngine: {
+      type:   'libretranslate',
+      url:    'https://your-libretranslate-server.com',
+      apiKey: 'your-api-key',
+    },
     subtitleStyle: {
       fontSize: '1.2em',
       color:    '#ffe066',
@@ -237,6 +329,10 @@ Whisper ASR — chunks of 30s each
       │  (subtitles stream in live)
       ▼
 Save to localStorage cache
+      │
+      ▼
+Translate via selected engine
+(MyMemory / LibreTranslate / MarianMT)
 ```
 
 

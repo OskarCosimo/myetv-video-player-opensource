@@ -45,6 +45,7 @@ constructor(videoElement, options = {}) {
         brandLogoUrl: '',         // URL for brand logo image
         brandLogoLinkUrl: '',     // Optional URL to open when clicking the logo
         brandLogoTooltipText: '', // Tooltip text for brand logo
+        loadingLogo: null,   // URL image to show inside the loading circle
         playlistEnabled: true,    // Enable/disable playlist detection
         playlistAutoPlay: true,   // Auto-play next video when current ends
         playlistLoop: false,      // Loop playlist when reaching the end
@@ -682,22 +683,38 @@ createPlayerStructure() {
 createInitialLoading() {
     const initialLoader = document.createElement('div');
     initialLoader.className = 'initial-loading';
-    initialLoader.innerHTML = '<div class="loading-spinner"></div><div class="loading-text"></div>';
+    initialLoader.innerHTML = `
+        <div class="loading-spinner-wrap">
+            <div class="loading-spinner"></div>
+            ${this.options.loadingLogo
+            ? `<img class="loading-spinner-logo" src="${this.options.loadingLogo}" alt="" />`
+            : ''}
+        </div>
+        <div class="loading-text"></div>
+    `;
     this.container.appendChild(initialLoader);
     this.initialLoading = initialLoader;
-}
-
-collectVideoQualities() {
-    if (this.options.debug) console.log('📁 Video qualities will be loaded with restored sources');
 }
 
 createLoadingOverlay() {
     const overlay = document.createElement('div');
     overlay.className = 'loading-overlay';
-    overlay.id = 'loadingOverlay-' + this.getUniqueId();
-    overlay.innerHTML = '<div class="loading-spinner"></div><div class="loading-text"></div>';
+    overlay.id = `loadingOverlay-${this.getUniqueId()}`;
+    overlay.innerHTML = `
+        <div class="loading-spinner-wrap">
+            <div class="loading-spinner"></div>
+            ${this.options.loadingLogo
+            ? `<img class="loading-spinner-logo" src="${this.options.loadingLogo}" alt="" />`
+            : ''}
+        </div>
+        <div class="loading-text"></div>
+    `;
     this.container.appendChild(overlay);
     this.loadingOverlay = overlay;
+}
+
+collectVideoQualities() {
+    if (this.options.debug) console.log('📁 Video qualities will be loaded with restored sources');
 }
 
 updateTooltips() {

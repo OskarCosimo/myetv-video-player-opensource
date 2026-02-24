@@ -289,6 +289,7 @@
                 cacheEnabled: true,
                 idCache: null,
                 autoTranslation: null,      // ISO 2-letter code, e.g. 'en', 'it'
+                translationEngine: null, // null = MyMemory (default), oppure { type: 'libretranslate', url: 'https://...', apiKey: '' }
             }, options);
 
             this.isGenerating = false;
@@ -867,10 +868,18 @@
 
         async _setTranslationLang(langCode) {
             this.translateLang = langCode;
-
             if (langCode === 'off') {
                 this.subtitlesTrans = [];
                 if (this.player.options.debug) console.log('[AutoSub] Translation disabled');
+                return;
+            }
+
+            // Skip if source language equals target language
+            const sourceLang = this._resolveLanguage(this.opts.language);
+            if (sourceLang && sourceLang === langCode.slice(0, 2)) {
+                if (this.player.options.debug) console.log('[AutoSub] Source = target lang, skipping translation');
+                this.subtitlesTrans = [];
+                this.translateLang = 'off';
                 return;
             }
 
@@ -899,61 +908,138 @@
             }
         }
 
-        async _translateBatch(segments, targetLang) {
-            const BATCH_CHARS = 400;
-            const SEP = '\n||||\n';
+        async _translateText(text, sourceLang, targetLang) {
+            const engine = this.opts.translationEngine;
 
-            // ── Detect source language ────────────────────────────────────────────
-            // 1. Use the language set in plugin options (if provided)
-            // 2. Otherwise try to detect it from the first segment via MyMemory
-            // 3. Absolute fallback: 'en'
-            let sourceLang = null;
-
-            if (this.opts.language) {
-                // Normalize: 'italian' → 'it', 'it' → 'it'
-                const lower = this.opts.language.toLowerCase().trim();
-                // Reverse lookup in LANGUAGE_MAP (value → key)
-                const found = Object.entries(LANGUAGE_MAP).find(([k, v]) => k === lower || v === lower);
-                sourceLang = found ? found[0] : lower.slice(0, 2); // fallback: first 2 chars
+            // ── MyMemory (default) ──────────────────────────────────────────────
+            if (!engine || engine.type === 'mymemory') {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
+                const resp = await fetch(url);
+                const json = await resp.json();
+                if (json.responseStatus && json.responseStatus !== 200) {
+                    throw new Error('MyMemory error: ' + json.responseDetails + ' (status ' + json.responseStatus + ')');
+                }
+                return json.responseData?.translatedText ?? text;
             }
 
+            // ── LibreTranslate ──────────────────────────────────────────────────
+            if (engine.type === 'libretranslate') {
+                const body = { q: text, source: sourceLang, target: targetLang, format: 'text' };
+                if (engine.apiKey) body.api_key = engine.apiKey;
+                const resp = await fetch(engine.url.replace(/\/$/, '') + '/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!resp.ok) throw new Error('LibreTranslate HTTP ' + resp.status);
+                const json = await resp.json();
+                if (json.error) throw new Error('LibreTranslate: ' + json.error);
+                return json.translatedText ?? text;
+            }
+
+            // ── MarianMT (Argos Translate API / custom REST endpoint) ───────────
+            if (engine.type === 'marianmt') {
+                const resp = await fetch(engine.url.replace(/\/$/, '') + '/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ q: text, source: sourceLang, target: targetLang })
+                });
+                if (!resp.ok) throw new Error('MarianMT HTTP ' + resp.status);
+                const json = await resp.json();
+                return json.translatedText ?? json.translation ?? text;
+            }
+
+            throw new Error('Unknown translation engine: ' + engine.type);
+        }
+
+        async _translateBatch(segments, targetLang) {
+            const SEP = ' ||| ';
+            const BATCH_CHARS = 400;
+
+            // Detect source language
+            let sourceLang = null;
+            if (this.opts.language) {
+                const lower = this.opts.language.toLowerCase().trim();
+                const found = Object.entries(LANGUAGE_MAP).find(([k, v]) => k === lower || v === lower);
+                sourceLang = found ? found[0] : lower.slice(0, 2);
+            }
             if (!sourceLang && segments.length > 0) {
-                // Try to detect language from the first segment via MyMemory
                 try {
                     const sample = segments[0].text.slice(0, 100);
                     const detectUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(sample)}&langpair=en|en`;
                     const resp = await fetch(detectUrl);
                     const json = await resp.json();
-                    // MyMemory returns the detected language in responseData
                     const detected = json.responseData?.detectedLanguage;
-                    if (detected && /^[a-z]{2}(-[A-Z]{2})?$/.test(detected)) {
-                        sourceLang = detected.slice(0, 2);
-                    }
-                } catch (_) { }
+                    if (/[a-z]{2}-[A-Z]{2}/.test(detected)) sourceLang = detected.slice(0, 2);
+                } catch { }
             }
+            if (!sourceLang) sourceLang = 'en';
 
-            if (!sourceLang) sourceLang = 'en'; // absolute fallback
+            // Normalize target to 2-letter code
+            const normTarget = LANGUAGE_MAP[targetLang]
+                ? targetLang
+                : (Object.entries(LANGUAGE_MAP).find(([k, v]) => v === targetLang)?.[0] ?? targetLang.slice(0, 2));
 
-            // Skip translation if source and target language are the same
-            if (sourceLang === targetLang) {
-                if (this.player.options.debug)
-                    console.log('[AutoSub] Source === target lang, skipping translation');
+            if (sourceLang === normTarget) {
+                if (this.player.options.debug) console.log('[AutoSub] Source = target lang, skipping translation');
                 return segments.map(s => ({ ...s }));
             }
 
-            if (this.player.options.debug)
-                console.log('[AutoSub] Translating', sourceLang, '→', targetLang);
+            if (this.player.options.debug) console.log('[AutoSub] Translating', sourceLang, '→', normTarget);
 
-            // ── Batching ──────────────────────────────────────────────────────────
+            const engine = this.opts.translationEngine;
+
+            // ── LibreTranslate: array nativo, mapping 1:1 garantito ──────────
+            if (engine?.type === 'libretranslate') {
+                const BATCH_SIZE = 50;
+                const result = [];
+                const url = `${engine.url.replace(/\/$/, '')}/translate`;
+
+                for (let i = 0; i < segments.length; i += BATCH_SIZE) {
+                    const batch = segments.slice(i, i + BATCH_SIZE);
+                    try {
+                        const body = {
+                            q: batch.map(s => s.text),   // array → risposta è array nella stessa posizione
+                            source: sourceLang,
+                            target: normTarget,
+                            format: 'text'
+                        };
+                        if (engine.apiKey) body.api_key = engine.apiKey;
+
+                        const resp = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                        });
+                        if (!resp.ok) throw new Error(`LibreTranslate HTTP ${resp.status}`);
+                        const json = await resp.json();
+                        if (json.error) throw new Error(`LibreTranslate: ${json.error}`);
+
+                        const translations = Array.isArray(json.translatedText)
+                            ? json.translatedText
+                            : [json.translatedText];
+
+                        batch.forEach((seg, j) => result.push({
+                            start: seg.start,
+                            end: seg.end,
+                            text: translations[j] ?? seg.text
+                        }));
+                    } catch (err) {
+                        if (this.player.options.debug) console.warn('[AutoSub] LibreTranslate batch error', err.message);
+                        batch.forEach(seg => result.push({ ...seg }));
+                    }
+                    if (i + BATCH_SIZE < segments.length)
+                        await new Promise(r => setTimeout(r, 100));
+                }
+                return result;
+            }
+
+            // ── MyMemory fallback ────────────────────────────────────────────
             const batches = [];
-            let current = [];
-            let charCount = 0;
-
+            let current = [], charCount = 0;
             for (const seg of segments) {
                 if (charCount + seg.text.length > BATCH_CHARS && current.length > 0) {
-                    batches.push(current);
-                    current = [];
-                    charCount = 0;
+                    batches.push(current); current = []; charCount = 0;
                 }
                 current.push(seg);
                 charCount += seg.text.length;
@@ -963,30 +1049,21 @@
             const result = [];
             for (const batch of batches) {
                 const sourceText = batch.map(s => s.text).join(SEP);
-                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(sourceText)}&langpair=${sourceLang}|${targetLang}`;
                 try {
-                    const resp = await fetch(url);
-                    const json = await resp.json();
-
-                    // Handle explicit API errors
-                    if (json.responseStatus && json.responseStatus !== 200) {
-                        if (this.player.options.debug) console.warn('[AutoSub] MyMemory API error:', json.responseDetails || json.responseStatus);
-                        batch.forEach(seg => result.push({ ...seg }));
-                        continue;
-                    }
-
-                    const translated = json.responseData?.translatedText || sourceText;
-                    const parts = translated.split('||||').map(s => s.trim().replace(/^\n+|\n+$/g, ''));
-                    batch.forEach((seg, i) => {
-                        result.push({ start: seg.start, end: seg.end, text: parts[i] || seg.text });
-                    });
-                    await new Promise(r => setTimeout(r, 120)); // rate-limit delay between batches
-                } catch (_) {
-                    batch.forEach(seg => result.push({ ...seg })); // fallback: keep original text
+                    const translated = await this._translateText(sourceText, sourceLang, normTarget);
+                    const parts = translated.split(SEP).map(s => s.trim().replace(/&amp;/g, '&'));
+                    batch.forEach((seg, i) => result.push({
+                        start: seg.start, end: seg.end, text: parts[i] ?? seg.text
+                    }));
+                } catch (err) {
+                    if (this.player.options.debug) console.warn('[AutoSub] Translation batch error', err.message);
+                    batch.forEach(seg => result.push({ ...seg }));
                 }
+                await new Promise(r => setTimeout(r, 120));
             }
             return result;
         }
+
 
         // ─────────────────────────────────────────────────────────────────────────
         // PRIVATE — DISPLAY

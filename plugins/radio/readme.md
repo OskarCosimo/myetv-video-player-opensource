@@ -30,7 +30,7 @@ This plugin transforms your standard video player into a fully-fledged internet 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/af5c56a5-e644-4ed2-b082-5e0882fd0dda" alt="Vintage Theme" width="48%">
+  <img src="https://github.com/user-attachments/assets/1f5ffcc3-b5b2-4c90-8207-c4a8293d9b7e" alt="Vintage Theme" width="48%">
   &nbsp; &nbsp;
   <img src="https://github.com/user-attachments/assets/5456f8cf-0b33-447a-ab35-5ca3d6a6f507" alt="Digital Theme" width="48%">
 </p>

@@ -87,7 +87,7 @@ When defining the `radio` object inside the player's plugins configuration, you 
 | `filter.language` | `String` | `''` | String to filter stations by language. |
 | `proxyUrl` | `String` | `''` | Optional proxy URL to bypass CORS issues for HTTP streams. |
 
-The API url is the JSON file with all the stream url of the radio stations, in the repository the is the file `station_example.json` that you can use for your tests.
+The API url is the `api.php` file, linked to the JSON file with all the stream url of the radio stations in the repository the is the file `station_example.json` that you can use for your tests.
 
 The proxy option, for example proxy.php (already inside the repository), can be like this: `https://mywebsite.com/proxy.html?url=` and it can be used to stream an http file inside an https network.
 

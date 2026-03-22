@@ -63,9 +63,9 @@
         '.radio-favicon{width:18px;height:18px;border-radius:3px;vertical-align:middle;margin-right:6px;object-fit:contain;display:none;}',
 
         /* DIAL WRAPPER & CONTAINER */
-        '.radio-dial-wrapper{width:100%;max-width:520px;position:relative;margin-bottom:10px; display:flex; flex-direction:column; flex:1; min-height:90px; max-height:160px;}',
+        '.radio-dial-wrapper{width:100%;max-width:520px;position:relative;margin-bottom:10px; display:flex; flex-direction:column; flex:1; min-height:60px; max-height:100px;}',
+        '.radio-analog-dial{position:relative;overflow:hidden;flex:1;min-height:50px;cursor:grab;border-radius:6px;transition:border-color 0.3s;}',
         '.radio-dial-label{display:flex;justify-content:space-between;font-size:10px;color:inherit;opacity:0.6;margin-bottom:4px;padding:0 2px;}',
-        '.radio-analog-dial{position:relative;overflow:hidden;flex:1;min-height:80px;cursor:grab;border-radius:6px;transition:border-color 0.3s;}',
         '.radio-analog-dial:active{cursor:grabbing;}',
         '.radio-analog-dial.loading-state{cursor:wait;}',
         '.radio-analog-dial.error-state{border-color:#ff0000 !important;}',
@@ -73,10 +73,10 @@
         /* HIGH DEFINITION SCALE */
         '.radio-scale{position:absolute;top:0;left:0;display:flex;align-items:flex-end;height:100%;will-change:transform;user-select:none;-webkit-user-select:none;}',
         '.radio-tick{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:20px;height:100%;flex-shrink:0;position:relative;}',
-        '.radio-tick::after{content:"";position:absolute;bottom:0;width:1px;height:12px;background:currentColor;opacity:0.3;}',
-        '.radio-tick.mid::after{height:20px;opacity:0.6;}',
-        '.radio-tick.major::after{height:35px;opacity:1;width:2px;}',
-        '.radio-tick-num{position:absolute;bottom:40px;font-size:9px;opacity:0.8;}',
+        '.radio-tick::after{content:"";position:absolute;bottom:0;width:1px;height:15%;background:currentColor;opacity:0.3;}',
+        '.radio-tick.mid::after{height:25%;opacity:0.6;}',
+        '.radio-tick.major::after{height:40%;opacity:1;width:2px;}',
+        '.radio-tick-num{position:absolute;bottom:45%;font-size:9px;opacity:0.8;}',
 
         /* NEEDLE */
         '.radio-needle{position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);pointer-events:none;z-index:10;}',
@@ -141,6 +141,18 @@
         '.settings-expandable-wrapper:has([data-action="speed_expand"]) { display: none !important; }',
         '.settings-option[data-action="speed_expand"] { display: none !important; }',
 
+        /* vintage theme responsive */
+        '@media(max-height: 480px) {',
+        '.radio-info-bar { margin-bottom: 5px !important; }',
+        '.radio-dial-wrapper { min-height: 60px !important; max-height: 100px !important; margin-bottom: 5px !important; }',
+        '.radio-analog-dial { min-height: 50px !important; }',
+        '.radio-search-bar { margin-top: 5px !important; }',
+        '.radio-tick-num { bottom: 25px !important; font-size: 8px !important; }',
+        '.radio-tick.major::after { height: 25px !important; }',
+        '.radio-tick.mid::after { height: 15px !important; }',
+        '.radio-tick::after { height: 8px !important; }',
+        '}',
+
         /* RESPONSIVE */
         '@media(max-width:480px){',
         '.radio-ch-label{display:none;}',
@@ -187,8 +199,18 @@
 
         this.rememberChannel = localStorage.getItem('myetv_radio_remember') === 'true';
         var savedCh = parseInt(localStorage.getItem('myetv_radio_last_ch'), 10);
+        var savedCountry = localStorage.getItem('myetv_radio_last_country');
 
-        this.currentChannel = (this.rememberChannel && !isNaN(savedCh)) ? savedCh : Math.max(1, parseInt(this.options.startChannel) || 1);
+        if (this.rememberChannel) {
+            // restore last channel if valid, otherwise default to startChannel option or 1
+            this.currentChannel = !isNaN(savedCh) ? savedCh : Math.max(1, parseInt(this.options.startChannel) || 1);
+            // restore country filter if available
+            if (savedCountry !== null) {
+                this.options.filter.country = savedCountry;
+            }
+        } else {
+            this.currentChannel = Math.max(1, parseInt(this.options.startChannel) || 1);
+        }
 
         // check if the player is already set to autoplay (e.g. radio mode) to maintain play state across channel changes
         this._isRadioPlaying = (player.options && player.options.autoplay) || (player.video && player.video.autoplay) || false;
@@ -745,9 +767,14 @@
 
         if (this.countrySelectEl) {
             this.countrySelectEl.addEventListener('change', function () {
-
                 self.options.filter.country = this.value;
                 self.currentChannel = 1;
+
+                // Se la memoria è attiva, salviamo subito la nuova nazione e il reset al canale 1
+                if (self.rememberChannel) {
+                    localStorage.setItem('myetv_radio_last_country', self.options.filter.country);
+                    localStorage.setItem('myetv_radio_last_ch', 1);
+                }
 
                 if (self.dialContainer) self.dialContainer.classList.add('loading-state');
                 if (self.digiMainEl) self.digiMainEl.textContent = 'LOADING...';
@@ -838,7 +865,7 @@
 
         var memLabel = document.createElement('span');
         memLabel.className = 'settings-option-label';
-        memLabel.textContent = 'Ricorda Canale';
+        memLabel.textContent = 'Remember Channel';
 
         var memCb = document.createElement('input');
         memCb.type = 'checkbox';
@@ -848,10 +875,13 @@
         memCb.addEventListener('change', function (e) {
             self.rememberChannel = e.target.checked;
             localStorage.setItem('myetv_radio_remember', self.rememberChannel ? 'true' : 'false');
+
             if (self.rememberChannel) {
                 localStorage.setItem('myetv_radio_last_ch', self.currentChannel);
+                localStorage.setItem('myetv_radio_last_country', self.options.filter.country);
             } else {
                 localStorage.removeItem('myetv_radio_last_ch');
+                localStorage.removeItem('myetv_radio_last_country');
             }
         });
 

@@ -1,0 +1,52 @@
+[
+  {
+    "channel_id": 1,
+    "name": "Radio Example Pop (IT)",
+    "url": "https://stream.example.com/radio_it.mp3",
+    "url_resolved": "https://stream.example.com/radio_it.mp3",
+    "countrycode": "IT",
+    "language": "italian",
+    "tags": "pop, top40, news",
+    "favicon": "https://via.placeholder.com/64/00d8ff/000000?text=IT"
+  },
+  {
+    "channel_id": 2,
+    "name": "Classic Rock FM (US)",
+    "url": "https://stream.example.com/rock_us.aac",
+    "url_resolved": "https://stream.example.com/rock_us.aac",
+    "countrycode": "US",
+    "language": "english",
+    "tags": "rock, classic, 80s",
+    "favicon": "https://via.placeholder.com/64/ff4400/ffffff?text=ROCK"
+  },
+  {
+    "channel_id": 3,
+    "name": "Smooth Jazz Lounge (UK)",
+    "url": "https://stream.example.com/jazz_uk.mp3",
+    "url_resolved": "https://stream.example.com/jazz_uk.mp3",
+    "countrycode": "GB",
+    "language": "english",
+    "tags": "jazz, chillout, lounge",
+    "favicon": "https://via.placeholder.com/64/b8860b/000000?text=JAZZ"
+  },
+  {
+    "channel_id": 4,
+    "name": "Chanson Française (FR)",
+    "url": "https://stream.example.com/chanson_fr.mp3",
+    "url_resolved": "https://stream.example.com/chanson_fr.mp3",
+    "countrycode": "FR",
+    "language": "french",
+    "tags": "chanson, acoustic, local",
+    "favicon": "https://via.placeholder.com/64/ffffff/000000?text=FR"
+  },
+  {
+    "channel_id": 5,
+    "name": "Tokyo Synthwave (JP)",
+    "url": "https://stream.example.com/synth_jp.mp3",
+    "url_resolved": "https://stream.example.com/synth_jp.mp3",
+    "countrycode": "JP",
+    "language": "japanese",
+    "tags": "synthwave, retrowave, electronic",
+    "favicon": "https://via.placeholder.com/64/ff00ff/ffffff?text=JP"
+  }
+]

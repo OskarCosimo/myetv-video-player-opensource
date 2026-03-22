@@ -173,7 +173,7 @@
         this.player = player;
 
         this.options = {
-            apiUrl: 'https://www.myetv.tv/api/radio/api.php?channel=all_light',
+            apiUrl: 'api.php',
             proxyUrl: '',
             filter: { search: '', country: '', language: '' },
             theme: (options && options.theme) ? options.theme : 'digital',

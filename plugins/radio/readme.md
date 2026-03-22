@@ -80,7 +80,7 @@ When defining the `radio` object inside the player's plugins configuration, you 
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `apiUrl` | `String` | MYETV API | The endpoint to fetch the JSON list of radio stations. |
+| `apiUrl` | `String` | `'api.php'` | The endpoint to fetch the JSON list of radio stations. |
 | `theme` | `String` | `'vintage'` | Sets the UI style. Accepted values: `'vintage'`, `'digital'`. |
 | `startChannel` | `Number` | `1` | The channel to tune into on first load (overridden if the user has a saved channel in memory). |
 | `filter.country` | `String` | `''` | 2-letter ISO code to initially filter stations (e.g., `'US'`, `'IT'`). |

@@ -27,6 +27,20 @@ This plugin transforms your standard video player into a fully-fledged internet 
 
 ---
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="[link-to-vintage.jpg](https://github.com/user-attachments/assets/af5c56a5-e644-4ed2-b082-5e0882fd0dda)" alt="Vintage Theme" width="48%">
+  &nbsp; &nbsp;
+  <img src="[link-to-digital.jpg](https://github.com/user-attachments/assets/5456f8cf-0b33-447a-ab35-5ca3d6a6f507)" alt="Digital Theme" width="48%">
+</p>
+
+<p align="center">
+  <em>Left: Vintage Theme | Right: Digital Theme</em>
+</p>
+
+---
+
 ## 🚀 Installation & Usage
 
 1. Include the MYETV Video Player files in your HTML.

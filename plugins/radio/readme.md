@@ -46,6 +46,7 @@ This plugin transforms your standard video player into a fully-fledged internet 
       autoplay: true,
       plugins: {
           radio: {
+              apiUrl: '',                // required: the url of the JSON with all the radio station to load
               theme: 'digital',          // 'vintage' or 'digital'
               startChannel: 1,           // Default starting channel
               filter: {

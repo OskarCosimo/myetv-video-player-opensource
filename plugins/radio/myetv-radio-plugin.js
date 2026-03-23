@@ -173,7 +173,7 @@
         this.player = player;
 
         this.options = {
-            apiUrl: 'api.php',
+            apiUrl: '',
             proxyUrl: '',
             filter: { search: '', country: '', language: '' },
             theme: (options && options.theme) ? options.theme : 'digital',
@@ -201,18 +201,15 @@
         var savedCh = parseInt(localStorage.getItem('myetv_radio_last_ch'), 10);
         var savedCountry = localStorage.getItem('myetv_radio_last_country');
 
+        this.targetAbsoluteCh = Math.max(1, parseInt(this.options.startChannel) || 1);
         if (this.rememberChannel) {
-            // restore last channel if valid, otherwise default to startChannel option or 1
-            this.currentChannel = !isNaN(savedCh) ? savedCh : Math.max(1, parseInt(this.options.startChannel) || 1);
-            // restore country filter if available
-            if (savedCountry !== null) {
-                this.options.filter.country = savedCountry;
-            }
-        } else {
-            this.currentChannel = Math.max(1, parseInt(this.options.startChannel) || 1);
+            if (!isNaN(savedCh)) this.targetAbsoluteCh = savedCh;
+            if (savedCountry !== null) this.options.filter.country = savedCountry;
         }
 
-        // check if the player is already set to autoplay (e.g. radio mode) to maintain play state across channel changes
+        this.currentChannel = 1;
+        this._wakeLock = null;
+
         this._isRadioPlaying = (player.options && player.options.autoplay) || (player.video && player.video.autoplay) || false;
         this._tuneId = 0;
 
@@ -266,6 +263,12 @@
         }, 100);
 
         this._loadStations();
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && self._isRadioPlaying) {
+                self._manageWakeLock(true);
+            }
+        });
     };
 
     RadioPlugin.prototype._injectCSS = function () {
@@ -482,9 +485,6 @@
         var list = this.filteredList;
         ch = Math.max(1, Math.min(ch, list.length || 1));
         this.currentChannel = ch;
-        if (this.rememberChannel) {
-            localStorage.setItem('myetv_radio_last_ch', ch);
-        }
         this._tuneId++;
 
         var playIntent = autoPlay || this._isRadioPlaying || (this.player.video && !this.player.video.paused);
@@ -504,15 +504,22 @@
 
         var s = list[ch - 1];
         if (s) {
+            // CALCUTLAE CHANNEL NUMBER BASED ON ORIGINAL STATIONS ARRAY
+            var absoluteCh = this.stations.indexOf(s) + 1;
+
+            if (this.rememberChannel) {
+                localStorage.setItem('myetv_radio_last_ch', absoluteCh);
+            }
+
             var stationName = s.name || 'UNKNOWN';
 
             if (this.stationNameEl) this.stationNameEl.textContent = stationName;
             if (this.channelNumEl) {
-                this.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + ch;
+                this.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + absoluteCh;
                 this.statusDot = this.channelNumEl.querySelector('.radio-status');
             }
 
-            if (this.digiChEl) this.digiChEl.textContent = 'CH ' + ch;
+            if (this.digiChEl) this.digiChEl.textContent = 'CH ' + absoluteCh;
             if (this.digiMainEl) this.digiMainEl.textContent = stationName;
 
             var metaParts = [];
@@ -538,6 +545,16 @@
             }
             if (this.digiMetaEl) this.digiMetaEl.textContent = metaString || 'FM RADIO';
             if (typeof this.player.setVideoTitle === 'function') this.player.setVideoTitle(stationName);
+
+            // Lock-Screen Mobile for Webview
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: stationName,
+                    artist: metaString || 'MYETV Radio',
+                    album: 'Radio Player',
+                    artwork: (s.favicon) ? [{ src: s.favicon, sizes: '192x192', type: 'image/png' }] : []
+                });
+            }
 
             /* 3. DEBOUNCE LOGIC & SAFE KILL-SWITCH */
             if (this._tuneTimeout && typeof this._tuneTimeout !== 'string') {
@@ -590,11 +607,12 @@
             var s = self.filteredList[ch - 1];
 
             if (s) {
+                var absCh = self.stations.indexOf(s) + 1;
                 var sName = s.name || 'UNKNOWN';
                 if (self.stationNameEl) self.stationNameEl.textContent = sName;
                 if (self.digiMainEl) self.digiMainEl.textContent = sName;
-                if (self.channelNumEl) self.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + ch;
-                if (self.digiChEl) self.digiChEl.textContent = 'CH ' + ch;
+                if (self.channelNumEl) self.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + absCh;
+                if (self.digiChEl) self.digiChEl.textContent = 'CH ' + absCh;
             }
         });
 
@@ -629,12 +647,17 @@
             .then(function (data) {
                 self.stations = data || [];
                 self.filteredList = self._applyFilter(self.options.filter.search || '');
-                if (self.dialContainer) self.dialContainer.classList.remove('loading-state');
+                var targetRel = 1;
+                if (self.stations.length > 0) {
+                    var targetAbsIndex = Math.min(Math.max(1, self.targetAbsoluteCh), self.stations.length) - 1;
+                    var targetStation = self.stations[targetAbsIndex];
+                    var foundIdx = self.filteredList.indexOf(targetStation);
+                    if (foundIdx !== -1) targetRel = foundIdx + 1;
+                }
 
                 setTimeout(function () {
                     self._buildScale(self.filteredList.length);
-
-                    self._positionTo(self.currentChannel, false, true);
+                    self._positionTo(targetRel, false, true);
                 }, 100);
             })
             .catch(function (err) {
@@ -744,6 +767,22 @@
         }
     };
 
+    RadioPlugin.prototype._manageWakeLock = function (play) {
+        var self = this;
+        if ('wakeLock' in navigator) {
+            if (play) {
+                if (!this._wakeLock) {
+                    navigator.wakeLock.request('screen').then(function (lock) {
+                        self._wakeLock = lock;
+                    }).catch(function () { });
+                }
+            } else if (this._wakeLock) {
+                this._wakeLock.release().catch(function () { });
+                this._wakeLock = null;
+            }
+        }
+    };
+
     // ============================================================
     // SEARCH EVENTS
     // ============================================================
@@ -769,8 +808,8 @@
             this.countrySelectEl.addEventListener('change', function () {
                 self.options.filter.country = this.value;
                 self.currentChannel = 1;
+                self.targetAbsoluteCh = -1;
 
-                // Se la memoria è attiva, salviamo subito la nuova nazione e il reset al canale 1
                 if (self.rememberChannel) {
                     localStorage.setItem('myetv_radio_last_country', self.options.filter.country);
                     localStorage.setItem('myetv_radio_last_ch', 1);
@@ -982,12 +1021,13 @@
         for (var i = 0; i < max; i++) {
             (function (s) {
                 var actualIndex = self.filteredList.indexOf(s) + 1;
+                var absoluteCh = self.stations.indexOf(s) + 1;
                 var item = document.createElement('div');
                 item.className = 'radio-modal-item' + (actualIndex === self.currentChannel ? ' active' : '');
 
                 var ch = document.createElement('span');
                 ch.className = 'radio-modal-ch';
-                ch.textContent = 'CH ' + actualIndex;
+                ch.textContent = 'CH ' + absoluteCh;
 
                 var fav = document.createElement('img');
                 fav.className = 'radio-modal-fav';
@@ -1047,6 +1087,7 @@
             self._clearBufferTimeout();
             self._clearError();
             self._setStatus('playing');
+            self._manageWakeLock(true);
         });
 
         this.player.addEventListener('paused', function () {
@@ -1054,6 +1095,7 @@
             self._isRadioPlaying = false;
             self._clearBufferTimeout();
             self._setStatus('');
+            self._manageWakeLock(false);
         });
 
         this.player.addEventListener('ended', function () {
@@ -1061,6 +1103,7 @@
             self._isRadioPlaying = false;
             self._clearBufferTimeout();
             self._setStatus('');
+            self._manageWakeLock(false);
         });
 
         var video = this.player.video;

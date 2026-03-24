@@ -130,10 +130,6 @@
 
         /* CONTROL BAR EXTENSION & PROGRESS BAR HIDER */
         '.radio-controls-center{position:absolute !important; left:50% !important; top:50% !important; transform:translate(-50%, -50%) !important; display:flex !important; align-items:center !important; justify-content:center !important; gap:16px !important; margin:0 !important; padding:0 !important; z-index:10;}',
-        '.radio-cb-btn{appearance:none; background:transparent !important; border:none !important; color:#ffffff !important; cursor:pointer !important; display:flex !important; align-items:center !important; justify-content:center !important; gap:5px !important; font-size:11px !important; font-family:"Courier New",monospace !important; font-weight:bold !important; opacity:0.8 !important; padding:0 !important; margin:0 !important; outline:none !important;}',
-        '.radio-cb-btn:hover{opacity:1 !important; color:#00d8ff !important;}',
-        '.radio-cb-btn svg{width:14px !important; height:14px !important; display:block !important; fill:currentColor !important; margin:0 !important; padding:0 !important;}',
-        '.radio-cb-label{display:block !important; line-height:1 !important; margin:0 !important; padding:0 !important;}',
         '.progress-container, .myetv-progress, .player-progress, .controls-progress, [class*="progress"] { display: none !important; opacity: 0 !important; pointer-events: none !important; }',
 
         /* HIDE BUTTONS */
@@ -160,7 +156,6 @@
         '.radio-cb-btn span.radio-cb-label{display:none;}',
         '.radio-analog-dial{min-height:60px;}',
         '.radio-digital-display{min-height:75px; padding:6px 12px;}',
-        '.radio-digital-display{height:75px; padding:6px 12px;}',
         '.digital-main{font-size:18px;}',
         '.radio-filter-row{display:none;}',
         '}'
@@ -195,27 +190,25 @@
             }
         }
 
-        /* Internal State */
+        /* Internal State Arrays */
         this.stations = [];
+        this.baseCountryList = [];
         this.filteredList = [];
 
-        // management of "remember last channel" feature using localStorage
         this.rememberChannel = localStorage.getItem('myetv_radio_remember') === 'true';
         var savedCh = parseInt(localStorage.getItem('myetv_radio_last_ch'), 10);
         var savedCountry = localStorage.getItem('myetv_radio_last_country');
 
-        // set initial state based on options and saved values
         this.activeCountry = (this.options.startCountry || '').toUpperCase();
-        this.targetAbsoluteCh = Math.max(1, parseInt(this.options.startChannel) || 1);
+        this.targetAbsoluteCh = -1;
+        this.currentChannel = Math.max(1, parseInt(this.options.startChannel) || 1);
 
         if (this.rememberChannel) {
             if (!isNaN(savedCh)) this.targetAbsoluteCh = savedCh;
             if (savedCountry !== null) this.activeCountry = savedCountry.toUpperCase();
         }
 
-        this.currentChannel = 1;
         this._wakeLock = null;
-
         this._isRadioPlaying = (player.options && player.options.autoplay) || (player.video && player.video.autoplay) || false;
         this._tuneId = 0;
 
@@ -245,6 +238,7 @@
         this.searchInput = null;
         this.errMsgEl = null;
         this.faviconEl = null;
+        this.countrySelectEl = null;
     }
 
     // ============================================================
@@ -351,7 +345,7 @@
         dialContainer.appendChild(errMsg);
         dialWrapper.appendChild(dialContainer);
 
-        /* 2. DIGITAL CAR STEREO DISPLAY (Digital) */
+        /* 2. DIGITAL STEREO DISPLAY (Digital) */
         var digitalDisplay = document.createElement('div');
         digitalDisplay.className = 'radio-digital-display';
         digitalDisplay.innerHTML = `
@@ -406,10 +400,7 @@
 
         var countrySelect = document.createElement('select');
         countrySelect.className = 'radio-country-select';
-        this.countrySelectEl = countrySelect; // La creiamo vuota, la popoleremo dopo!
-
-        var searchInput = document.createElement('input');
-        searchInput.type = 'text';
+        this.countrySelectEl = countrySelect;
 
         var searchInput = document.createElement('input');
         searchInput.type = 'text';
@@ -491,8 +482,9 @@
 
         var s = list[ch - 1];
         if (s) {
-            // CALCUTLAE CHANNEL NUMBER BASED ON ORIGINAL STATIONS ARRAY
             var absoluteCh = this.stations.indexOf(s) + 1;
+
+            var displayCh = this.baseCountryList.indexOf(s) + 1;
 
             if (this.rememberChannel) {
                 localStorage.setItem('myetv_radio_last_ch', absoluteCh);
@@ -502,11 +494,11 @@
 
             if (this.stationNameEl) this.stationNameEl.textContent = stationName;
             if (this.channelNumEl) {
-                this.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + absoluteCh;
+                this.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + displayCh;
                 this.statusDot = this.channelNumEl.querySelector('.radio-status');
             }
 
-            if (this.digiChEl) this.digiChEl.textContent = 'CH ' + absoluteCh;
+            if (this.digiChEl) this.digiChEl.textContent = 'CH ' + displayCh;
             if (this.digiMainEl) this.digiMainEl.textContent = stationName;
 
             var metaParts = [];
@@ -517,7 +509,6 @@
             if (this.stationMetaEl) {
                 this.stationMetaEl.querySelector('.radio-meta-text').textContent = metaString;
 
-                // FAVICON SAFE-LOAD
                 if (this.faviconEl) {
                     if (s.favicon) {
                         this.faviconEl.style.display = 'none';
@@ -543,7 +534,7 @@
                 });
             }
 
-            /* 3. DEBOUNCE LOGIC & SAFE KILL-SWITCH */
+            /* DEBOUNCE LOGIC */
             if (this._tuneTimeout && typeof this._tuneTimeout !== 'string') {
                 clearTimeout(this._tuneTimeout);
             }
@@ -594,12 +585,12 @@
             var s = self.filteredList[ch - 1];
 
             if (s) {
-                var absCh = self.stations.indexOf(s) + 1;
+                var displayCh = self.baseCountryList.indexOf(s) + 1;
                 var sName = s.name || 'UNKNOWN';
                 if (self.stationNameEl) self.stationNameEl.textContent = sName;
                 if (self.digiMainEl) self.digiMainEl.textContent = sName;
-                if (self.channelNumEl) self.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + absCh;
-                if (self.digiChEl) self.digiChEl.textContent = 'CH ' + absCh;
+                if (self.channelNumEl) self.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + displayCh;
+                if (self.digiChEl) self.digiChEl.textContent = 'CH ' + displayCh;
             }
         });
 
@@ -621,10 +612,23 @@
     RadioPlugin.prototype._buildApiUrl = function () {
         var url = this.options.apiUrl;
         var params = [];
-        if (this.options.filter.country) params.push('country=' + encodeURIComponent(this.options.filter.country));
         if (this.options.filter.language) params.push('language=' + encodeURIComponent(this.options.filter.language));
         if (params.length) url += (url.indexOf('?') !== -1 ? '&' : '?') + params.join('&');
         return url;
+    };
+
+    RadioPlugin.prototype._updateBaseList = function () {
+        var cf = (this.activeCountry || '').toLowerCase();
+        this.baseCountryList = !cf ? this.stations.slice() : this.stations.filter(function (s) {
+            return (s.countrycode || '').toLowerCase() === cf;
+        });
+    };
+
+    RadioPlugin.prototype._applyTextSearch = function (q) {
+        var low = (q || '').toLowerCase();
+        this.filteredList = !low ? this.baseCountryList.slice() : this.baseCountryList.filter(function (s) {
+            return (s.name || '').toLowerCase().indexOf(low) !== -1;
+        });
     };
 
     RadioPlugin.prototype._loadStations = function () {
@@ -634,7 +638,7 @@
             .then(function (data) {
                 self.stations = data || [];
 
-                // dynamic population of country select options based on loaded stations
+                // dinamically build country list based on loaded stations, but only if not already built (e.g. from memory or previous load)
                 if (self.countrySelectEl && self.countrySelectEl.options.length === 0) {
                     var uniqueCountries = [];
                     self.stations.forEach(function (s) {
@@ -655,7 +659,7 @@
                         self.countrySelectEl.appendChild(opt);
                     });
 
-                    // restore previously selected country if still available, otherwise select first available or "ALL"
+                    // Restore previously selected country if still available, otherwise select first available or "All"
                     var initC = self.activeCountry;
                     if (initC && uniqueCountries.indexOf(initC) !== -1) {
                         self.countrySelectEl.value = initC;
@@ -668,11 +672,14 @@
                     }
                 }
 
-                // apply initial filter and position to the target channel
-                self.filteredList = self._applyFilter(self.options.filter.search || '');
+                // Apply filters & search
+                self._updateBaseList();
+                self._applyTextSearch(self.options.filter.search || (self.searchInput ? self.searchInput.value.trim() : ''));
 
-                var targetRel = 1;
-                if (self.stations.length > 0) {
+                var targetRel = Math.max(1, parseInt(self.options.startChannel) || 1);
+
+                // if there's an absolute channel target (from memory) try to find it in the filtered list and switch to it
+                if (self.targetAbsoluteCh !== -1 && self.stations.length > 0) {
                     var targetAbsIndex = Math.min(Math.max(1, self.targetAbsoluteCh), self.stations.length) - 1;
                     var targetStation = self.stations[targetAbsIndex];
                     var foundIdx = self.filteredList.indexOf(targetStation);
@@ -688,18 +695,6 @@
                 if (self.stationNameEl) self.stationNameEl.textContent = 'API Unavailable';
                 if (self.digiMainEl) self.digiMainEl.textContent = 'NO SIGNAL';
             });
-    };
-
-    RadioPlugin.prototype._applyFilter = function (q) {
-        var low = q.toLowerCase();
-        var cf = (this.activeCountry || '').toLowerCase();
-        var lf = (this.options.filter.language || '').toLowerCase();
-        return this.stations.filter(function (s) {
-            var ok = !q || (s.name || '').toLowerCase().indexOf(low) !== -1;
-            if (cf) ok = ok && (s.countrycode || '').toLowerCase() === cf;
-            if (lf) ok = ok && (s.language || '').toLowerCase().indexOf(lf) !== -1;
-            return ok;
-        });
     };
 
     RadioPlugin.prototype._resolveUrl = function (url) {
@@ -815,7 +810,7 @@
 
         var doLocalSearch = function () {
             var q = input.value.trim();
-            self.filteredList = self._applyFilter(q);
+            self._applyTextSearch(q);
             self._buildScale(self.filteredList.length);
             self._positionTo(1, false, true);
         };
@@ -827,25 +822,31 @@
             self._searchTimeout = setTimeout(doLocalSearch, 450);
         });
 
-
         if (this.countrySelectEl) {
             this.countrySelectEl.addEventListener('change', function () {
                 self.activeCountry = this.value;
                 self.currentChannel = 1;
                 self.targetAbsoluteCh = -1;
 
+                self._updateBaseList();
+                self._applyTextSearch(self.searchInput ? self.searchInput.value.trim() : '');
+
                 if (self.rememberChannel) {
                     localStorage.setItem('myetv_radio_last_country', self.activeCountry);
-                    localStorage.setItem('myetv_radio_last_ch', 1);
+
+                    var firstStation = self.filteredList[0];
+                    if (firstStation) {
+                        localStorage.setItem('myetv_radio_last_ch', self.stations.indexOf(firstStation) + 1);
+                    }
                 }
+
+                if (self.dialContainer) self.dialContainer.classList.add('loading-state');
+                if (self.digiMainEl) self.digiMainEl.textContent = 'LOADING...';
 
                 if (self.player.video) {
                     try { self.player.video.pause(); } catch (e) { }
                 }
 
-                // filter stations based on new country selection and reset to first channel
-                var q = self.searchInput ? self.searchInput.value.trim() : '';
-                self.filteredList = self._applyFilter(q);
                 self._buildScale(self.filteredList.length);
                 self._positionTo(1, false, true);
             });
@@ -941,8 +942,10 @@
             localStorage.setItem('myetv_radio_remember', self.rememberChannel ? 'true' : 'false');
 
             if (self.rememberChannel) {
-                localStorage.setItem('myetv_radio_last_ch', self.currentChannel);
-                localStorage.setItem('myetv_radio_last_country', self.options.filter.country);
+                var s = self.filteredList[self.currentChannel - 1];
+                var absoluteCh = s ? self.stations.indexOf(s) + 1 : 1;
+                localStorage.setItem('myetv_radio_last_ch', absoluteCh);
+                localStorage.setItem('myetv_radio_last_country', self.activeCountry);
             } else {
                 localStorage.removeItem('myetv_radio_last_ch');
                 localStorage.removeItem('myetv_radio_last_country');
@@ -1046,13 +1049,14 @@
         for (var i = 0; i < max; i++) {
             (function (s) {
                 var actualIndex = self.filteredList.indexOf(s) + 1;
-                var absoluteCh = self.stations.indexOf(s) + 1;
+                var displayCh = self.baseCountryList.indexOf(s) + 1;
+
                 var item = document.createElement('div');
                 item.className = 'radio-modal-item' + (actualIndex === self.currentChannel ? ' active' : '');
 
                 var ch = document.createElement('span');
                 ch.className = 'radio-modal-ch';
-                ch.textContent = 'CH ' + absoluteCh;
+                ch.textContent = 'CH ' + displayCh;
 
                 var fav = document.createElement('img');
                 fav.className = 'radio-modal-fav';

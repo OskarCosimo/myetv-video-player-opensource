@@ -84,9 +84,9 @@ When defining the `radio` object inside the player's plugins configuration, you 
 | `theme` | `String` | `'vintage'` | Sets the UI style. Accepted values: `'vintage'`, `'digital'`. |
 | `startChannel` | `Number` | `1` | The channel to tune into on first load (overridden if the user has a saved channel in memory). |
 | `showAllCountryOption` | `Boolean` | `true` | Show or hide the ALL option in the contry selectbox. |
-| `startCountry` | `String` | `''` | The initial selction in the country selectbox (e.g., `'US'`, `'IT'`) |
-| `filter.country` | `String` | `''` | 2-letter ISO code to initially filter stations (e.g., `'US'`, `'IT'`). |
-| `filter.language` | `String` | `''` | String to filter stations by language. |
+| `startCountry` | `String` | `''` | The initial selction in the country selectbox (e.g., `'US'` or `'IT'`) |
+| `filter.country` | `String` | `''` | 2-letter ISO code to filter the API stations (e.g., `'US'` or `'IT'`). |
+| `filter.language` | `String` | `''` | String to filter the API stations by language (e.g, `'English'` or `'Italian'`. |
 | `proxyUrl` | `String` | `''` | Optional proxy URL to bypass CORS issues for HTTP streams. |
 
 The API url is the `api.php` file, linked to the JSON file with all the stream url of the radio stations in the repository this is the file `station_example.json` that you can use for your tests.

@@ -177,7 +177,9 @@
             proxyUrl: '',
             filter: { search: '', country: '', language: '' },
             theme: (options && options.theme) ? options.theme : 'digital',
-            startChannel: 1
+            startChannel: 1,
+            startCountry: '',
+            showAllCountryOption: true
         };
 
         if (options) {
@@ -197,14 +199,18 @@
         this.stations = [];
         this.filteredList = [];
 
+        // management of "remember last channel" feature using localStorage
         this.rememberChannel = localStorage.getItem('myetv_radio_remember') === 'true';
         var savedCh = parseInt(localStorage.getItem('myetv_radio_last_ch'), 10);
         var savedCountry = localStorage.getItem('myetv_radio_last_country');
 
+        // set initial state based on options and saved values
+        this.activeCountry = (this.options.startCountry || '').toUpperCase();
         this.targetAbsoluteCh = Math.max(1, parseInt(this.options.startChannel) || 1);
+
         if (this.rememberChannel) {
             if (!isNaN(savedCh)) this.targetAbsoluteCh = savedCh;
-            if (savedCountry !== null) this.options.filter.country = savedCountry;
+            if (savedCountry !== null) this.activeCountry = savedCountry.toUpperCase();
         }
 
         this.currentChannel = 1;
@@ -400,29 +406,10 @@
 
         var countrySelect = document.createElement('select');
         countrySelect.className = 'radio-country-select';
+        this.countrySelectEl = countrySelect; // La creiamo vuota, la popoleremo dopo!
 
-        var countries = ['', 'IT', 'US', 'GB', 'FR', 'DE', 'ES', 'RU', 'JP', 'BR', 'CH'];
-        var cNames = { '': 'ALL', 'IT': 'IT', 'US': 'US', 'GB': 'GB', 'FR': 'FR', 'DE': 'DE', 'ES': 'ES', 'RU': 'RU', 'JP': 'JP', 'BR': 'BR', 'CH': 'CH' };
-
-        countries.forEach(function (c) {
-            var opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = cNames[c];
-            countrySelect.appendChild(opt);
-        });
-
-        var initC = (this.options.filter.country || '').toUpperCase();
-        if (countries.indexOf(initC) !== -1) {
-            countrySelect.value = initC;
-        } else if (initC) {
-
-            var opt = document.createElement('option');
-            opt.value = initC;
-            opt.textContent = initC;
-            countrySelect.appendChild(opt);
-            countrySelect.value = initC;
-        }
-        this.countrySelectEl = countrySelect;
+        var searchInput = document.createElement('input');
+        searchInput.type = 'text';
 
         var searchInput = document.createElement('input');
         searchInput.type = 'text';
@@ -646,7 +633,44 @@
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 self.stations = data || [];
+
+                // dynamic population of country select options based on loaded stations
+                if (self.countrySelectEl && self.countrySelectEl.options.length === 0) {
+                    var uniqueCountries = [];
+                    self.stations.forEach(function (s) {
+                        var cc = (s.countrycode || '').toUpperCase();
+                        if (cc && uniqueCountries.indexOf(cc) === -1) uniqueCountries.push(cc);
+                    });
+                    uniqueCountries.sort();
+
+                    if (self.options.showAllCountryOption) {
+                        var optAll = document.createElement('option');
+                        optAll.value = ''; optAll.textContent = 'ALL';
+                        self.countrySelectEl.appendChild(optAll);
+                    }
+
+                    uniqueCountries.forEach(function (cc) {
+                        var opt = document.createElement('option');
+                        opt.value = cc; opt.textContent = cc;
+                        self.countrySelectEl.appendChild(opt);
+                    });
+
+                    // restore previously selected country if still available, otherwise select first available or "ALL"
+                    var initC = self.activeCountry;
+                    if (initC && uniqueCountries.indexOf(initC) !== -1) {
+                        self.countrySelectEl.value = initC;
+                    } else if (!self.options.showAllCountryOption && uniqueCountries.length > 0) {
+                        self.countrySelectEl.value = uniqueCountries[0];
+                        self.activeCountry = uniqueCountries[0];
+                    } else {
+                        self.countrySelectEl.value = '';
+                        self.activeCountry = '';
+                    }
+                }
+
+                // apply initial filter and position to the target channel
                 self.filteredList = self._applyFilter(self.options.filter.search || '');
+
                 var targetRel = 1;
                 if (self.stations.length > 0) {
                     var targetAbsIndex = Math.min(Math.max(1, self.targetAbsoluteCh), self.stations.length) - 1;
@@ -668,7 +692,7 @@
 
     RadioPlugin.prototype._applyFilter = function (q) {
         var low = q.toLowerCase();
-        var cf = (this.options.filter.country || '').toLowerCase();
+        var cf = (this.activeCountry || '').toLowerCase();
         var lf = (this.options.filter.language || '').toLowerCase();
         return this.stations.filter(function (s) {
             var ok = !q || (s.name || '').toLowerCase().indexOf(low) !== -1;
@@ -806,23 +830,24 @@
 
         if (this.countrySelectEl) {
             this.countrySelectEl.addEventListener('change', function () {
-                self.options.filter.country = this.value;
+                self.activeCountry = this.value;
                 self.currentChannel = 1;
                 self.targetAbsoluteCh = -1;
 
                 if (self.rememberChannel) {
-                    localStorage.setItem('myetv_radio_last_country', self.options.filter.country);
+                    localStorage.setItem('myetv_radio_last_country', self.activeCountry);
                     localStorage.setItem('myetv_radio_last_ch', 1);
                 }
-
-                if (self.dialContainer) self.dialContainer.classList.add('loading-state');
-                if (self.digiMainEl) self.digiMainEl.textContent = 'LOADING...';
 
                 if (self.player.video) {
                     try { self.player.video.pause(); } catch (e) { }
                 }
 
-                self._loadStations();
+                // filter stations based on new country selection and reset to first channel
+                var q = self.searchInput ? self.searchInput.value.trim() : '';
+                self.filteredList = self._applyFilter(q);
+                self._buildScale(self.filteredList.length);
+                self._positionTo(1, false, true);
             });
         }
     };

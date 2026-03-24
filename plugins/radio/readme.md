@@ -64,7 +64,7 @@ This plugin transforms your standard video player into a fully-fledged internet 
               theme: 'digital',          // 'vintage' or 'digital'
               startChannel: 1,           // Default starting channel
               filter: {
-                  country: 'IT'          // Initial country filter (optional)
+                  country: 'IT'          // Filter the country selectbox (optional)
               }
           }
       }
@@ -83,6 +83,8 @@ When defining the `radio` object inside the player's plugins configuration, you 
 | `apiUrl` | `String` | `'api.php'` | The endpoint to fetch the JSON list of radio stations. |
 | `theme` | `String` | `'vintage'` | Sets the UI style. Accepted values: `'vintage'`, `'digital'`. |
 | `startChannel` | `Number` | `1` | The channel to tune into on first load (overridden if the user has a saved channel in memory). |
+| `showAllCountryOption` | `Boolean` | `true` | Show or hide the ALL option in the contry selectbox. |
+| `startCountry` | `String` | `''` | The initial selction in the country selectbox (e.g., `'US'`, `'IT'`) |
 | `filter.country` | `String` | `''` | 2-letter ISO code to initially filter stations (e.g., `'US'`, `'IT'`). |
 | `filter.language` | `String` | `''` | String to filter stations by language. |
 | `proxyUrl` | `String` | `''` | Optional proxy URL to bypass CORS issues for HTTP streams. |

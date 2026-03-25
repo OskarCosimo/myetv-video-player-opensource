@@ -87,12 +87,29 @@ When defining the `radio` object inside the player's plugins configuration, you 
 | `startCountry` | `String` | `''` | The initial selction in the country selectbox (e.g., `'US'` or `'IT'`) |
 | `filter.country` | `String` | `''` | 2-letter ISO code to filter the API stations (e.g., `'US'` or `'IT'`). |
 | `filter.language` | `String` | `''` | String to filter the API stations by language (e.g, `'English'` or `'Italian'`. |
+| `defaultIcon` | `String` | `''` | The default icon to show for the station and in the stations list. |
+| `tagIcons` | `Array` | `'[]'` | An array of icons related to the station tag; see below for examples |
 | `proxyUrl` | `String` | `''` | Optional proxy URL to bypass CORS issues for HTTP streams. |
 
 The API url is the `api.php` file, linked to the JSON file with all the stream url of the radio stations in the repository this is the file `station_example.json` that you can use for your tests.
 
 The proxy option, for example proxy.php (already inside the repository), can be like this: `https://mywebsite.com/proxy.html?url=` and it can be used to stream an http file inside an https network.
 
+Icons option example:
+```
+defaultIcon: 'https://www.mywebsite.tcom/plugin/radio/icons/radio-solid.png',
+tagIcons: {
+                'news': 'https://www.mywebsite.tcom/plugin/radio/icons/newspaper-solid.png',
+                'pop': 'https://www.mywebsite.tcom/plugin/radio/icons/headphones-solid.png',
+                'rock': 'https://www.mywebsite.tcom/plugin/radio/icons/bolt-lightning-solid.png',
+                'classical': 'https://www.mywebsite.tcom/plugin/radio/icons/music-solid.png',
+                'dance': 'https://www.mywebsite.tcom/plugin/radio/icons/compact-disc-solid.png',
+                'jazz': 'https://www.mywebsite.tcom/plugin/radio/icons/guitar-solid.png',
+                'sports': 'https://www.mywebsite.tcom/plugin/radio/icons/medal-solid.png',
+                'religious': 'https://www.mywebsite.tcom/plugin/radio/icons/radio-solid.png',
+                'various': 'https://www.mywebsite.tcom/plugin/radio/icons/radio-solid.png'
+          }
+```
 ---
 
 ## 🔌 Public API Methods

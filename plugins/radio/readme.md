@@ -97,17 +97,17 @@ The proxy option, for example proxy.php (already inside the repository), can be 
 
 Icons option example:
 ```
-defaultIcon: 'https://www.mywebsite.tcom/plugin/radio/icons/radio-solid.png',
+defaultIcon: 'https://www.mywebsite.com/plugins/radio/icons/radio-solid.png',
 tagIcons: {
-                'news': 'https://www.mywebsite.tcom/plugin/radio/icons/newspaper-solid.png',
-                'pop': 'https://www.mywebsite.tcom/plugin/radio/icons/headphones-solid.png',
-                'rock': 'https://www.mywebsite.tcom/plugin/radio/icons/bolt-lightning-solid.png',
-                'classical': 'https://www.mywebsite.tcom/plugin/radio/icons/music-solid.png',
-                'dance': 'https://www.mywebsite.tcom/plugin/radio/icons/compact-disc-solid.png',
-                'jazz': 'https://www.mywebsite.tcom/plugin/radio/icons/guitar-solid.png',
-                'sports': 'https://www.mywebsite.tcom/plugin/radio/icons/medal-solid.png',
-                'religious': 'https://www.mywebsite.tcom/plugin/radio/icons/radio-solid.png',
-                'various': 'https://www.mywebsite.tcom/plugin/radio/icons/radio-solid.png'
+                'news': 'https://www.mywebsite.com/plugins/radio/icons/newspaper-solid.png',
+                'pop': 'https://www.mywebsite.com/plugins/radio/icons/headphones-solid.png',
+                'rock': 'https://www.mywebsite.com/plugins/radio/icons/bolt-lightning-solid.png',
+                'classical': 'https://www.mywebsite.com/plugins/radio/icons/music-solid.png',
+                'dance': 'https://www.mywebsite.com/plugins/radio/icons/compact-disc-solid.png',
+                'jazz': 'https://www.mywebsite.com/plugins/radio/icons/guitar-solid.png',
+                'sports': 'https://www.mywebsite.com/plugins/radio/icons/medal-solid.png',
+                'religious': 'https://www.mywebsite.com/plugins/radio/icons/radio-solid.png',
+                'various': 'https://www.mywebsite.com/plugins/radio/icons/radio-solid.png'
           }
 ```
 ---

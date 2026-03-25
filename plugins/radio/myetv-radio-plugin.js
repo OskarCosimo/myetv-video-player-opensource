@@ -48,7 +48,14 @@
         '.digital-status-dot.buffering{background:#ffaa00; box-shadow:0 0 8px #ffaa00; animation:radio-blink 0.5s infinite;}',
         '.digital-status-dot.error{background:#ff0000; box-shadow:0 0 8px #ff0000;}',
         '.digital-badge{background:#00d8ff; color:#000000; padding:2px 6px; border-radius:2px; font-size:10px; letter-spacing:1px;}',
-        '.digital-main{font-size:28px; font-weight:bold; color:#00d8ff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 0 8px rgba(0,216,255,0.6); margin:0; padding:10px 0; text-align:center; font-family:"Courier New", monospace, sans-serif; letter-spacing:2px; text-transform:uppercase; flex:1; display:flex; align-items:center; justify-content:center; line-height:normal;}',
+        '.digital-top-right{display:flex; align-items:center; gap:6px;}',
+        '.digital-icon-box{background:#00d8ff; border-radius:2px; padding:2px; display:none; align-items:center; justify-content:center; width:14px; height:14px; overflow:hidden;}',
+        '.digital-icon-box img{width:100%; height:100%; object-fit:contain;}',
+        '.digital-main{font-size:28px; font-weight:bold; color:#00d8ff; margin:0; padding:10px 0; text-align:center; font-family:"Courier New", monospace, sans-serif; letter-spacing:2px; text-transform:uppercase; flex:1; display:flex; align-items:center; justify-content:center; line-height:normal; overflow:hidden; width:100%;}',
+        '.digital-main-text{display:inline-block; white-space:nowrap;}',
+        '.digital-main.is-scrolling{justify-content:flex-start;}',
+        '.digital-main.is-scrolling .digital-main-text{padding-left:100%; animation: radio-marquee 8s linear infinite;}',
+        '@keyframes radio-marquee{0%{transform:translateX(0);} 100%{transform:translateX(-100%);}}',
         '.digital-sub{display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#00d8ff;}',
         '.digital-meta{opacity:0.7; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:60%;}',
         '.digital-controls-row{display:flex; gap:6px;}',
@@ -60,7 +67,7 @@
         '.radio-channel-num{font-size:12px;color:#ff4400;letter-spacing:3px;margin-bottom:3px;text-transform:uppercase;}',
         '.radio-station-name{font-size:18px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
         '.radio-station-meta{font-size:11px;color:#7a5200;margin-top:3px;letter-spacing:1px;}',
-        '.radio-favicon{width:18px;height:18px;border-radius:3px;vertical-align:middle;margin-right:6px;object-fit:contain;display:none;}',
+        '.radio-favicon{width:18px;height:18px;border-radius:3px;vertical-align:middle;margin-right:6px;object-fit:contain;display:none; background:#00d8ff; padding:1px;}',
 
         /* DIAL WRAPPER & CONTAINER */
         '.radio-dial-wrapper{width:100%;max-width:520px;position:relative;margin-bottom:10px; display:flex; flex-direction:column; flex:1; min-height:60px; max-height:100px;}',
@@ -109,7 +116,7 @@
         '.radio-modal-item:hover{background:rgba(255,255,255,0.05);}',
         '.radio-modal-item.active{border-left:3px solid currentColor;background:rgba(255,255,255,0.1);}',
         '.radio-modal-ch{font-size:11px;min-width:38px;opacity:0.6;}',
-        '.radio-modal-fav{width:16px;height:16px;border-radius:2px;object-fit:contain;flex-shrink:0;display:none;}',
+        '.radio-modal-fav{width:16px;height:16px;border-radius:2px;object-fit:contain;flex-shrink:0;display:none; background:#00d8ff; padding:1px;}',
         '.radio-modal-name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}',
         '.radio-modal-cc{font-size:10px;opacity:0.6;flex-shrink:0;}',
         '.radio-modal-count{font-size:10px;padding:6px 14px;opacity:0.6;flex-shrink:0;}',
@@ -174,7 +181,9 @@
             theme: (options && options.theme) ? options.theme : 'digital',
             startChannel: 1,
             startCountry: '',
-            showAllCountryOption: true
+            showAllCountryOption: true,
+            defaultIcon: '',
+            tagIcons: {}
         };
 
         if (options) {
@@ -354,9 +363,12 @@
                     <div class="digital-status-dot"></div>
                     <span class="digital-ch">CH --</span>
                 </div>
-                <span class="digital-badge">DAB+ / NET</span>
+                <div class="digital-top-right">
+                    <div class="digital-icon-box"><img class="digi-top-icon" src="" /></div>
+                    <span class="digital-badge">DAB+ / NET</span>
+                </div>
             </div>
-            <div class="digital-main">LOADING...</div>
+            <div class="digital-main"><span class="digital-main-text">LOADING...</span></div>
             <div class="digital-sub">
                 <span class="digital-meta">PLEASE WAIT</span>
                 <div class="digital-controls-row">
@@ -369,8 +381,11 @@
 
         this.digiChEl = digitalDisplay.querySelector('.digital-ch');
         this.digiMainEl = digitalDisplay.querySelector('.digital-main');
+        this.digiMainTextEl = digitalDisplay.querySelector('.digital-main-text');
         this.digiMetaEl = digitalDisplay.querySelector('.digital-meta');
         this.digiStatusDot = digitalDisplay.querySelector('.digital-status-dot');
+        this.digiTopIconBoxEl = digitalDisplay.querySelector('.digital-icon-box');
+        this.digiTopIconEl = digitalDisplay.querySelector('.digi-top-icon');
 
         var dPrev = digitalDisplay.querySelector('.digi-btn.prev');
         var dNext = digitalDisplay.querySelector('.digi-btn.next');
@@ -430,6 +445,22 @@
 
         this._bindDialEvents(dialContainer);
         this._bindSearchEvents(searchInput, searchBtn);
+    };
+
+    // Functuon to set digital display name and handle scrolling if too long
+    RadioPlugin.prototype._setDigitalName = function (name) {
+        if (!this.digiMainEl || !this.digiMainTextEl) return;
+
+        this.digiMainTextEl.textContent = name;
+        this.digiMainEl.classList.remove('is-scrolling');
+
+        var self = this;
+        // wait for DOM to update and measure text width, then decide if scrolling is needed
+        setTimeout(function () {
+            if (self.digiMainTextEl.scrollWidth > self.digiMainEl.clientWidth) {
+                self.digiMainEl.classList.add('is-scrolling');
+            }
+        }, 50);
     };
 
     // ============================================================
@@ -499,22 +530,38 @@
             }
 
             if (this.digiChEl) this.digiChEl.textContent = 'CH ' + displayCh;
-            if (this.digiMainEl) this.digiMainEl.textContent = stationName;
+            this._setDigitalName(stationName);
 
             var metaParts = [];
             if (s.countrycode) metaParts.push(s.countrycode.toUpperCase());
             if (s.tags) metaParts.push(s.tags.split(',')[0].trim());
             var metaString = metaParts.join(' · ');
 
+            var iconUrl = this._getStationIcon(s);
+
+            // show top-right icon only if we have a valid URL, otherwise hide the entire box to avoid broken image icon
+            if (this.digiTopIconBoxEl && this.digiTopIconEl) {
+                if (iconUrl) {
+                    this.digiTopIconBoxEl.style.display = 'flex';
+                    this.digiTopIconEl.onload = function () { this.style.display = 'block'; };
+
+                    this.digiTopIconEl.onerror = function () { this.parentElement.style.display = 'none'; };
+                    this.digiTopIconEl.src = iconUrl;
+                } else {
+                    this.digiTopIconBoxEl.style.display = 'none';
+                    this.digiTopIconEl.src = '';
+                }
+            }
+
             if (this.stationMetaEl) {
                 this.stationMetaEl.querySelector('.radio-meta-text').textContent = metaString;
 
                 if (this.faviconEl) {
-                    if (s.favicon) {
+                    if (iconUrl) {
                         this.faviconEl.style.display = 'none';
                         this.faviconEl.onload = function () { this.style.display = 'inline-block'; };
                         this.faviconEl.onerror = function () { this.style.display = 'none'; };
-                        this.faviconEl.src = s.favicon;
+                        this.faviconEl.src = iconUrl;
                     } else {
                         this.faviconEl.style.display = 'none';
                         this.faviconEl.src = '';
@@ -530,7 +577,7 @@
                     title: stationName,
                     artist: metaString || 'MYETV Radio',
                     album: 'Radio Player',
-                    artwork: (s.favicon) ? [{ src: s.favicon, sizes: '192x192', type: 'image/png' }] : []
+                    artwork: (iconUrl) ? [{ src: iconUrl, sizes: '192x192', type: 'image/png' }] : []
                 });
             }
 
@@ -588,7 +635,7 @@
                 var displayCh = self.baseCountryList.indexOf(s) + 1;
                 var sName = s.name || 'UNKNOWN';
                 if (self.stationNameEl) self.stationNameEl.textContent = sName;
-                if (self.digiMainEl) self.digiMainEl.textContent = sName;
+                self._setDigitalName(sName);
                 if (self.channelNumEl) self.channelNumEl.innerHTML = '<span class="radio-status"></span>CH ' + displayCh;
                 if (self.digiChEl) self.digiChEl.textContent = 'CH ' + displayCh;
             }
@@ -703,6 +750,19 @@
         return url;
     };
 
+    RadioPlugin.prototype._getStationIcon = function (station) {
+        if (station && station.tags) {
+
+            var firstTag = station.tags.split(',')[0].trim().toLowerCase();
+
+            if (this.options.tagIcons && this.options.tagIcons[firstTag]) {
+                return this.options.tagIcons[firstTag];
+            }
+        }
+
+        return this.options.defaultIcon || (station ? station.favicon : '') || '';
+    };
+
     RadioPlugin.prototype._prepareStream = function (station, play) {
         var video = this.player.video;
         if (!video || !station) return;
@@ -764,8 +824,21 @@
             this.errMsgEl.textContent = msg || 'ERROR';
             this.errMsgEl.style.display = 'block';
         }
-        if (this.digiMainEl) {
-            this.digiMainEl.textContent = msg || 'CONNECTION ERROR';
+        if (this.digiMainEl && this.digiMainTextEl) {
+            this.digiMainEl.classList.remove('is-scrolling');
+            this.digiMainTextEl.textContent = msg || 'CONNECTION ERROR';
+        }
+
+        if (this.player && this.player.video) {
+            try {
+                this.player.video.pause();
+                this.player.video.removeAttribute('src');
+                this.player.video.load();
+
+                this.player.video.dispatchEvent(new Event('pause'));
+                this.player.video.dispatchEvent(new Event('abort'));
+                this.player.video.dispatchEvent(new Event('error'));
+            } catch (e) { }
         }
     };
 
@@ -774,8 +847,9 @@
         if (this.errMsgEl) this.errMsgEl.style.display = 'none';
 
         var s = this.filteredList[this.currentChannel - 1];
-        if (s && this.digiMainEl) {
-            this.digiMainEl.textContent = s.name || 'UNKNOWN';
+        var s = this.filteredList[this.currentChannel - 1];
+        if (s) {
+            this._setDigitalName(s.name || 'UNKNOWN');
         }
     };
 
@@ -841,7 +915,7 @@
                 }
 
                 if (self.dialContainer) self.dialContainer.classList.add('loading-state');
-                if (self.digiMainEl) self.digiMainEl.textContent = 'LOADING...';
+                self._setDigitalName('LOADING...');
 
                 if (self.player.video) {
                     try { self.player.video.pause(); } catch (e) { }
@@ -1060,12 +1134,13 @@
 
                 var fav = document.createElement('img');
                 fav.className = 'radio-modal-fav';
+                var iconUrl = self._getStationIcon(s);
 
-                if (s.favicon) {
+                if (iconUrl) {
                     fav.style.display = 'none';
                     fav.onload = function () { this.style.display = 'block'; };
                     fav.onerror = function () { this.style.display = 'none'; };
-                    fav.src = s.favicon;
+                    fav.src = iconUrl;
                 }
 
                 var name = document.createElement('span');

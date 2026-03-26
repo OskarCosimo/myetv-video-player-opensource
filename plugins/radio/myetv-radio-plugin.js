@@ -156,6 +156,11 @@
         '.radio-tick::after { height: 8px !important; }',
         '}',
 
+        /* AUDIOWAVE CANVAS */
+        '.radio-wave-canvas{position:absolute; bottom:10px; left:5%; width:90%; height:25px; z-index:1; pointer-events:none; opacity:0.3; transition:opacity 0.3s;}',
+        '.theme-vintage .radio-wave-canvas{bottom:15px; height:30px; opacity:0.15; z-index:1;}',
+        '.theme-digital .radio-wave-canvas{bottom:40px; left:16px; width:calc(100% - 32px); height:20px; opacity:0.25; z-index:1;}',
+
         /* RESPONSIVE */
         '@media(max-width:480px){',
         '.radio-ch-label{display:none;}',
@@ -274,10 +279,24 @@
         this._loadStations();
 
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible' && self._isRadioPlaying) {
-                self._manageWakeLock(true);
+            if (document.visibilityState === 'visible') {
+                self._manageWakeLock(self._isRadioPlaying);
+
+                if (self.dialContainer && self.dialContainer.classList.contains('error-state')) {
+                    var s = self.filteredList[self.currentChannel - 1];
+                    if (s) {
+                        self._setDigitalName('RECONNECTING...');
+                        self._setStatus('buffering');
+                        self.dialContainer.classList.remove('error-state');
+
+                        setTimeout(function () {
+                            self._prepareStream(s, true);
+                        }, 1500);
+                    }
+                }
             }
         });
+        this._startWaveAnimation();
     };
 
     RadioPlugin.prototype._injectCSS = function () {
@@ -407,6 +426,14 @@
         });
 
         dialWrapper.appendChild(digitalDisplay);
+
+        /* --- Audiowave Canvas --- */
+        var waveCanvas = document.createElement('canvas');
+        waveCanvas.className = 'radio-wave-canvas';
+        dialWrapper.appendChild(waveCanvas);
+        this.waveCanvas = waveCanvas;
+        this.waveCtx = waveCanvas.getContext('2d');
+
         ov.appendChild(dialWrapper);
 
         /* --- Search Bar & Country Select --- */
@@ -461,6 +488,57 @@
                 self.digiMainEl.classList.add('is-scrolling');
             }
         }, 50);
+    };
+
+    // ============================================================
+    // SIMULATED AUDIOWAVE VISUALIZER
+    // ============================================================
+    RadioPlugin.prototype._startWaveAnimation = function () {
+        var self = this;
+        var canvas = this.waveCanvas;
+        var ctx = this.waveCtx;
+        var bars = 32;
+        var phase = 0;
+
+        function draw() {
+            requestAnimationFrame(draw);
+
+            if (!canvas.offsetWidth) return;
+
+            if (canvas.width !== canvas.offsetWidth) canvas.width = canvas.offsetWidth;
+            if (canvas.height !== canvas.offsetHeight) canvas.height = canvas.offsetHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Colore in base al tema
+            var isDigital = self.options.theme === 'digital';
+            ctx.fillStyle = isDigital ? '#00d8ff' : '#ff6600';
+
+            var barWidth = Math.floor(canvas.width / bars);
+            var gap = 2;
+
+            for (var i = 0; i < bars; i++) {
+                var height = 2;
+
+                if (self._isRadioPlaying) {
+
+                    var noise = Math.sin(phase + i * 0.4) * Math.cos(phase * 0.7 + i * 0.2);
+                    var beat = Math.random() * 0.4;
+                    var normalized = Math.abs(noise + beat);
+                    height = Math.max(2, normalized * canvas.height);
+                }
+
+                var x = i * barWidth;
+                var y = canvas.height - height;
+
+                ctx.fillRect(x + gap / 2, y, barWidth - gap, height);
+            }
+
+            if (self._isRadioPlaying) {
+                phase += 0.15;
+            }
+        }
+        draw();
     };
 
     // ============================================================
@@ -773,40 +851,47 @@
             return;
         }
 
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
+        try {
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+        } catch (e) { }
 
         this._clearError();
+        this._isRadioPlaying = play;
 
-        video.src = src;
-        video.load();
+        var self = this;
+        var currentTuneId = this._tuneId;
 
-        if (play) {
-            var self = this;
-            var currentTuneId = this._tuneId;
-            this._setStatus('buffering');
+        setTimeout(function () {
+            if (self._tuneId !== currentTuneId) return;
 
-            this._bufferTimeout = setTimeout(function () {
-                if (video.readyState < 3) self._setError('STREAM UNAVAILABLE');
-            }, 10000);
+            video.src = src;
+            video.load();
 
-            var playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.then(function () {
-                    if (self._tuneId !== currentTuneId) return;
-                    self._clearBufferTimeout();
-                    self._clearError();
-                    self._setStatus('playing');
-                    self._isRadioPlaying = true;
-                }).catch(function (err) {
-                    if (self._tuneId !== currentTuneId) return;
-                    if (err.name !== 'AbortError') {
-                        self._setError('PLAYBACK ERROR');
-                    }
-                });
+            if (play) {
+                self._setStatus('buffering');
+
+                self._bufferTimeout = setTimeout(function () {
+                    if (video.readyState < 3) self._setError('STREAM UNAVAILABLE');
+                }, 10000);
+
+                var playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(function () {
+                        if (self._tuneId !== currentTuneId) return;
+                        self._clearBufferTimeout();
+                        self._clearError();
+                        self._setStatus('playing');
+                    }).catch(function (err) {
+                        if (self._tuneId !== currentTuneId) return;
+                        if (err.name !== 'AbortError') {
+                            self._setError('PLAYBACK ERROR');
+                        }
+                    });
+                }
             }
-        }
+        }, 50);
     };
 
     RadioPlugin.prototype._setStatus = function (state) {
@@ -837,7 +922,6 @@
 
                 this.player.video.dispatchEvent(new Event('pause'));
                 this.player.video.dispatchEvent(new Event('abort'));
-                this.player.video.dispatchEvent(new Event('error'));
             } catch (e) { }
         }
     };

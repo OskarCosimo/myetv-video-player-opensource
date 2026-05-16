@@ -44,7 +44,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Multiple video qualities** with automatic selection based on connection
 - **Subtitles** with multiple track support
 - **Chapters** with images and customized colors
-- Custom **Plugins** to enhance player's functionality
+- Custom **Plugins** to enhance player's functionality (including an advanced Web Radio Tuner with Live Analytics)
 - **Picture-in-Picture** mode (where supported)
 - **Complete keyboard controls**
 - **Internationalization** (i18n) multilingual
@@ -66,27 +66,28 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 
 ### Include Required Files
 
-```
-<!-- Player CSS -->
+```html
 <link rel="stylesheet" href="css/myetv-player.min.css">
-<!-- Player JavaScript -->
 <script src="dist/myetv-player.min.js"></script>
+
 ```
 
 ## Basic Usage
 
 ### HTML
 
-```
+```html
 <video id="my-video" width="800" height="450">
 <source src="video-480p.mp4" type="video/mp4" data-quality="480p">
 <source src="video-720p.mp4" type="video/mp4" data-quality="720p">
 <source src="video-1080p.mp4" type="video/mp4" data-quality="1080p">
-<!-- Optional subtitles -->
 <track kind="subtitles" src="subtitles-en.vtt" srclang="en" label="English">
 <track kind="subtitles" src="subtitles-it.vtt" srclang="it" label="Italiano">
 </video>
 
+```
+
+```javascript
 // Basic initialization
 const player = new MYETVvideoplayer('my-video');
 
@@ -99,12 +100,13 @@ const player = new MYETVvideoplayer('my-video', {
     language: 'en',
     debug: false
 });
+
 ```
 
 ## Initialization Options
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `poster` | string | `''` | URL of a cover image (optional) |
 | `showPosterOnEnd` | boolean | `false` | Show the cover image when the video ends |
 | `playFromStartButton` | boolean | `false` | Show/hide play from start button (restart video) |
@@ -115,19 +117,19 @@ const player = new MYETVvideoplayer('my-video', {
 | `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
 | `showSettingsMenu` | boolean | `true` | Show/Hide the settings menu in the top-bar |
-| `moreinfoTitle` | string | `''` | Title for the modal window (if present, the button "more information" in the settings menu will be visible) 
-| `moreinfoDescription` | string | `''` |  Description for the modal window (if present, the button "more information" in the settings menu will be visible) 
+| `moreinfoTitle` | string | `''` | Title for the modal window (if present, the button "more information" in the settings menu will be visible) |
+| `moreinfoDescription` | string | `''` | Description for the modal window (if present, the button "more information" in the settings menu will be visible) |
 | `chapters` | string | json | Enable/Disable chapters: chapter can be in json format or string format (see below) |
 | `plugins` | string | json | Add a customized plugin to the player to extend its functionality (see below) |
 | `seekHandleShape` | string | `true` | Edit the shape of the seek controlbar. Shape type: none, circle, square, diamond, arrow, triangle, heart, star |
 | `showSeekTooltip` | boolean | `true` | Show tooltip during seek |
 | `volumeSlider` | string | `show` | Volume slider 'show' or 'hide': with "show" the volume slider is always visible and have the automatic fallback to "hide" under 550px of width; with "hide" the volume slider is visible only at mouse over |
 | `autoplay` | boolean | `false` | Start video automatically |
-| `loop` | boolean | `false` | Optional if the video should loop
+| `loop` | boolean | `false` | Optional if the video should loop |
 | `resolution` | string | `normal` | resolution type: "normal" same resolution of the native video; "4:3"; "16:9"; "stretched" the video will be stretched in all the container; "fit-to-screen" the video will fit the screen but can be cutted; "scale-to-fit" fit the screen but preserve aspect ration and not cut |
 | `autoHide` | boolean | `true` | Auto-hide controls |
 | `autoHideDelay` | number | `3000` | Auto-hide delay in milliseconds |
-| `hideCursor	` | boolean | `true` | Auto-hide the mouse cursor with the controlbar |
+| `hideCursor` | boolean | `true` | Auto-hide the mouse cursor with the controlbar |
 | `pauseClick` | boolean | `true` | Enable or disable the click on the video to pause/resume |
 | `doubleTapPause` | boolean | `true` | First touch shows controls, second touch pauses (usefull on touch devices) |
 | `keyboardControls` | boolean | `true` | Enable keyboard controls |
@@ -141,51 +143,58 @@ const player = new MYETVvideoplayer('my-video', {
 | `language` | string | `en` | Interface language code |
 | `brandLogoEnabled` | boolean | `false` | Show/hide the brand logo in the controlbar |
 | `brandLogoUrl` | string | `''` | Brand logo url in the controlbar (png, jpg, gif) - image height 44px - image width 120px |
-| `brandLogoLinkUrl` | string | `''` | Optional URL to open in a new page when clicking the brand logo in the controlbar
-| `brandLogoTooltipText` | string | `''` | Optional Custom tooltip of the brand logo (the default is the url of the brand logo, if present)
-| `loadingLogo` | string | `''` | Optional Custom image logo url to show it inside the loading spinner
-| `watermarkUrl` | string | `''` | Optional URL of the image watermark over the video, reccomended dimension: width: 180px, height: 100px
-| `watermarkLink` | string | `''` | Optional URL to open in a new page when clicking the watermark logo in the video
-| `watermarkPosition` | string | `''` | Optional where to show the watermark logo in the video (values are: top-left, top-right, bottom-left, bottom-right)
-| `watermarkTitle` | string | `''` | Optional title to show when the mouse is over the watermark logo in the video
-| `hideWatermark` | boolean | `true` | Optional hide watermark logo with the controlbar or show the watermark logo always visible
-| `playlistEnabled` | boolean | `false` | Optional if the playlist of video is enabled (html structured)
-| `playlistAutoPlay` | boolean | `false` | Optional if the playlist should autoplay
-| `playlistLoop` | boolean | `false` | Optional if the playlist should loop
-| `adaptiveStreaming` | boolean | `false` | Enable HLS/DASH adaptive streaming
-| `adaptiveQualityControl` | boolean | `false` | Enable the menu quality with adaptive streaming
+| `brandLogoLinkUrl` | string | `''` | Optional URL to open in a new page when clicking the brand logo in the controlbar |
+| `brandLogoTooltipText` | string | `''` | Optional Custom tooltip of the brand logo (the default is the url of the brand logo, if present) |
+| `loadingLogo` | string | `''` | Optional Custom image logo url to show it inside the loading spinner |
+| `watermarkUrl` | string | `''` | Optional URL of the image watermark over the video, reccomended dimension: width: 180px, height: 100px |
+| `watermarkLink` | string | `''` | Optional URL to open in a new page when clicking the watermark logo in the video |
+| `watermarkPosition` | string | `''` | Optional where to show the watermark logo in the video (values are: top-left, top-right, bottom-left, bottom-right) |
+| `watermarkTitle` | string | `''` | Optional title to show when the mouse is over the watermark logo in the video |
+| `hideWatermark` | boolean | `true` | Optional hide watermark logo with the controlbar or show the watermark logo always visible |
+| `playlistEnabled` | boolean | `false` | Optional if the playlist of video is enabled (html structured) |
+| `playlistAutoPlay` | boolean | `false` | Optional if the playlist should autoplay |
+| `playlistLoop` | boolean | `false` | Optional if the playlist should loop |
+| `adaptiveStreaming` | boolean | `false` | Enable HLS/DASH adaptive streaming |
+| `adaptiveQualityControl` | boolean | `false` | Enable the menu quality with adaptive streaming |
 | `audiofile` | boolean | `false` | Optional if the file is only audio (no video) |
 | `audiowave` | boolean | `false` | Optional if the file is only audio, show the audio wave as video (with the browser Web Audio API) |
 | `debug` | boolean | `false` | Enable debug logs |
 
-
 ## API Methods
+
 ### Basic Controls
-```
+
+```javascript
 // Playback
 player.play();                     // Start playback
 player.pause();                    // Pause playback
 player.togglePlayPause();          // Toggle play/pause
 
 // Volume
-player.setVolume(0.8);            // Set volume (0-1)
-player.getVolume();               // Get current volume
-player.toggleMute();              // Toggle mute
-player.setMuted(true);            // Set mute
+player.setVolume(0.8);             // Set volume (0-1)
+player.getVolume();                // Get current volume
+player.toggleMute();               // Toggle mute
+player.setMuted(true);             // Set mute
+
 ```
+
 ### Time Controls
-```
+
+```javascript
 // Position
-player.setCurrentTime(120);       // Go to second 120
-player.getCurrentTime();          // Current position
-player.getDuration();             // Total duration
-player.skipTime(10);              // Skip 10 seconds forward
-player.skipTime(-10);             // Skip 10 seconds backward
+player.setCurrentTime(120);        // Go to second 120
+player.getCurrentTime();           // Current position
+player.getDuration();              // Total duration
+player.skipTime(10);               // Skip 10 seconds forward
+player.skipTime(-10);              // Skip 10 seconds backward
+
 ```
+
 ### Poster Image (cover image)
-```
+
+```javascript
 // Set poster after initialization
-player.setPoster('https://example.com/poster.jpg');
+player.setPoster('[https://example.com/poster.jpg](https://example.com/poster.jpg)');
 
 // Get current poster
 const currentPoster = player.getPoster();
@@ -201,26 +210,35 @@ player.togglePoster(false); // Hide
 if (player.isPosterVisible()) {
     console.log('Poster is visible');
 }
+
 ```
+
 ### Quality Controls
-```
+
+```javascript
 // Video quality
-player.setDefaultQuality('720p'); // Set default quality
-player.setQuality('1080p');       // Change quality
-player.getSelectedQuality();      // Selected quality
+player.setDefaultQuality('720p');  // Set default quality
+player.setQuality('1080p');        // Change quality
+player.getSelectedQuality();       // Selected quality
 player.getCurrentPlayingQuality(); // Actual playing quality
-player.enableAutoQuality();       // Enable automatic selection
+player.enableAutoQuality();        // Enable automatic selection
+
 ```
+
 ### Subtitles Controls
-```
+
+```javascript
 // Subtitles
-player.toggleSubtitles();         // Toggle subtitles
-player.enableSubtitleTrack(0);    // Enable subtitle track
-player.disableSubtitles();        // Disable subtitles
-player.getAvailableSubtitles();   // List available subtitles
+player.toggleSubtitles();          // Toggle subtitles
+player.enableSubtitleTrack(0);     // Enable subtitle track
+player.disableSubtitles();         // Disable subtitles
+player.getAvailableSubtitles();    // List available subtitles
+
 ```
+
 ### Chapters Controls
-```
+
+```javascript
 // Get current chapter
 const current = player.getCurrentChapter();
 
@@ -237,29 +255,40 @@ player.setChapters([...]);
 
 // Clear chapters
 player.clearChapters();
+
 ```
+
 ### Plugins Controls
+
 [Plugins Help: https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md](https://github.com/OskarCosimo/myetv-video-player-opensource/blob/main/plugins/README.md)
+
 ### Screen Controls
-```
+
+```javascript
 // Fullscreen and Picture-in-Picture
-player.toggleFullscreen();        // Toggle fullscreen
-player.enterFullscreen();         // Enter fullscreen
-player.exitFullscreen();          // Exit fullscreen
-player.togglePictureInPicture();  // Toggle Picture-in-Picture
+player.toggleFullscreen();         // Toggle fullscreen
+player.enterFullscreen();          // Enter fullscreen
+player.exitFullscreen();           // Exit fullscreen
+player.togglePictureInPicture();   // Toggle Picture-in-Picture
+
 ```
+
 ### Brand Logo Controls
-```
+
+```javascript
 // Brand Logo in controlbar
 player.setBrandLogo(enabled, url, linkUrl)    //change brand logo dynamically
 player.getBrandLogoSettings()    //get current brand logo settings
+
 ```
+
 ### Watermark Logo Controls
-```
+
+```javascript
 // Change watermark dynamically
 player.setWatermark(
-    'https://example.com/new-logo.png',
-    'https://example.com/promo',
+    '[https://example.com/new-logo.png](https://example.com/new-logo.png)',
+    '[https://example.com/promo](https://example.com/promo)',
     'topleft',
     'Special promotion'
 );
@@ -276,9 +305,12 @@ player.removeWatermark();
 
 //hide with the controlbar or always show the watermark logo
 player.setWatermarkAutoHide(false);
+
 ```
+
 ### Controlbar seek shape
-```
+
+```javascript
 // Change dynamically
 player.setSeekHandleShape('heart');
 
@@ -288,9 +320,12 @@ console.log(player.getSeekHandleShape()); // "heart"
 // Show all available shape
 console.log(player.getAvailableSeekHandleShapes());
 // ["none", "circle", "square", "diamond", "arrow", "triangle", "heart", "star"]
+
 ```
+
 ### Auto-hide mouse cursor (works only when autohide controlbar is true)
-```
+
+```javascript
 // Disable auto-hide mouse
 player.disableCursorHiding();
 
@@ -301,118 +336,166 @@ player.enableCursorHiding();
 if (player.isCursorHidingEnabled()) {
     console.log('Cursor hiding is active');
 }
+
 ```
+
 ### Playlist Controls
-```
+
+```javascript
 player.nextVideo();                    // Next Video
 player.prevVideo();                    // Previous Video  
-player.goToPlaylistIndex(2);          // Go to the specific video
+player.goToPlaylistIndex(2);           // Go to the specific video
 player.getPlaylistInfo();              // Info Playlist
 player.setPlaylistOptions({loop:true}); // Playlist Options
+
 ```
+
 ### Resolution Controls
-```
+
+```javascript
 player.setResolution("4:3");           // Change to 4:3
 player.setResolution("16:9");           // Change to 16:9
 player.setResolution("stretched");     // Change to stretched: Stretch the video to the entire container
 player.setResolution("fit-to-screen"); // Change to fit to screen: It fits the screen, can cut parts of the video
 player.setResolution("scale-to-fit"); // Intelligently fit to screen without cut video parts
 console.log(player.getCurrentResolution()); // Get current resolution
+
 ```
+
 ## API Events
+
 The MYETV Video Player includes a comprehensive custom event system that allows you to monitor all player state changes in real-time.
+
 ### on player ready
+
 Description: Triggered when the video player is ready
 
 When: Player is ready to receive other events
-```
+
+```javascript
 player.addEventListener('playerready', (event) => {
     console.log('Player is ready!', event);
 //now it's secure to call other apis method
         player.setVolume(0.8);
         player.play();
 });
+
 ```
+
 ### on played
+
 Description: Triggered when the video starts playing
 
 When: User presses play or video starts automatically
-```
+
+```javascript
 player.addEventListener('played', (event) => {
     console.log('Video started!', {
         currentTime: event.currentTime,
         duration: event.duration
     });
 });
+
 ```
+
 ### on playing
+
 Description: Triggered when the video is playing
 
 When: Video is effectively playing
-```
+
+```javascript
 player.addEventListener('playing', (event) => {
     console.log('Video is playing at', event.currentTime);
 });
+
 ```
+
 ### on paused
+
 Description: Triggered when the video is pause
 
 When: User presses pause or video stops
-```
+
+```javascript
 player.addEventListener('paused', (event) => {
     console.log('Video paused at:', event.currentTime + 's');
 });
+
 ```
+
 ### on waiting
+
 Description: Triggered when the video is buffering
 
 When: Video is buffering and is waiting
-```
+
+```javascript
 player.addEventListener('waiting', (event) => {
     console.log('Video is buffering...');
 });
+
 ```
+
 ### on seeking
+
 Description: Triggered when the video is being seeking
 
 When: The user is seeking over the video
-```
+
+```javascript
 player.addEventListener('seeking', (event) => {
     console.log('User is seeking to', event.targetTime);
 });
+
 ```
+
 ### on seeked
+
 Description: Triggered when the video is finished seeked
 
 When: The user have finished seeking and seeked the video
-```
+
+```javascript
 player.addEventListener('seeked', (event) => {
     console.log('Seek completed at', event.currentTime);
 });
+
 ```
+
 ### on ended
+
 Description: Triggered when the video is ended
 
 When: Video is ended
-```
+
+```javascript
 player.addEventListener('ended', (e) => {
     console.log('Video terminato!', e.currentTime, e.duration, e.playlistInfo);
 });
+
 ```
+
 ### on error
+
 Description: Triggered when the video have some error
 
 When: Video have some error on load
-```
+
+```javascript
 player.addEventListener('error', (event) => {
     console.error('Playback error:', event.message);
 });
+
 ```
+
 ### on subtitle change
+
 Description: Triggered when subtitles are enabled/disabled or track changes
 
 When: User toggles subtitles or switches subtitle tracks
-```
+
+```javascript
 player.addEventListener('subtitlechange', (event) => {
     if (event.enabled) {
         console.log('Subtitles enabled:', event.trackLabel);
@@ -420,59 +503,83 @@ player.addEventListener('subtitlechange', (event) => {
         console.log('Subtitles disabled');
     }
 });
+
 ```
+
 ### on chapters change
+
 Description: Triggered when chapters are changes
 
 When: User switches chapters tracks
-```
+
+```javascript
 player.on('chapterchange', (data) => {
     console.log('Chapter changed:', data.chapter.title);
 });
+
 ```
+
 ### on pip change
+
 Description: Triggered when Picture-in-Picture mode changes
 
 When: Video enters or exits PiP mode
-```
+
+```javascript
 player.addEventListener('pipchange', (event) => {
     console.log('Picture-in-Picture:', event.active ? 'Activated' : 'Deactivated');
 });
+
 ```
+
 ### on fullscreen change
+
 Description: Triggered when fullscreen mode changes
 
 When: Player enters or exits fullscreen mode
-```
+
+```javascript
 player.addEventListener('fullscreenchange', (event) => {
     console.log('Fullscreen:', event.active ? 'Activated' : 'Deactivated');
 });
+
 ```
+
 ### on speed change
+
 Description: Triggered when playback speed changes
 
 When: User modifies playback speed (0.5x, 1x, 1.5x, 2x, etc.)
-```
+
+```javascript
 player.addEventListener('speedchange', (event) => {
     console.log('Speed changed to:', event.speed + 'x');
 });
+
 ```
+
 ### on time update
+
 Description: Triggered during playback to update progress
 
 When: Every 250ms during playback (throttled for performance)
-```
+
+```javascript
 player.addEventListener('timeupdate', (event) => {
     console.log('Progress:', event.progress.toFixed(1) + '%');
     // Update custom progress bar
     updateProgressBar(event.progress);
 });
+
 ```
+
 ### on volumechange
+
 Description: Triggered when volume or mute state changes
 
 When: User modifies volume or toggles mute
-```
+
+```javascript
 player.addEventListener('volumechange', (event) => {
     if (event.muted) {
         console.log('Audio muted');
@@ -480,18 +587,25 @@ player.addEventListener('volumechange', (event) => {
         console.log('Volume:', Math.round(event.volume * 100) + '%');
     }
 });
+
 ```
+
 ### Playlist API
-```
+
+```javascript
 player.addEventListener('playlistchange', (e) => {
     console.log(`From "${e.fromTitle}" to "${e.toTitle}"`);
 });
+
 ```
+
 ### Main APIs
+
 getEventData()
 
 Returns all requested state data in a single object:
-```
+
+```javascript
 const state = player.getEventData();
 console.log(state);
 /* Output:
@@ -510,9 +624,12 @@ console.log(state);
     buffered: 120.5
 }
 */
+
 ```
+
 ### Event Listener Management
-```
+
+```javascript
 // Add listener
 player.addEventListener('played', callback);
 
@@ -527,9 +644,12 @@ const onVideoPlay = (event) => {
 player.addEventListener('played', onVideoPlay);
 // ... later
 player.removeEventListener('played', onVideoPlay);
+
 ```
+
 ### Complete Example
-```
+
+```javascript
 // Initialize the player
 const player = new MYETVvideoplayer('myVideo', {
     debug: true,
@@ -560,8 +680,11 @@ function updateUI(state, time) {
     document.getElementById('player-status').textContent = 
         `Status: ${state} at ${time.toFixed(1)}s`;
 }
+
 ```
+
 ### Technical Notes
+
 Performance: The timeupdate event is throttled to 250ms to avoid overload
 
 Compatibility: All events maintain compatibility with existing code
@@ -573,7 +696,7 @@ Error Handling: Errors in callbacks don't interrupt the player
 ### Event Data Reference
 
 | Property | Type | Description |
-|:---------|:----:|:------------|
+| --- | --- | --- |
 | `played` | `boolean` | Video is currently playing |
 | `paused` | `boolean` | Video is currently paused |
 | `subtitleEnabled` | `boolean` | Subtitles are enabled |
@@ -590,7 +713,7 @@ Error Handling: Errors in callbacks don't interrupt the player
 ## Keyboard Controls
 
 | Key | Action |
-|-----|--------|
+| --- | --- |
 | `Space` | Play/Pause |
 | `M` | Mute/Unmute |
 | `F` | Fullscreen |
@@ -612,7 +735,8 @@ The MYETV Video Player is fully customizable using CSS variables and themes. The
 ### CSS Variables
 
 The player uses CSS custom properties (variables) for easy theming:
-```
+
+```css
 .video-wrapper {
 /* Primary Colors */
 --player-primary-color: goldenrod;
@@ -643,53 +767,74 @@ The player uses CSS custom properties (variables) for easy theming:
 --player-transition-fast: 0.2s ease;
 --player-transition-normal: 0.3s ease;
 }
+
 ```
+
 ### Pre-built Themes
 
 The player includes several pre-built themes that you can apply:
 
 #### Blue Theme
-```
+
+```css
 .video-wrapper.player-theme-blue {
 /* Automatically uses blue color scheme */
 }
+
 ```
+
 #### Green Theme
-```
+
+```css
 .video-wrapper.player-theme-green {
 /* Automatically uses green color scheme */
 }
+
 ```
+
 #### Red Theme
-```
+
+```css
 .video-wrapper.player-theme-red {
 /* Automatically uses red color scheme */
 }
+
 ```
+
 #### Dark Theme
-```
+
+```css
 .video-wrapper.player-theme-dark {
 /* Enhanced dark mode with improved contrast */
 }
+
 ```
+
 ### Control Size Variants
 
 #### Large Controls
-```
+
+```css
 .video-wrapper.player-large-controls {
 /* Bigger buttons and controls for better accessibility */
 }
+
 ```
+
 #### Compact Controls
-```
+
+```css
 .video-wrapper.player-compact-controls {
 /* Smaller, space-efficient controls */
 }
+
 ```
+
 ### Custom Theme Examples
 
 #### Custom Purple Theme
-```
+
+```css
 .video-wrapper.my-purple-theme {
 --player-primary-color: #9c27b0;
 --player-primary-hover: #7b1fa2;
@@ -697,9 +842,12 @@ The player includes several pre-built themes that you can apply:
 --player-bg-primary: #1a0d1a;
 --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(26, 13, 26, 0.9) 100%);
 }
+
 ```
+
 #### High Contrast Theme
-```
+
+```css
 .video-wrapper.high-contrast-theme {
 --player-primary-color: #ffff00;
 --player-primary-hover: #ffeb3b;
@@ -708,9 +856,12 @@ The player includes several pre-built themes that you can apply:
 --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.95) 100%);
 --player-border-radius: 0; /* Sharp corners for accessibility */
 }
+
 ```
+
 #### Minimal Theme
-```
+
+```css
 .video-wrapper.minimal-theme {
 --player-bg-controls: rgba(0, 0, 0, 0.3);
 --player-bg-title-overlay: rgba(0, 0, 0, 0.3);
@@ -719,31 +870,37 @@ The player includes several pre-built themes that you can apply:
 --player-volume-height: 2px;
 --player-button-padding: 4px;
 }
+
 ```
+
 ### Responsive Customization
 
 The player automatically adapts to different screen sizes. You can customize the responsive behavior:
-```
-/* Custom mobile adjustments /
+
+```css
+/* Custom mobile adjustments */
 @media (max-width: 768px) {
-.video-wrapper {
---player-icon-size: 18px;
---player-progress-height: 8px; / Thicker for touch /
---player-button-padding: 12px; / Larger touch targets */
-}
+    .video-wrapper {
+    --player-icon-size: 18px;
+    --player-progress-height: 8px; /* Thicker for touch */
+    --player-button-padding: 12px; /* Larger touch targets */
+    }
 }
 
 @media (max-width: 480px) {
-.video-wrapper {
---player-controls-padding: 12px 8px 8px;
---player-border-radius: 0; /* Full width on small screens */
+    .video-wrapper {
+    --player-controls-padding: 12px 8px 8px;
+    --player-border-radius: 0; /* Full width on small screens */
+    }
 }
-}
+
 ```
+
 ### Custom Subtitle Styling
 
 Customize the appearance of subtitles:
-```
+
+```css
 .video-player::cue {
 background: rgba(0, 0, 0, 0.9);
 color: #ffffff;
@@ -759,11 +916,14 @@ text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 background: var(--player-primary-color);
 color: black;
 }
+
 ```
+
 ### Animation Customization
 
 Control the player's animations:
-```
+
+```css
 .video-wrapper {
 /* Faster animations */
 --player-transition-fast: 0.1s ease;
@@ -780,11 +940,14 @@ Control the player's animations:
 transition: none !important;
 animation: none !important;
 }
+
 ```
+
 ### Quality Selector Customization
 
 The dual-quality indicator can be customized:
-```
+
+```css
 .quality-btn {
 min-height: 40px; /* More space for two lines */
 }
@@ -798,11 +961,14 @@ font-weight: 600;
 font-size: 11px; /* Current playing quality */
 opacity: 0.7;
 }
+
 ```
+
 ### Usage Examples
 
 #### Apply Theme via JavaScript
-```
+
+```javascript
 // Apply theme when initializing
 const player = new MYETVvideoplayer('video', {
 // ... other options
@@ -810,12 +976,21 @@ const player = new MYETVvideoplayer('video', {
 
 // Add theme class
 document.querySelector('.video-wrapper').classList.add('player-theme-blue');
+
 ```
+
 #### Apply Theme via HTML
-```<div class="video-wrapper player-theme-dark player-large-controls"> <video id="my-video"> <!-- video sources --> </video> </div> ```
+
+```html
+<div class="video-wrapper player-theme-dark player-large-controls"> 
+    <video id="my-video"> </video> 
+</div> 
+
+```
 
 #### Dynamic Theme Switching
-```
+
+```javascript
 function switchTheme(themeName) {
     const wrapper = document.querySelector('.video-wrapper');
     
@@ -832,8 +1007,11 @@ function switchTheme(themeName) {
 switchTheme('blue');    // Switch to blue theme
 switchTheme('dark');    // Switch to dark theme
 switchTheme('default'); // Switch to default theme
+
 ```
+
 ## Browser Compatibility
+
 The CSS uses modern features with fallbacks:
 
 CSS Custom Properties: Supported in all modern browsers
@@ -866,7 +1044,7 @@ If no language is specified in the initialization options, the player **automati
 The player currently supports the following languages:
 
 | Code | Language | Native Name |
-|------|----------|-------------|
+| --- | --- | --- |
 | `it` | Italian | Italiano |
 | `en` | English | English |
 | `es` | Spanish | Español |
@@ -881,22 +1059,28 @@ The player currently supports the following languages:
 ### Setting Language at Initialization
 
 To specify a language during player initialization, use the `language` option:
-```
+
+```javascript
 const player = new VideoPlayer('myVideo', {
 language: 'en', // Set to English
 // other options...
 });
+
 ```
+
 ### Changing Language Dynamically
 
 You can change the player language at any time using the `setLanguage()` method:
-```
+
+```javascript
 // Change language to Spanish
 player.setLanguage('es');
 
 // Change language to French
 player.setLanguage('fr');
+
 ```
+
 The method returns `true` if the language was successfully changed, `false` if the specified language is not available.
 
 ### Getting Language Information
@@ -904,48 +1088,75 @@ The method returns `true` if the language was successfully changed, `false` if t
 The player provides several methods to retrieve language information:
 
 #### Get current language:
-```
+
+```javascript
 const currentLang = player.getCurrentLanguage();
 console.log(currentLang); // e.g., 'en'
+
 ```
+
 #### Get list of supported languages:
-```
+
+```javascript
 const languages = player.getSupportedLanguages();
 console.log(languages); // ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ru', 'ar']
+
 ```
+
 ### Translated Elements
 
 The i18n system automatically translates the following interface elements:
 
-- Control buttons (play/pause, mute, fullscreen, etc.)
-- Settings menus
-- Video quality options
-- Subtitle controls
-- Playback speed controls
-- Playlist controls
-- Tooltips and help messages
-- Brand logo
+* Control buttons (play/pause, mute, fullscreen, etc.)
+* Settings menus
+* Video quality options
+* Subtitle controls
+* Playback speed controls
+* Playlist controls
+* Tooltips and help messages
+* Brand logo
 
 ## Plugins feature
+
 The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
+
+### Radio Plugin Example (with Live Stats)
+
+You can use the built-in radio plugin to play web radio streams, featuring a digital/analog interface, audiowave visualizer, and real-time live viewers tracking.
+
+```javascript
+player.usePlugin('radio', {
+    apiUrl: '[https://example.com/api/stations](https://example.com/api/stations)',
+    theme: 'digital',
+    startChannel: 1,
+    
+    // Stats Analytics Configuration
+    statsApiUrl: '[https://example.com/api/radio_stats.php](https://example.com/api/radio_stats.php)', // Backend for live & history stats
+    statsPollInterval: 15000 // Polling interval in milliseconds (e.g., 15s)
+});
+
+```
 
 [Plugins and Feature Help: https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins](https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins)
 
 ## Chapters feature
+
 Supports flexible time formats (HH:MM:SS, MM:SS, or seconds) and images url (optional)
+
 ### JSON format
-```
+
+```javascript
 const player = new VideoPlayer('myVideo', {
     chapters: [
         {
             time: 0,
             title: "Introduction",
-            image: "https://example.com/intro.jpg"
+            image: "[https://example.com/intro.jpg](https://example.com/intro.jpg)"
         },
         {
             time: 120,
             title: "Main Content",
-            image: "https://example.com/main.jpg",
+            image: "[https://example.com/main.jpg](https://example.com/main.jpg)",
             color: "#FF5722" // Custom color (optional)
         },
         {
@@ -955,18 +1166,25 @@ const player = new VideoPlayer('myVideo', {
         }
     ]
 });
+
 ```
+
 ### String format
-```
+
+```javascript
 const player = new VideoPlayer('myVideo', {
     chapters: "0:00:00|Introduction|intro.jpg,0:02:00|Main Content|main.jpg,0:05:00|Conclusion"
 });
+
 ```
+
 ## Playlist feature
+
 ### Playlist Detection System
+
 The playlist detection will work through HTML attributes on your video elements:
-```
-<!-- Example playlist setup -->
+
+```html
 <video id="myVideo" class="video-player" 
        data-playlist-id="my-series" 
        data-playlist-index="0">
@@ -974,39 +1192,50 @@ The playlist detection will work through HTML attributes on your video elements:
     <source src="video1-480p.mp4" type="video/mp4" data-quality="480p">
 </video>
 
-<!-- Next video in playlist -->
 <video id="video2" class="video-player" 
        data-playlist-id="my-series" 
        data-playlist-index="1">
     <source src="video2-720p.mp4" type="video/mp4" data-quality="720p">
     <source src="video2-480p.mp4" type="video/mp4" data-quality="480p">
 </video>
-```
-## Adaptive streaming (HLS/DASH)
-(Dash)
-Ecco un esempio per il tuo README.md:​
 
-text
-## Adaptive Streaming (DASH/HLS)
+```
+
+## Adaptive streaming (HLS/DASH)
 
 MyeTV Player supports adaptive bitrate streaming using DASH (Dynamic Adaptive Streaming over HTTP) and HLS (HTTP Live Streaming) protocols. This enables automatic quality switching based on network conditions for optimal playback experience.
 
 ### Features
 
-- **Automatic Quality Selection**: The player automatically adjusts video quality based on available bandwidth
-- **Manual Quality Control**: Users can manually select specific resolutions (240p, 360p, 480p, 720p, 1080p, 4K)
-- **Seamless Switching**: Quality changes occur smoothly without interrupting playback
-- **Real-time Monitoring**: Displays current playing quality in the control bar
+* **Automatic Quality Selection**: The player automatically adjusts video quality based on available bandwidth
+* **Manual Quality Control**: Users can manually select specific resolutions (240p, 360p, 480p, 720p, 1080p, 4K)
+* **Seamless Switching**: Quality changes occur smoothly without interrupting playback
+* **Real-time Monitoring**: Displays current playing quality in the control bar
 
 ### Basic Usage
 
 #### Method 1: Using HTML Video Tag
+
+```html
+<video id="my-player" controls> 
+    <source src="[https://example.com/video/manifest.mpd](https://example.com/video/manifest.mpd)" type="application/dash+xml"> 
+    <source src="[https://example.com/video/fallback.mp4](https://example.com/video/fallback.mp4)" type="video/mp4"> 
+</video>
+<script>
+    const player = new MYETVvideoplayer({ 
+        container: '#my-player', 
+        autoplay: false, 
+        adaptiveStreaming: true, 
+        adaptiveQualityControl: true, 
+        debug: true 
+    });
+</script>
+
 ```
-<video id="my-player" controls> <source src="https://example.com/video/manifest.mpd" type="application/dash+xml"> <!-- Fallback for browsers without DASH support --> <source src="https://example.com/video/fallback.mp4" type="video/mp4"> </video>
-<script>const player = new MYETVvideoplayer({ container: '#my-player', autoplay: false, adaptiveStreaming: true, adaptiveQualityControl: true, debug: true });</script>
-```
+
 #### Method 2: Using JavaScript Load
-```
+
+```javascript
 const player = new MYETVvideoplayer({
 container: '#player-container',
 autoplay: true,
@@ -1015,46 +1244,53 @@ debug: true
 
 // Load DASH stream
 player.load({
-src: 'https://example.com/video/manifest.mpd',
+src: '[https://example.com/video/manifest.mpd](https://example.com/video/manifest.mpd)',
 type: 'application/dash+xml'
 });
 
 // Or load HLS stream
 player.load({
-src: 'https://example.com/video/playlist.m3u8',
+src: '[https://example.com/video/playlist.m3u8](https://example.com/video/playlist.m3u8)',
 type: 'application/x-mpegURL'
 });
+
 ```
+
 The player automatically loads the required libraries:
 
-- **dash.js** (v5.x) for DASH streams
-- **hls.js** (latest) for HLS streams
+* **dash.js** (v5.x) for DASH streams
+* **hls.js** (latest) for HLS streams
 
 No additional configuration needed - libraries are loaded on-demand when adaptive streaming is detected.
+
 ### Adaptive Streaming APIs
-```
+
+```javascript
 // Info adaptive streaming
 player.getAdaptiveStreamingInfo();
 
 // Change quality of adaptive streaming  
 player.setAdaptiveQuality(1);     // Specify quality
 player.setAdaptiveQuality('auto'); // Auto-switching
+
 ```
+
 ### Example Playlist+Adaptive Streaming
-```
-<!-- Video 1: DASH -->
+
+```html
 <video data-playlist-id="series" data-playlist-index="0" src="ep1.mpd">
 
-<!-- Video 2: HLS --> 
 <video data-playlist-id="series" data-playlist-index="1" src="ep2.m3u8">
 
-<!-- Video 3: Traditional -->
 <video data-playlist-id="series" data-playlist-index="2">
     <source src="ep3-1080p.mp4" data-quality="1080p">
     <source src="ep3-720p.mp4" data-quality="720p">
 </video>
+
 ```
+
 ## Supported Browsers
+
 Chrome 60+
 Firefox 55+
 Safari 11+
@@ -1062,9 +1298,11 @@ Edge 79+
 Mobile browsers with HTML5 support
 
 ## License
+
 This project is released under the MIT License.
 
 ## Contributing
+
 Fork the repository
 
 Create a feature branch (git checkout -b feature/feature-name)
@@ -1082,4 +1320,5 @@ Donate to the project here: [https://blog.myetv.tv/donate-to-developers/](https:
 Watch MYETV here: [https://www.myetv.tv](https://www.myetv.tv)
 
 ## Bug Reports
+
 To report bugs or request features, open an issue in the repository.

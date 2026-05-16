@@ -44,7 +44,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Multiple video qualities** with automatic selection based on connection
 - **Subtitles** with multiple track support
 - **Chapters** with images and customized colors
-- Custom **Plugins** to enhance player's functionality (including an advanced Web Radio Tuner with Live Analytics)
+- Custom **Plugins** to enhance player's functionality
 - **Picture-in-Picture** mode (where supported)
 - **Complete keyboard controls**
 - **Internationalization** (i18n) multilingual
@@ -1120,24 +1120,9 @@ The i18n system automatically translates the following interface elements:
 
 The player supports custom plugins to extend its functionality. Every plugins must have its own documentation to clearly known how to use it. Plugins are modular so you can add or remove any plugins whenever you want. This is just an example based on two plugins.
 
-### Radio Plugin Example (with Live Stats)
+Some of the supported plugins: autosub (with ai), cloudflare, facebook, soundcloud, twitch, vimeo, youtube, gamepad-remote-controller, google-adsense-ads, google-analytics, google-ima-ads, vast-vpaid-ads, iframe-ads, radio tuner
 
-You can use the built-in radio plugin to play web radio streams, featuring a digital/analog interface, audiowave visualizer, and real-time live viewers tracking.
-
-```javascript
-player.usePlugin('radio', {
-    apiUrl: '[https://example.com/api/stations](https://example.com/api/stations)',
-    theme: 'digital',
-    startChannel: 1,
-    
-    // Stats Analytics Configuration
-    statsApiUrl: '[https://example.com/api/radio_stats.php](https://example.com/api/radio_stats.php)', // Backend for live & history stats
-    statsPollInterval: 15000 // Polling interval in milliseconds (e.g., 15s)
-});
-
-```
-
-[Plugins and Feature Help: https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins](https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins)
+Plugins and Feature Help: [https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins](https://github.com/OskarCosimo/myetv-video-player-opensource/tree/main/plugins)
 
 ## Chapters feature
 

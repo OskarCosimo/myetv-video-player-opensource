@@ -65,7 +65,7 @@ This plugin transforms your standard video player into a fully-fledged internet 
               apiUrl: 'api.php',         // required: the url of the JSON with all the radio station to load
               theme: 'digital',          // 'vintage' or 'digital'
               startChannel: 1,           // Default starting channel
-              statsApiUrl: '[https://mywebsite.com/api/radio_stats.php](https://mywebsite.com/api/radio_stats.php)', // Backend for live & history stats
+              statsApiUrl: 'https://mywebsite.com/radio/php/radio_stats.php', // Backend for live & history stats
               statsPollInterval: 15000,  // Polling interval in ms (15s)
               filter: {
                   country: 'IT'          // Filter the country selectbox (optional)

@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 A powerful and fully responsive Radio Tuner extension for the **MYETV Video Player Open Source**. 
-This plugin transforms your standard video player into a fully-fledged internet radio receiver, complete with interactive UI, real-time filtering, and native player integration.
+This plugin transforms your standard video player into a fully-fledged internet radio receiver, complete with interactive UI, real-time filtering, native player integration, and live analytics.
 
 ---
 
@@ -12,6 +12,8 @@ This plugin transforms your standard video player into a fully-fledged internet 
 - **🎨 Dual Themes**: Choose between two stunning interfaces:
   - **Vintage**: A classic, draggable analog dial with a glowing needle.
   - **Digital**: A modern, car-stereo style LCD display.
+
+- **📊 Live Analytics**: Real-time tracking of live viewers and historical statistics (daily, weekly, monthly, yearly) using a robust backend polling system and an interactive UI modal.
 
 - **⚡ Real-time Zapping & Filtering**: Instantly search stations by name, or filter them via the built-in country dropdown without reloading the page.
 
@@ -60,9 +62,11 @@ This plugin transforms your standard video player into a fully-fledged internet 
       autoplay: true,
       plugins: {
           radio: {
-              apiUrl: '',                // required: the url of the JSON with all the radio station to load
+              apiUrl: 'api.php',         // required: the url of the JSON with all the radio station to load
               theme: 'digital',          // 'vintage' or 'digital'
               startChannel: 1,           // Default starting channel
+              statsApiUrl: '[https://mywebsite.com/api/radio_stats.php](https://mywebsite.com/api/radio_stats.php)', // Backend for live & history stats
+              statsPollInterval: 15000,  // Polling interval in ms (15s)
               filter: {
                   country: 'IT'          // Filter the country selectbox (optional)
               }
@@ -70,6 +74,7 @@ This plugin transforms your standard video player into a fully-fledged internet 
       }
   });
 </script>
+
 ```
 
 ---
@@ -79,7 +84,7 @@ This plugin transforms your standard video player into a fully-fledged internet 
 When defining the `radio` object inside the player's plugins configuration, you can pass the following options:
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `apiUrl` | `String` | `'api.php'` | The endpoint to fetch the JSON list of radio stations. |
 | `theme` | `String` | `'vintage'` | Sets the UI style. Accepted values: `'vintage'`, `'digital'`. |
 | `startChannel` | `Number` | `1` | The channel to tune into on first load (overridden if the user has a saved channel in memory). |
@@ -90,26 +95,31 @@ When defining the `radio` object inside the player's plugins configuration, you 
 | `defaultIcon` | `String` | `''` | The default icon to show for the station and in the stations list. |
 | `tagIcons` | `Array` | `'[]'` | An array of icons related to the station tag; see below for examples |
 | `proxyUrl` | `String` | `''` | Optional proxy URL to bypass CORS issues for HTTP streams. |
+| `statsApiUrl` | `String` | `''` | Absolute path to the backend script handling the analytics JSON operations. |
+| `statsPollInterval` | `Number` | `15000` | Refresh rate in milliseconds for the live viewers counter. |
 
 The API url is the `api.php` file, linked to the JSON file with all the stream url of the radio stations in the repository this is the file `station_example.json` that you can use for your tests.
 
 The proxy option, for example proxy.php (already inside the repository), can be like this: `https://mywebsite.com/proxy.html?url=` and it can be used to stream an http file inside an https network.
 
 Icons option example:
-```
-defaultIcon: 'https://www.mywebsite.com/plugins/radio/icons/radio-solid.png',
+
+```javascript
+defaultIcon: '[https://www.mywebsite.com/plugins/radio/icons/radio-solid.png](https://www.mywebsite.com/plugins/radio/icons/radio-solid.png)',
 tagIcons: {
-                'news': 'https://www.mywebsite.com/plugins/radio/icons/newspaper-solid.png',
-                'pop': 'https://www.mywebsite.com/plugins/radio/icons/headphones-solid.png',
-                'rock': 'https://www.mywebsite.com/plugins/radio/icons/bolt-lightning-solid.png',
-                'classical': 'https://www.mywebsite.com/plugins/radio/icons/music-solid.png',
-                'dance': 'https://www.mywebsite.com/plugins/radio/icons/compact-disc-solid.png',
-                'jazz': 'https://www.mywebsite.com/plugins/radio/icons/guitar-solid.png',
-                'sports': 'https://www.mywebsite.com/plugins/radio/icons/medal-solid.png',
-                'religious': 'https://www.mywebsite.com/plugins/radio/icons/radio-solid.png',
-                'various': 'https://www.mywebsite.com/plugins/radio/icons/radio-solid.png'
-          }
+    'news': '[https://www.mywebsite.com/plugins/radio/icons/newspaper-solid.png](https://www.mywebsite.com/plugins/radio/icons/newspaper-solid.png)',
+    'pop': '[https://www.mywebsite.com/plugins/radio/icons/headphones-solid.png](https://www.mywebsite.com/plugins/radio/icons/headphones-solid.png)',
+    'rock': '[https://www.mywebsite.com/plugins/radio/icons/bolt-lightning-solid.png](https://www.mywebsite.com/plugins/radio/icons/bolt-lightning-solid.png)',
+    'classical': '[https://www.mywebsite.com/plugins/radio/icons/music-solid.png](https://www.mywebsite.com/plugins/radio/icons/music-solid.png)',
+    'dance': '[https://www.mywebsite.com/plugins/radio/icons/compact-disc-solid.png](https://www.mywebsite.com/plugins/radio/icons/compact-disc-solid.png)',
+    'jazz': '[https://www.mywebsite.com/plugins/radio/icons/guitar-solid.png](https://www.mywebsite.com/plugins/radio/icons/guitar-solid.png)',
+    'sports': '[https://www.mywebsite.com/plugins/radio/icons/medal-solid.png](https://www.mywebsite.com/plugins/radio/icons/medal-solid.png)',
+    'religious': '[https://www.mywebsite.com/plugins/radio/icons/radio-solid.png](https://www.mywebsite.com/plugins/radio/icons/radio-solid.png)',
+    'various': '[https://www.mywebsite.com/plugins/radio/icons/radio-solid.png](https://www.mywebsite.com/plugins/radio/icons/radio-solid.png)'
+}
+
 ```
+
 ---
 
 ## 🔌 Public API Methods
@@ -117,14 +127,15 @@ tagIcons: {
 Once initialized, you can control the Radio plugin programmatically by accessing its instance.
 
 | Method | Description |
-|--------|-------------|
+| --- | --- |
 | `tune(channelNumber)` | Jumps directly to the specified channel number. |
 | `play()` | Starts playback of the currently tuned station. |
 | `stop()` | Stops playback and clears the video source. |
 | `setTheme('themeName')` | Changes the visual theme on the fly (e.g., `setTheme('digital')`). |
-| `dispose()` | Safely removes the radio UI, unbinds all events, and destroys the plugin instance. |
+| `dispose()` | Safely removes the radio UI, unbinds all events, stops polling, and destroys the plugin instance. |
 
 **Example:**
+
 ```javascript
 // Access the plugin instance (assuming the player exposes active plugins)
 var radioPlugin = myPlayer.getPlugin('radio'); // Use your player's specific method to get the plugin
@@ -134,24 +145,28 @@ radioPlugin.tune(5);
 
 // Switch to vintage theme
 radioPlugin.setTheme('vintage');
+
 ```
 
 ---
 
 ## 🎮 Controls
 
-- **Mouse / Touch**: 
-  - Drag the analog dial to tune (Vintage theme).
-  - Click the `< TUNE >` buttons (Digital theme).
-- **Keyboard**: Use the `Left Arrow` and `Right Arrow` keys to zap between channels seamlessly.
-- **Control Bar**: Click the `RADIO LIST` button injected in the player's bottom bar to open the full station directory modal.
-- **Settings Gear**: Click the native player settings icon to toggle the "Remember Channel" feature.
+* **Mouse / Touch**:
+* Drag the analog dial to tune (Vintage theme).
+* Click the `< TUNE >` buttons (Digital theme).
+* Click the Live Viewers / Total Views counter to open the Analytics history modal.
+
+
+* **Keyboard**: Use the `Left Arrow` and `Right Arrow` keys to zap between channels seamlessly.
+* **Control Bar**: Click the `RADIO LIST` button injected in the player's bottom bar to open the full station directory modal.
+* **Settings Gear**: Click the native player settings icon to toggle the "Remember Channel" feature.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! 
+Contributions, issues, and feature requests are welcome!
 Feel free to check [issues page](https://github.com/OskarCosimo/myetv-video-player-opensource).
 
 ## 📝 License

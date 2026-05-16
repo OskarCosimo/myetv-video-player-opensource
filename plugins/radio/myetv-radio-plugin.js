@@ -1,6 +1,7 @@
 /*!
- * MYETV Radio Plugin v1.0
+ * MYETV Radio Plugin v1.1
  * Themeable Radio Tuner for the MYETV Video Player Open Source
+ * Features: API integration, Live Viewers & Stats History Polling
  * https://www.myetv.tv | https://oskarcosimo.com
  */
 (function (global) {
@@ -89,6 +90,20 @@
         '.radio-needle{position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);pointer-events:none;z-index:10;}',
         '.radio-needle::before{content:"▼";position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-size:11px;}',
 
+        /* STATS UI COMPONENTS */
+        '.radio-stats-bar{display:flex; justify-content:center; gap:15px; font-size:10px; margin-top:20px; opacity:0.8; z-index:10;}',
+        '.radio-stat-item{display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:4px; cursor:pointer;}',
+        '.radio-stat-item:hover{background:rgba(255,255,255,0.1);}',
+        '.radio-stat-live{color:#00ff44;}',
+        '.radio-stat-total{color:#00d8ff;}',
+
+        /* STATS MODAL */
+        '.radio-stats-modal-content{padding:15px; font-size:12px;}',
+        '.radio-stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}',
+        '.radio-stats-card{background:rgba(255,255,255,0.05); padding:10px; border-radius:4px; text-align:center; border:1px solid rgba(255,255,255,0.1);}',
+        '.radio-stats-value{font-size:18px; font-weight:bold; margin-top:5px; color:#f0c040;}',
+        '.theme-digital .radio-stats-value{color:#00d8ff;}',
+
         /* SEARCH BAR */
         '.radio-search-bar{display:flex;gap:6px;width:100%;max-width:520px;margin-top:8px;}',
         '.radio-country-select{background:rgba(0,0,0,0.5);border:1px solid currentColor;border-radius:4px;color:inherit;font-family:inherit;font-size:12px;padding:5px;outline:none;opacity:0.8;transition:border-color 0.3s;cursor:pointer;text-transform:uppercase;max-width:70px;}',
@@ -174,6 +189,13 @@
     ].join('');
 
     // ============================================================
+    // HELPER METHODS
+    // ============================================================
+    function _generateClientId() {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+
+    // ============================================================
     // CONSTRUCTOR
     // ============================================================
     function RadioPlugin(player, options) {
@@ -188,7 +210,10 @@
             startCountry: '',
             showAllCountryOption: true,
             defaultIcon: '',
-            tagIcons: {}
+            tagIcons: {},
+            statsApiUrl: (options && options.statsApiUrl) ? options.statsApiUrl : '',
+            statsPollInterval: (options && options.statsPollInterval) ? options.statsPollInterval : 15000,
+            clientId: _generateClientId()
         };
 
         if (options) {
@@ -222,6 +247,10 @@
             if (savedCountry !== null) this.activeCountry = savedCountry.toUpperCase();
         }
 
+        /* Stats Variables */
+        this._statsIntervalId = null;
+        this.currentStats = { live: 0, total: 0, daily: 0, weekly: 0, monthly: 0, yearly: 0 };
+
         this._wakeLock = null;
         this._isRadioPlaying = (player.options && player.options.autoplay) || (player.video && player.video.autoplay) || false;
         this._tuneId = 0;
@@ -253,6 +282,10 @@
         this.errMsgEl = null;
         this.faviconEl = null;
         this.countrySelectEl = null;
+
+        this.liveStatsEl = null;
+        this.totalStatsEl = null;
+        this._statsModalOverlay = null;
     }
 
     // ============================================================
@@ -268,6 +301,7 @@
         setTimeout(function () {
             self._buildControlBar();
             self._buildModal();
+            self._buildStatsModal();
 
             if (typeof self.player.populateSettingsMenu === 'function') {
                 self.player.populateSettingsMenu();
@@ -434,6 +468,34 @@
         this.waveCanvas = waveCanvas;
         this.waveCtx = waveCanvas.getContext('2d');
 
+        /* --- Stats Bar --- */
+        var statsBar = document.createElement('div');
+        statsBar.className = 'radio-stats-bar';
+
+        var liveStats = document.createElement('div');
+        liveStats.className = 'radio-stat-item radio-stat-live';
+        liveStats.innerHTML = '<span class="radio-status playing" style="width:6px;height:6px;margin:0;"></span> <span class="val">0</span> LIVE';
+        this.liveStatsEl = liveStats.querySelector('.val');
+
+        var totalStats = document.createElement('div');
+        totalStats.className = 'radio-stat-item radio-stat-total';
+        totalStats.innerHTML = '&#128065; <span class="val">0</span> VIEWS'; // Eye icon html entity
+        this.totalStatsEl = totalStats.querySelector('.val');
+
+        totalStats.addEventListener('click', function (e) {
+            e.stopPropagation();
+            self._openStatsModal();
+        });
+
+        liveStats.addEventListener('click', function (e) {
+            e.stopPropagation();
+            self._openStatsModal();
+        });
+
+        statsBar.appendChild(liveStats);
+        statsBar.appendChild(totalStats);
+        dialWrapper.appendChild(statsBar);
+
         ov.appendChild(dialWrapper);
 
         /* --- Search Bar & Country Select --- */
@@ -474,7 +536,6 @@
         this._bindSearchEvents(searchInput, searchBtn);
     };
 
-    // Functuon to set digital display name and handle scrolling if too long
     RadioPlugin.prototype._setDigitalName = function (name) {
         if (!this.digiMainEl || !this.digiMainTextEl) return;
 
@@ -482,7 +543,6 @@
         this.digiMainEl.classList.remove('is-scrolling');
 
         var self = this;
-        // wait for DOM to update and measure text width, then decide if scrolling is needed
         setTimeout(function () {
             if (self.digiMainTextEl.scrollWidth > self.digiMainEl.clientWidth) {
                 self.digiMainEl.classList.add('is-scrolling');
@@ -502,15 +562,12 @@
 
         function draw() {
             requestAnimationFrame(draw);
-
             if (!canvas.offsetWidth) return;
-
             if (canvas.width !== canvas.offsetWidth) canvas.width = canvas.offsetWidth;
             if (canvas.height !== canvas.offsetHeight) canvas.height = canvas.offsetHeight;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Colore in base al tema
             var isDigital = self.options.theme === 'digital';
             ctx.fillStyle = isDigital ? '#00d8ff' : '#ff6600';
 
@@ -521,7 +578,6 @@
                 var height = 2;
 
                 if (self._isRadioPlaying) {
-
                     var noise = Math.sin(phase + i * 0.4) * Math.cos(phase * 0.7 + i * 0.2);
                     var beat = Math.random() * 0.4;
                     var normalized = Math.abs(noise + beat);
@@ -530,13 +586,10 @@
 
                 var x = i * barWidth;
                 var y = canvas.height - height;
-
                 ctx.fillRect(x + gap / 2, y, barWidth - gap, height);
             }
 
-            if (self._isRadioPlaying) {
-                phase += 0.15;
-            }
+            if (self._isRadioPlaying) phase += 0.15;
         }
         draw();
     };
@@ -592,7 +645,6 @@
         var s = list[ch - 1];
         if (s) {
             var absoluteCh = this.stations.indexOf(s) + 1;
-
             var displayCh = this.baseCountryList.indexOf(s) + 1;
 
             if (this.rememberChannel) {
@@ -617,12 +669,10 @@
 
             var iconUrl = this._getStationIcon(s);
 
-            // show top-right icon only if we have a valid URL, otherwise hide the entire box to avoid broken image icon
             if (this.digiTopIconBoxEl && this.digiTopIconEl) {
                 if (iconUrl) {
                     this.digiTopIconBoxEl.style.display = 'flex';
                     this.digiTopIconEl.onload = function () { this.style.display = 'block'; };
-
                     this.digiTopIconEl.onerror = function () { this.parentElement.style.display = 'none'; };
                     this.digiTopIconEl.src = iconUrl;
                 } else {
@@ -633,7 +683,6 @@
 
             if (this.stationMetaEl) {
                 this.stationMetaEl.querySelector('.radio-meta-text').textContent = metaString;
-
                 if (this.faviconEl) {
                     if (iconUrl) {
                         this.faviconEl.style.display = 'none';
@@ -649,7 +698,6 @@
             if (this.digiMetaEl) this.digiMetaEl.textContent = metaString || 'FM RADIO';
             if (typeof this.player.setVideoTitle === 'function') this.player.setVideoTitle(stationName);
 
-            // Lock-Screen Mobile for Webview
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: stationName,
@@ -659,7 +707,6 @@
                 });
             }
 
-            /* DEBOUNCE LOGIC */
             if (this._tuneTimeout && typeof this._tuneTimeout !== 'string') {
                 clearTimeout(this._tuneTimeout);
             }
@@ -670,9 +717,7 @@
 
             var video = this.player.video;
             if (video) {
-                try {
-                    video.pause();
-                } catch (e) { }
+                try { video.pause(); } catch (e) { }
             }
 
             if (skipDelay) {
@@ -686,12 +731,14 @@
                     self._prepareStream(s, playIntent);
                 }, 1200);
             }
+
+            // Start polling stats for the current station
+            this._startStatsPolling(s);
         }
     };
 
     RadioPlugin.prototype._bindDialEvents = function (container) {
         var self = this;
-
         container.addEventListener('pointerdown', function (e) {
             self.isDragging = true;
             self.startX = e.clientX;
@@ -763,7 +810,6 @@
             .then(function (data) {
                 self.stations = data || [];
 
-                // dinamically build country list based on loaded stations, but only if not already built (e.g. from memory or previous load)
                 if (self.countrySelectEl && self.countrySelectEl.options.length === 0) {
                     var uniqueCountries = [];
                     self.stations.forEach(function (s) {
@@ -784,7 +830,6 @@
                         self.countrySelectEl.appendChild(opt);
                     });
 
-                    // Restore previously selected country if still available, otherwise select first available or "All"
                     var initC = self.activeCountry;
                     if (initC && uniqueCountries.indexOf(initC) !== -1) {
                         self.countrySelectEl.value = initC;
@@ -797,13 +842,11 @@
                     }
                 }
 
-                // Apply filters & search
                 self._updateBaseList();
                 self._applyTextSearch(self.options.filter.search || (self.searchInput ? self.searchInput.value.trim() : ''));
 
                 var targetRel = Math.max(1, parseInt(self.options.startChannel) || 1);
 
-                // if there's an absolute channel target (from memory) try to find it in the filtered list and switch to it
                 if (self.targetAbsoluteCh !== -1 && self.stations.length > 0) {
                     var targetAbsIndex = Math.min(Math.max(1, self.targetAbsoluteCh), self.stations.length) - 1;
                     var targetStation = self.stations[targetAbsIndex];
@@ -830,14 +873,11 @@
 
     RadioPlugin.prototype._getStationIcon = function (station) {
         if (station && station.tags) {
-
             var firstTag = station.tags.split(',')[0].trim().toLowerCase();
-
             if (this.options.tagIcons && this.options.tagIcons[firstTag]) {
                 return this.options.tagIcons[firstTag];
             }
         }
-
         return this.options.defaultIcon || (station ? station.favicon : '') || '';
     };
 
@@ -871,7 +911,6 @@
 
             if (play) {
                 self._setStatus('buffering');
-
                 self._bufferTimeout = setTimeout(function () {
                     if (video.readyState < 3) self._setError('STREAM UNAVAILABLE');
                 }, 10000);
@@ -913,13 +952,11 @@
             this.digiMainEl.classList.remove('is-scrolling');
             this.digiMainTextEl.textContent = msg || 'CONNECTION ERROR';
         }
-
         if (this.player && this.player.video) {
             try {
                 this.player.video.pause();
                 this.player.video.removeAttribute('src');
                 this.player.video.load();
-
                 this.player.video.dispatchEvent(new Event('pause'));
                 this.player.video.dispatchEvent(new Event('abort'));
             } catch (e) { }
@@ -930,7 +967,6 @@
         if (this.dialContainer) this.dialContainer.classList.remove('error-state');
         if (this.errMsgEl) this.errMsgEl.style.display = 'none';
 
-        var s = this.filteredList[this.currentChannel - 1];
         var s = this.filteredList[this.currentChannel - 1];
         if (s) {
             this._setDigitalName(s.name || 'UNKNOWN');
@@ -958,6 +994,67 @@
                 this._wakeLock = null;
             }
         }
+    };
+
+    // ============================================================
+    // STATS MANAGEMENT
+    // ============================================================
+    RadioPlugin.prototype._startStatsPolling = function (station) {
+        var self = this;
+
+        // Clear existing polling
+        if (this._statsIntervalId) {
+            clearInterval(this._statsIntervalId);
+            this._statsIntervalId = null;
+        }
+
+        if (!this.options.statsApiUrl || !station) {
+            this.currentStats = { live: 0, total: 0, daily: 0, weekly: 0, monthly: 0, yearly: 0 };
+            this._updateStatsUI();
+            return;
+        }
+
+        /* * Generate a truly unique station ID to prevent stat overlaps
+         * across different countries or dynamic lists.
+         * We combine the country code and a sanitized version of the station name.
+         */
+        var country = (station.countrycode || 'global').toLowerCase();
+        var safeName = (station.name || 'unknown').toLowerCase().replace(/[^a-z0-9]/g, '_');
+        var uniqueStationId = country + '_' + safeName;
+
+        // Fetch initial stats
+        this._fetchStats(uniqueStationId);
+
+        // Start polling interval
+        this._statsIntervalId = setInterval(function () {
+            self._fetchStats(uniqueStationId);
+        }, this.options.statsPollInterval);
+    };
+
+    RadioPlugin.prototype._fetchStats = function (stationId) {
+        var self = this;
+        var url = this.options.statsApiUrl + '?action=update_and_get&station_id=' + stationId + '&client_id=' + this.options.clientId;
+
+        if (this._isRadioPlaying) {
+            url += '&status=playing';
+        }
+
+        fetch(url)
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data && data.success) {
+                    self.currentStats = data.stats || { live: 0, total: 0, daily: 0, weekly: 0, monthly: 0, yearly: 0 };
+                    self._updateStatsUI();
+                }
+            })
+            .catch(function (err) {
+                console.warn('MYETV Radio: Failed to fetch stats', err);
+            });
+    };
+
+    RadioPlugin.prototype._updateStatsUI = function () {
+        if (this.liveStatsEl) this.liveStatsEl.textContent = this.currentStats.live || 0;
+        if (this.totalStatsEl) this.totalStatsEl.textContent = this.currentStats.total || 0;
     };
 
     // ============================================================
@@ -991,7 +1088,6 @@
 
                 if (self.rememberChannel) {
                     localStorage.setItem('myetv_radio_last_country', self.activeCountry);
-
                     var firstStation = self.filteredList[0];
                     if (firstStation) {
                         localStorage.setItem('myetv_radio_last_ch', self.stations.indexOf(firstStation) + 1);
@@ -1033,7 +1129,7 @@
     };
 
     // ============================================================
-    // CONTROL BAR & MODAL
+    // CONTROL BAR & MODALS
     // ============================================================
     RadioPlugin.prototype._buildControlBar = function () {
         var self = this;
@@ -1063,9 +1159,6 @@
         btnList.addEventListener('click', function (e) { e.stopPropagation(); self._openModal(); });
     };
 
-    // ============================================================
-    // CUSTOM SETTINGS MENU INJECTION
-    // ============================================================
     RadioPlugin.prototype._injectSettingsMenu = function () {
         var self = this;
         var settingsMenu = this.player.container.querySelector('.settings-menu');
@@ -1266,6 +1359,105 @@
     };
 
     // ============================================================
+    // STATS MODAL
+    // ============================================================
+    RadioPlugin.prototype._buildStatsModal = function () {
+        var self = this;
+        var container = this.player.container;
+        if (!container) return;
+
+        var overlay = document.createElement('div');
+        overlay.className = 'radio-modal-overlay';
+        overlay.style.display = 'none';
+
+        var box = document.createElement('div');
+        box.className = 'radio-modal-box';
+        box.style.color = '#f0c040';
+        box.style.maxWidth = '400px';
+        box.style.margin = '0 auto';
+
+        var header = document.createElement('div');
+        header.className = 'radio-modal-header';
+        var title = document.createElement('span');
+        title.className = 'radio-modal-title';
+        title.textContent = 'Channel Analytics';
+        this._statsModalTitle = title;
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'radio-modal-close';
+        closeBtn.innerHTML = '&times;';
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+
+        var content = document.createElement('div');
+        content.className = 'radio-stats-modal-content';
+        this._statsModalContent = content;
+
+        box.appendChild(header);
+        box.appendChild(content);
+        overlay.appendChild(box);
+
+        if (this.overlay) {
+            this.overlay.appendChild(overlay);
+        } else {
+            container.appendChild(overlay);
+        }
+
+        this._statsModalOverlay = overlay;
+
+        closeBtn.addEventListener('click', function () { self._closeStatsModal(); });
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) self._closeStatsModal(); });
+    };
+
+    RadioPlugin.prototype._openStatsModal = function () {
+        if (!this._statsModalOverlay) return;
+
+        var s = this.filteredList[this.currentChannel - 1];
+        if (s && this._statsModalTitle) {
+            this._statsModalTitle.textContent = 'Analytics: ' + (s.name || 'Station');
+        }
+
+        if (this._statsModalContent) {
+            var stats = this.currentStats;
+            this._statsModalContent.innerHTML = `
+                <div style="text-align:center; opacity:0.8; margin-bottom:10px;">Viewer History</div>
+                <div class="radio-stats-grid">
+                    <div class="radio-stats-card">
+                        <div>LIVE NOW</div>
+                        <div class="radio-stats-value" style="color:#00ff44;">${stats.live || 0}</div>
+                    </div>
+                    <div class="radio-stats-card">
+                        <div>TODAY</div>
+                        <div class="radio-stats-value">${stats.daily || 0}</div>
+                    </div>
+                    <div class="radio-stats-card">
+                        <div>THIS WEEK</div>
+                        <div class="radio-stats-value">${stats.weekly || 0}</div>
+                    </div>
+                    <div class="radio-stats-card">
+                        <div>THIS MONTH</div>
+                        <div class="radio-stats-value">${stats.monthly || 0}</div>
+                    </div>
+                    <div class="radio-stats-card">
+                        <div>THIS YEAR</div>
+                        <div class="radio-stats-value">${stats.yearly || 0}</div>
+                    </div>
+                    <div class="radio-stats-card">
+                        <div>ALL TIME TOTAL</div>
+                        <div class="radio-stats-value" style="color:#00d8ff;">${stats.total || 0}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        this._statsModalOverlay.style.display = 'flex';
+    };
+
+    RadioPlugin.prototype._closeStatsModal = function () {
+        if (this._statsModalOverlay) this._statsModalOverlay.style.display = 'none';
+    };
+
+    // ============================================================
     // PLAYER HOOKS
     // ============================================================
     RadioPlugin.prototype._hookPlayerEvents = function () {
@@ -1276,6 +1468,10 @@
             self._clearError();
             self._setStatus('playing');
             self._manageWakeLock(true);
+
+            // Re-trigger stats polling to register status=playing immediately
+            var s = self.filteredList[self.currentChannel - 1];
+            if (s) self._startStatsPolling(s);
         });
 
         this.player.addEventListener('paused', function () {
@@ -1284,6 +1480,10 @@
             self._clearBufferTimeout();
             self._setStatus('');
             self._manageWakeLock(false);
+
+            // Re-trigger to update live status
+            var s = self.filteredList[self.currentChannel - 1];
+            if (s) self._startStatsPolling(s);
         });
 
         this.player.addEventListener('ended', function () {
@@ -1324,8 +1524,15 @@
     // PUBLIC API
     // ============================================================
     RadioPlugin.prototype.tune = function (ch) { this._positionTo(parseInt(ch) || 1, false, true); return this; };
-    RadioPlugin.prototype.play = function () { this._isRadioPlaying = true; var s = this.filteredList[this.currentChannel - 1]; if (s) this._prepareStream(s, true); return this; };
-    RadioPlugin.prototype.stop = function () { this._isRadioPlaying = false; var v = this.player.video; if (v) { v.pause(); v.removeAttribute('src'); v.load(); } this._setStatus(''); return this; };
+    RadioPlugin.prototype.play = function () { this._isRadioPlaying = true; var s = this.filteredList[this.currentChannel - 1]; if (s) { this._prepareStream(s, true); this._startStatsPolling(s); } return this; };
+    RadioPlugin.prototype.stop = function () {
+        this._isRadioPlaying = false;
+        var v = this.player.video;
+        if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+        this._setStatus('');
+        if (this._statsIntervalId) clearInterval(this._statsIntervalId);
+        return this;
+    };
     RadioPlugin.prototype.setTheme = function (theme) {
         this.options.theme = theme;
         if (this.overlay) {
@@ -1339,6 +1546,7 @@
         if (this._keydownHandler) document.removeEventListener('keydown', this._keydownHandler, true);
         if (this._searchTimeout) clearTimeout(this._searchTimeout);
         if (this._tuneTimeout) clearTimeout(this._tuneTimeout);
+        if (this._statsIntervalId) clearInterval(this._statsIntervalId);
         if (this.overlay && this.overlay.parentNode) this.overlay.parentNode.removeChild(this.overlay);
     };
 

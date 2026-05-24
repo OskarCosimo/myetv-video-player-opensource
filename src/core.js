@@ -19,6 +19,9 @@ constructor(videoElement, options = {}) {
         showPictureInPicture: true,  // Enable PiP button
         showSubtitles: true,         // Enable subtitles button
         subtitlesEnabled: false,     // Enable subtitles by default if available
+        externalSubtitleTracks: [],// external subtitles track from url
+        externalSubtitleLabel: 'Default Subtitles', //label for the subtitle track url
+        externalSubtitleLang: 'en',  // language of the subtitles track url
         showSettingsMenu: true,      // Show settings menu in top bar
         autoHide: true,              // auto-hide controls when idle
         autoHideDelay: 3000,         // hide controls after ... seconds of inactivity (specificed in milliseconds)
@@ -291,6 +294,12 @@ constructor(videoElement, options = {}) {
         this.initializeChapters();
         this.initializePoster();
         this.initializeWatermark();
+
+        // Check if external subtitle tracks were provided and the array is not empty
+        if (this.options.externalSubtitleTracks && this.options.externalSubtitleTracks.length > 0) {
+            // Call the PLURAL method and pass ONLY the array
+            this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
+        }
 
     } catch (error) {
         if (this.options.debug) console.error('Video player initialization error:', error);

@@ -4426,6 +4426,53 @@ populateSettingsMenu() {
 }
 
 /**
+     * Updates specific UI elements inside the settings menu 
+     * without recreating the entire DOM (prevents accordions from closing)
+     */
+updateSettingsMenuUI() {
+    const settingsMenu = this.container?.querySelector('.settings-menu');
+    if (!settingsMenu) return;
+
+    if (this.options.showSubtitles) {
+        const subtitlesTrigger = settingsMenu.querySelector('[data-action="subtitles_expand"]');
+
+        if (subtitlesTrigger) {
+            // 1. Update the label text (e.g. "Subtitles: English")
+            const label = subtitlesTrigger.querySelector('.settings-option-label');
+            if (label) {
+                const subtitlesLabel = this.t('subtitles') || 'Subtitles';
+                const currentTrack = this.currentSubtitleTrack;
+
+                let currentLabelText = this.t('subtitlesoff') || 'Off';
+                if (this.subtitlesEnabled && currentTrack) {
+                    currentLabelText = currentTrack.label || 'Unknown';
+                }
+
+                label.innerHTML = `${subtitlesLabel} <strong>${currentLabelText}</strong>`;
+            }
+
+            // 2. Update the "active" classes in the dropdown list
+            const submenuContent = subtitlesTrigger.nextElementSibling;
+            if (submenuContent && submenuContent.classList.contains('settings-expandable-content')) {
+                submenuContent.querySelectorAll('.settings-suboption').forEach(opt => {
+                    const trackData = opt.getAttribute('data-track');
+                    opt.classList.remove('active');
+
+                    if (trackData === 'off' && !this.subtitlesEnabled) {
+                        opt.classList.add('active');
+                    } else if (this.subtitlesEnabled && trackData !== 'off') {
+                        const trackIndex = parseInt(trackData);
+                        if (this.textTracks[trackIndex] && this.textTracks[trackIndex].track === this.currentSubtitleTrack) {
+                            opt.classList.add('active');
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+
+/**
  * Add scrollbar to settings menu on mobile
  */
 addSettingsMenuScrollbar() {
@@ -6237,6 +6284,8 @@ injectExternalSubtitleTracks(tracksArray) {
         // Set default if specified in the JSON
         if (trackData.default) {
             trackEl.default = true;
+            trackEl.setAttribute('default', 'default');
+            trackEl.setAttribute('data-default', 'true');
         }
 
         // Listen for the load event on EACH track
@@ -6282,6 +6331,8 @@ loadCustomSubtitleTracks() {
         var src = track.getAttribute('src');
         var label = track.getAttribute('label') || 'Unknown';
         var srclang = track.getAttribute('srclang') || '';
+
+        var isDefault = track.default || track.hasAttribute('default');
 
         var trackObj = {
             label: label,
@@ -6352,6 +6403,27 @@ loadCustomSubtitleTracks() {
                 if (self.options.debug) {
                     console.log('✅ Custom parser loaded ' + trackObj.subtitles.length + ' subtitles for ' + label);
                 }
+
+                // =========================================================
+                // AUTO-ENABLE SUBTITLES
+                // =========================================================
+                var isDefault = track.default || track.hasAttribute('default') || track.getAttribute('data-default') === 'true';
+
+                if (isDefault) {
+                    if (self.options.debug) {
+                        console.log('⏳ Waiting 500ms for UI alignment... track:', label);
+                    }
+
+                    // Delay execution to ensure the player has finished 
+                    // building the menu and populating this.textTracks array!
+                    setTimeout(function () {
+                        if (self.options.debug) {
+                            console.log('🎯 Forced auto-enable triggered now!');
+                        }
+                        self.enableSubtitleTrack(index);
+                    }, 500); // 500 milliseconds of delay
+                }
+
             })
             .catch(function (error) {
                 console.error('❌ Error loading ' + label + ':', error);
@@ -6488,6 +6560,10 @@ enableSubtitleTrack(trackIndex) {
         this.updateSubtitlesButton();
         this.populateSubtitlesMenu();
 
+        if (typeof this.updateSettingsMenuUI === 'function') {
+            this.updateSettingsMenuUI();
+        }
+
         if (this.options.debug) {
             console.log('✅ Custom UI subtitles strictly enforced for track', trackIndex);
         }
@@ -6510,6 +6586,11 @@ disableSubtitles() {
 
     this.updateSubtitlesButton();
     this.populateSubtitlesMenu();
+
+    // 👉 L'AGGIUNTA FONDAMENTALE: Sincronizza il menu Settings!
+    if (typeof this.updateSettingsMenuUI === 'function') {
+        this.updateSettingsMenuUI();
+    }
 
     if (this.options.debug) console.log('📝 Subtitles disabled');
 

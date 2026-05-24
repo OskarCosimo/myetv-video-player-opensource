@@ -100,6 +100,7 @@ const player = new MYETVvideoplayer('my-video', {
     showTitleOverlay: true,
     videoTitle: 'My Video',
     language: 'en',
+    subtitlesEnabled: true,
     debug: false
 });
 

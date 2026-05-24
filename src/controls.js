@@ -948,6 +948,53 @@ populateSettingsMenu() {
 }
 
 /**
+     * Updates specific UI elements inside the settings menu 
+     * without recreating the entire DOM (prevents accordions from closing)
+     */
+updateSettingsMenuUI() {
+    const settingsMenu = this.container?.querySelector('.settings-menu');
+    if (!settingsMenu) return;
+
+    if (this.options.showSubtitles) {
+        const subtitlesTrigger = settingsMenu.querySelector('[data-action="subtitles_expand"]');
+
+        if (subtitlesTrigger) {
+            // 1. Update the label text (e.g. "Subtitles: English")
+            const label = subtitlesTrigger.querySelector('.settings-option-label');
+            if (label) {
+                const subtitlesLabel = this.t('subtitles') || 'Subtitles';
+                const currentTrack = this.currentSubtitleTrack;
+
+                let currentLabelText = this.t('subtitlesoff') || 'Off';
+                if (this.subtitlesEnabled && currentTrack) {
+                    currentLabelText = currentTrack.label || 'Unknown';
+                }
+
+                label.innerHTML = `${subtitlesLabel} <strong>${currentLabelText}</strong>`;
+            }
+
+            // 2. Update the "active" classes in the dropdown list
+            const submenuContent = subtitlesTrigger.nextElementSibling;
+            if (submenuContent && submenuContent.classList.contains('settings-expandable-content')) {
+                submenuContent.querySelectorAll('.settings-suboption').forEach(opt => {
+                    const trackData = opt.getAttribute('data-track');
+                    opt.classList.remove('active');
+
+                    if (trackData === 'off' && !this.subtitlesEnabled) {
+                        opt.classList.add('active');
+                    } else if (this.subtitlesEnabled && trackData !== 'off') {
+                        const trackIndex = parseInt(trackData);
+                        if (this.textTracks[trackIndex] && this.textTracks[trackIndex].track === this.currentSubtitleTrack) {
+                            opt.classList.add('active');
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+
+/**
  * Add scrollbar to settings menu on mobile
  */
 addSettingsMenuScrollbar() {

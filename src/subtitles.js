@@ -202,6 +202,8 @@ injectExternalSubtitleTracks(tracksArray) {
         // Set default if specified in the JSON
         if (trackData.default) {
             trackEl.default = true;
+            trackEl.setAttribute('default', 'default');
+            trackEl.setAttribute('data-default', 'true');
         }
 
         // Listen for the load event on EACH track
@@ -247,6 +249,8 @@ loadCustomSubtitleTracks() {
         var src = track.getAttribute('src');
         var label = track.getAttribute('label') || 'Unknown';
         var srclang = track.getAttribute('srclang') || '';
+
+        var isDefault = track.default || track.hasAttribute('default');
 
         var trackObj = {
             label: label,
@@ -317,6 +321,27 @@ loadCustomSubtitleTracks() {
                 if (self.options.debug) {
                     console.log('✅ Custom parser loaded ' + trackObj.subtitles.length + ' subtitles for ' + label);
                 }
+
+                // =========================================================
+                // AUTO-ENABLE SUBTITLES
+                // =========================================================
+                var isDefault = track.default || track.hasAttribute('default') || track.getAttribute('data-default') === 'true';
+
+                if (isDefault) {
+                    if (self.options.debug) {
+                        console.log('⏳ Waiting 500ms for UI alignment... track:', label);
+                    }
+
+                    // Delay execution to ensure the player has finished 
+                    // building the menu and populating this.textTracks array!
+                    setTimeout(function () {
+                        if (self.options.debug) {
+                            console.log('🎯 Forced auto-enable triggered now!');
+                        }
+                        self.enableSubtitleTrack(index);
+                    }, 500); // 500 milliseconds of delay
+                }
+
             })
             .catch(function (error) {
                 console.error('❌ Error loading ' + label + ':', error);
@@ -453,6 +478,10 @@ enableSubtitleTrack(trackIndex) {
         this.updateSubtitlesButton();
         this.populateSubtitlesMenu();
 
+        if (typeof this.updateSettingsMenuUI === 'function') {
+            this.updateSettingsMenuUI();
+        }
+
         if (this.options.debug) {
             console.log('✅ Custom UI subtitles strictly enforced for track', trackIndex);
         }
@@ -475,6 +504,11 @@ disableSubtitles() {
 
     this.updateSubtitlesButton();
     this.populateSubtitlesMenu();
+
+    // 👉 L'AGGIUNTA FONDAMENTALE: Sincronizza il menu Settings!
+    if (typeof this.updateSettingsMenuUI === 'function') {
+        this.updateSettingsMenuUI();
+    }
 
     if (this.options.debug) console.log('📝 Subtitles disabled');
 

@@ -93,7 +93,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 // Basic initialization
 const player = new MYETVvideoplayer('my-video');
 
-// Initialization with basic options
+// Initialization with options
 const player = new MYETVvideoplayer('my-video', {
     autoplay: true,
     defaultQuality: '720p',
@@ -103,25 +103,6 @@ const player = new MYETVvideoplayer('my-video', {
     debug: false
 });
 
-// Initialization with external WebVTT subtitles array
-const playerWithSubs = new MYETVvideoplayer('my-video', {
-    subtitlesEnabled: true,
-    showSubtitles: true,
-    externalSubtitleTracks: [
-        {
-            src: '[https://example.com/subtitles/en.vtt](https://example.com/subtitles/en.vtt)',
-            lang: 'en',
-            label: 'English (Server)',
-            default: true
-        },
-        {
-            src: '[https://example.com/subtitles/it.vtt](https://example.com/subtitles/it.vtt)',
-            lang: 'it',
-            label: 'Italiano (Server)',
-            default: false
-        }
-    ]
-});
 
 ```
 
@@ -138,7 +119,7 @@ const playerWithSubs = new MYETVvideoplayer('my-video', {
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
 | `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
-| `externalSubtitleTracks` | array | `[]` | Array of objects to load external WebVTT subtitle tracks (supports src, lang, label, and default properties) |
+| `externalSubtitleTracks` | array | `[]` | Array of objects to load external WebVTT or SRT subtitle tracks dynamically (supports src, lang, label, and default properties) |
 | `showSettingsMenu` | boolean | `true` | Show/Hide the settings menu in the top-bar |
 | `moreinfoTitle` | string | `''` | Title for the modal window (if present, the button "more information" in the settings menu will be visible) |
 | `moreinfoDescription` | string | `''` | Description for the modal window (if present, the button "more information" in the settings menu will be visible) |
@@ -261,6 +242,25 @@ player.enableSubtitleTrack(0);     // Enable subtitle track
 player.disableSubtitles();         // Disable subtitles
 player.getAvailableSubtitles();    // List available subtitles
 
+// Initialize with external subtitle tracks (JSON array of WebVTT/SRT)
+const playerWithSubs = new MYETVvideoplayer('my-video', {
+    subtitlesEnabled: true,
+    showSubtitles: true,
+    externalSubtitleTracks: [
+        {
+            src: '[https://example.com/subtitles/en.vtt](https://example.com/subtitles/en.vtt)', // WebVTT format
+            lang: 'en',
+            label: 'English (Server)',
+            default: true
+        },
+        {
+            src: '[https://example.com/subtitles/it.srt](https://example.com/subtitles/it.srt)', // SRT format
+            lang: 'it',
+            label: 'Italiano (Server)',
+            default: false
+        }
+    ]
+});
 
 ```
 
@@ -857,9 +857,6 @@ The player includes several pre-built themes that you can apply:
 .video-wrapper.player-theme-red {
 /* Automatically uses red color scheme */
 }
-
-
-```
 
 #### Dark Theme
 

@@ -674,6 +674,9 @@ constructor(videoElement, options = {}) {
         showPictureInPicture: true,  // Enable PiP button
         showSubtitles: true,         // Enable subtitles button
         subtitlesEnabled: false,     // Enable subtitles by default if available
+        externalSubtitleTracks: [],// external subtitles track from url
+        externalSubtitleLabel: 'Default Subtitles', //label for the subtitle track url
+        externalSubtitleLang: 'en',  // language of the subtitles track url
         showSettingsMenu: true,      // Show settings menu in top bar
         autoHide: true,              // auto-hide controls when idle
         autoHideDelay: 3000,         // hide controls after ... seconds of inactivity (specificed in milliseconds)
@@ -946,6 +949,12 @@ constructor(videoElement, options = {}) {
         this.initializeChapters();
         this.initializePoster();
         this.initializeWatermark();
+
+        // Check if external subtitle tracks were provided and the array is not empty
+        if (this.options.externalSubtitleTracks && this.options.externalSubtitleTracks.length > 0) {
+            // Call the PLURAL method and pass ONLY the array
+            this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
+        }
 
     } catch (error) {
         if (this.options.debug) console.error('Video player initialization error:', error);
@@ -6097,6 +6106,33 @@ createCustomSubtitleOverlay() {
     if (this.options.debug) console.log('✅ Custom subtitle overlay created with responsive settings');
 }
 
+// Universal time parser for both SRT (00:00:00,000) and VTT (00:00.000)
+parseTimeToSecondsUniversal(timeString) {
+    if (!timeString) return 0;
+
+    // Normalize comma to dot for consistency
+    let normalized = timeString.replace(',', '.');
+    let parts = normalized.split('.');
+
+    let timeParts = parts[0].split(':');
+    let ms = parts[1] ? parseInt(parts[1], 10) / 1000 : 0;
+
+    let hours = 0, minutes = 0, seconds = 0;
+
+    if (timeParts.length === 3) {
+        // SRT Format: HH:MM:SS
+        hours = parseInt(timeParts[0], 10);
+        minutes = parseInt(timeParts[1], 10);
+        seconds = parseInt(timeParts[2], 10);
+    } else if (timeParts.length === 2) {
+        // VTT Short Format: MM:SS
+        minutes = parseInt(timeParts[0], 10);
+        seconds = parseInt(timeParts[1], 10);
+    }
+
+    return (hours * 3600) + (minutes * 60) + seconds + ms;
+}
+
 customTimeToSeconds(timeString) {
     if (!timeString) return 0;
 
@@ -6120,6 +6156,33 @@ customTimeToSeconds(timeString) {
     }
 
     return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+}
+
+// Universal time parser for both SRT (00:00:00,000) and VTT (00:00.000)
+parseTimeToSecondsUniversal(timeString) {
+    if (!timeString) return 0;
+
+    // Normalize comma to dot for consistency
+    const normalized = timeString.replace(',', '.');
+    const parts = normalized.split('.');
+
+    const timeParts = parts[0].split(':');
+    const ms = parts[1] ? parseInt(parts[1], 10) / 1000 : 0;
+
+    let hours = 0, minutes = 0, seconds = 0;
+
+    if (timeParts.length === 3) {
+        // Full format: HH:MM:SS
+        hours = parseInt(timeParts[0], 10);
+        minutes = parseInt(timeParts[1], 10);
+        seconds = parseInt(timeParts[2], 10);
+    } else if (timeParts.length === 2) {
+        // Short format (common in VTT): MM:SS
+        minutes = parseInt(timeParts[0], 10);
+        seconds = parseInt(timeParts[1], 10);
+    }
+
+    return (hours * 3600) + (minutes * 60) + seconds + ms;
 }
 
 parseCustomSRT(srtText) {
@@ -6155,6 +6218,61 @@ parseCustomSRT(srtText) {
     return subtitles;
 }
 
+// Method to inject multiple external subtitle tracks
+injectExternalSubtitleTracks(tracksArray) {
+    // Check if video exists and if tracksArray is actually an array
+    if (!this.video || !Array.isArray(tracksArray) || tracksArray.length === 0) return;
+
+    this.video.crossOrigin = "anonymous";
+    let loadedCount = 0;
+
+    // Loop through each track object in the array
+    tracksArray.forEach(trackData => {
+        const trackEl = document.createElement('track');
+        trackEl.kind = 'subtitles';
+        trackEl.label = trackData.label;
+        trackEl.srclang = trackData.lang;
+        trackEl.src = trackData.src;
+
+        // Set default if specified in the JSON
+        if (trackData.default) {
+            trackEl.default = true;
+        }
+
+        // Listen for the load event on EACH track
+        trackEl.addEventListener('load', () => {
+            if (trackEl.track) {
+                // Only show the default one, keep others hidden but ready
+                trackEl.track.mode = trackData.default ? 'showing' : 'hidden';
+            }
+
+            loadedCount++;
+
+            // Re-initialize UI ONLY when ALL tracks have finished loading
+            if (loadedCount === tracksArray.length) {
+                console.log(`MYETV Player: ${loadedCount} external subtitle tracks loaded.`);
+
+                if (typeof this.initializeSubtitles === 'function') {
+                    this.initializeSubtitles();
+                } else if (typeof this.initializeCustomSubtitles === 'function') {
+                    this.initializeCustomSubtitles();
+                } else if (typeof this.loadCustomSubtitleTracks === 'function') {
+                    this.loadCustomSubtitleTracks();
+                }
+            }
+        });
+
+        trackEl.addEventListener('error', () => {
+            console.warn(`MYETV Player: Failed to load track ${trackData.lang}`);
+            // Increment anyway so we don't block the UI initialization
+            loadedCount++;
+        });
+
+        // Append to DOM
+        this.video.appendChild(trackEl);
+    });
+}
+
 loadCustomSubtitleTracks() {
     var self = this;
     var tracks = this.video.querySelectorAll('track[kind="subtitles"]');
@@ -6165,7 +6283,6 @@ loadCustomSubtitleTracks() {
         var label = track.getAttribute('label') || 'Unknown';
         var srclang = track.getAttribute('srclang') || '';
 
-        // CREA L'OGGETTO PRIMA E AGGIUNGILO SUBITO
         var trackObj = {
             label: label,
             language: srclang,
@@ -6179,42 +6296,61 @@ loadCustomSubtitleTracks() {
                 return response.text();
             })
             .then(function (srtText) {
+                // Normalize newlines
                 var normalizedText = srtText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+                // Split into blocks by double newline
                 var blocks = normalizedText.trim().split('\n\n');
 
                 for (var i = 0; i < blocks.length; i++) {
                     var block = blocks[i].trim();
-                    if (!block) continue;
+                    if (!block || block.toUpperCase().startsWith('WEBVTT')) continue;
+
                     var lines = block.split('\n');
+                    var timeMatch = null;
+                    var textLines = [];
 
-                    if (lines.length >= 3) {
-                        var timeLine = lines[1].trim();
-                        var timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
+                    for (var j = 0; j < lines.length; j++) {
+                        var line = lines[j].trim();
 
-                        if (timeMatch) {
-                            var startParts = timeMatch[1].split(',');
-                            var startTimeParts = startParts[0].split(':');
-                            var startTime = parseInt(startTimeParts[0], 10) * 3600 + parseInt(startTimeParts[1], 10) * 60 + parseInt(startTimeParts[2], 10) + parseInt(startParts[1], 10) / 1000;
-
-                            var endParts = timeMatch[2].split(',');
-                            var endTimeParts = endParts[0].split(':');
-                            var endTime = parseInt(endTimeParts[0], 10) * 3600 + parseInt(endTimeParts[1], 10) * 60 + parseInt(endTimeParts[2], 10) + parseInt(endParts[1], 10) / 1000;
-
-                            var text = lines.slice(2).join('\n').trim().replace(/<[^>]*>/g, '');
-
-                            if (text && text.length > 0 && !isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
-                                trackObj.subtitles.push({
-                                    start: startTime,
-                                    end: endTime,
-                                    text: text
-                                });
+                        // Regex matches both SRT and VTT formats (with or without hours, dot or comma)
+                        if (!timeMatch) {
+                            var match = line.match(/(\d{2,}:\d{2}:\d{2}[.,]\d{3}|\d{2}:\d{2}[.,]\d{3})\s*-->\s*(\d{2,}:\d{2}:\d{2}[.,]\d{3}|\d{2}:\d{2}[.,]\d{3})/);
+                            if (match) {
+                                timeMatch = match;
+                                continue;
                             }
+                        }
+
+                        // Skip numeric IDs common in SRT files
+                        if (!timeMatch && /^\d+$/.test(line)) {
+                            continue;
+                        }
+
+                        // Everything after the timestamp is the actual subtitle text
+                        if (timeMatch) {
+                            textLines.push(line);
+                        }
+                    }
+
+                    // Store the parsed subtitle block
+                    if (timeMatch && textLines.length > 0) {
+                        var startTime = self.parseTimeToSecondsUniversal(timeMatch[1]);
+                        var endTime = self.parseTimeToSecondsUniversal(timeMatch[2]);
+                        var text = textLines.join('\n').trim().replace(/<[^>]*>/g, '');
+
+                        if (text && !isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
+                            trackObj.subtitles.push({
+                                start: startTime,
+                                end: endTime,
+                                text: text
+                            });
                         }
                     }
                 }
 
                 if (self.options.debug) {
-                    console.log('✅ Loaded ' + trackObj.subtitles.length + ' subtitles for ' + label);
+                    console.log('✅ Custom parser loaded ' + trackObj.subtitles.length + ' subtitles for ' + label);
                 }
             })
             .catch(function (error) {
@@ -6334,39 +6470,34 @@ detectTextTracks() {
 enableSubtitleTrack(trackIndex) {
     if (trackIndex < 0 || trackIndex >= this.textTracks.length) return;
 
-    // Disable all tracks first
+    // 1. Disable all tracks first to prevent overlapping
     this.disableAllTracks();
 
-    // Enable ONLY the custom subtitle system (not native browser)
+    // 2. Enable ONLY the custom WebView-safe subtitle system
     var success = this.enableCustomSubtitleTrack(trackIndex);
 
     if (success) {
         this.currentSubtitleTrack = this.textTracks[trackIndex].track;
         this.subtitlesEnabled = true;
 
-        // Make sure native tracks stay DISABLED
+        // 3. Kill the native browser track to avoid double rendering or crashes
         if (this.video.textTracks && this.video.textTracks[trackIndex]) {
-            this.video.textTracks[trackIndex].mode = 'disabled'; // Keep native disabled
+            this.video.textTracks[trackIndex].mode = 'disabled';
         }
 
         this.updateSubtitlesButton();
         this.populateSubtitlesMenu();
 
         if (this.options.debug) {
-            console.log('✅ Custom subtitles enabled:', this.textTracks[trackIndex].label);
+            console.log('✅ Custom UI subtitles strictly enforced for track', trackIndex);
         }
 
-        // Trigger subtitle change event
         this.triggerEvent('subtitlechange', {
             enabled: true,
             trackIndex: trackIndex,
             trackLabel: this.textTracks[trackIndex].label,
             trackLanguage: this.textTracks[trackIndex].language
         });
-    } else {
-        if (this.options.debug) {
-            console.error('❌ Failed to enable custom subtitles for track', trackIndex);
-        }
     }
 }
 

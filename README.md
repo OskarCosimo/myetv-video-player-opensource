@@ -42,7 +42,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Custom controls** with intelligent auto-hide
 - Built to work with both .mp4 or .webm or .mp3 (**download streaming**) but also with hls or dash (**adaptive streaming**)
 - **Multiple video qualities** with automatic selection based on connection
-- **Subtitles** with multiple track support
+- **Subtitles** with multiple track support (with .srt or .vtt support)
 - **Chapters** with images and customized colors
 - Custom **Plugins** to enhance player's functionality
 - **Picture-in-Picture** mode (where supported)

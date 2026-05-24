@@ -42,7 +42,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 - **Custom controls** with intelligent auto-hide
 - Built to work with both .mp4 or .webm or .mp3 (**download streaming**) but also with hls or dash (**adaptive streaming**)
 - **Multiple video qualities** with automatic selection based on connection
-- **Subtitles** with multiple track support (with .srt or .vtt support)
+- **Subtitles** with multiple track support
 - **Chapters** with images and customized colors
 - Custom **Plugins** to enhance player's functionality
 - **Picture-in-Picture** mode (where supported)
@@ -70,6 +70,7 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 <link rel="stylesheet" href="css/myetv-player.min.css">
 <script src="dist/myetv-player.min.js"></script>
 
+
 ```
 
 ## Basic Usage
@@ -85,13 +86,14 @@ A modern and complete HTML5 + JavaScript + css video player with custom controls
 <track kind="subtitles" src="subtitles-it.vtt" srclang="it" label="Italiano">
 </video>
 
+
 ```
 
 ```javascript
 // Basic initialization
 const player = new MYETVvideoplayer('my-video');
 
-// Initialization with options
+// Initialization with basic options
 const player = new MYETVvideoplayer('my-video', {
     autoplay: true,
     defaultQuality: '720p',
@@ -99,6 +101,26 @@ const player = new MYETVvideoplayer('my-video', {
     videoTitle: 'My Video',
     language: 'en',
     debug: false
+});
+
+// Initialization with external WebVTT subtitles array
+const playerWithSubs = new MYETVvideoplayer('my-video', {
+    subtitlesEnabled: true,
+    showSubtitles: true,
+    externalSubtitleTracks: [
+        {
+            src: '[https://example.com/subtitles/en.vtt](https://example.com/subtitles/en.vtt)',
+            lang: 'en',
+            label: 'English (Server)',
+            default: true
+        },
+        {
+            src: '[https://example.com/subtitles/it.vtt](https://example.com/subtitles/it.vtt)',
+            lang: 'it',
+            label: 'Italiano (Server)',
+            default: false
+        }
+    ]
 });
 
 ```
@@ -116,6 +138,7 @@ const player = new MYETVvideoplayer('my-video', {
 | `showPictureInPicture` | boolean | `true` | Show Picture-in-Picture button |
 | `showSubtitles` | boolean | `true` | Show subtitles controls (the button) - it is automatically true only if subtitles track are detected |
 | `subtitlesEnabled` | boolean | `false` | Enable/Disable subtitles at player ready |
+| `externalSubtitleTracks` | array | `[]` | Array of objects to load external WebVTT subtitle tracks (supports src, lang, label, and default properties) |
 | `showSettingsMenu` | boolean | `true` | Show/Hide the settings menu in the top-bar |
 | `moreinfoTitle` | string | `''` | Title for the modal window (if present, the button "more information" in the settings menu will be visible) |
 | `moreinfoDescription` | string | `''` | Description for the modal window (if present, the button "more information" in the settings menu will be visible) |
@@ -176,6 +199,7 @@ player.getVolume();                // Get current volume
 player.toggleMute();               // Toggle mute
 player.setMuted(true);             // Set mute
 
+
 ```
 
 ### Time Controls
@@ -187,6 +211,7 @@ player.getCurrentTime();           // Current position
 player.getDuration();              // Total duration
 player.skipTime(10);               // Skip 10 seconds forward
 player.skipTime(-10);              // Skip 10 seconds backward
+
 
 ```
 
@@ -211,6 +236,7 @@ if (player.isPosterVisible()) {
     console.log('Poster is visible');
 }
 
+
 ```
 
 ### Quality Controls
@@ -223,6 +249,7 @@ player.getSelectedQuality();       // Selected quality
 player.getCurrentPlayingQuality(); // Actual playing quality
 player.enableAutoQuality();        // Enable automatic selection
 
+
 ```
 
 ### Subtitles Controls
@@ -233,6 +260,7 @@ player.toggleSubtitles();          // Toggle subtitles
 player.enableSubtitleTrack(0);     // Enable subtitle track
 player.disableSubtitles();         // Disable subtitles
 player.getAvailableSubtitles();    // List available subtitles
+
 
 ```
 
@@ -256,6 +284,7 @@ player.setChapters([...]);
 // Clear chapters
 player.clearChapters();
 
+
 ```
 
 ### Plugins Controls
@@ -271,6 +300,7 @@ player.enterFullscreen();          // Enter fullscreen
 player.exitFullscreen();           // Exit fullscreen
 player.togglePictureInPicture();   // Toggle Picture-in-Picture
 
+
 ```
 
 ### Brand Logo Controls
@@ -279,6 +309,7 @@ player.togglePictureInPicture();   // Toggle Picture-in-Picture
 // Brand Logo in controlbar
 player.setBrandLogo(enabled, url, linkUrl)    //change brand logo dynamically
 player.getBrandLogoSettings()    //get current brand logo settings
+
 
 ```
 
@@ -306,6 +337,7 @@ player.removeWatermark();
 //hide with the controlbar or always show the watermark logo
 player.setWatermarkAutoHide(false);
 
+
 ```
 
 ### Controlbar seek shape
@@ -320,6 +352,7 @@ console.log(player.getSeekHandleShape()); // "heart"
 // Show all available shape
 console.log(player.getAvailableSeekHandleShapes());
 // ["none", "circle", "square", "diamond", "arrow", "triangle", "heart", "star"]
+
 
 ```
 
@@ -337,6 +370,7 @@ if (player.isCursorHidingEnabled()) {
     console.log('Cursor hiding is active');
 }
 
+
 ```
 
 ### Playlist Controls
@@ -347,6 +381,7 @@ player.prevVideo();                    // Previous Video
 player.goToPlaylistIndex(2);           // Go to the specific video
 player.getPlaylistInfo();              // Info Playlist
 player.setPlaylistOptions({loop:true}); // Playlist Options
+
 
 ```
 
@@ -359,6 +394,7 @@ player.setResolution("stretched");     // Change to stretched: Stretch the video
 player.setResolution("fit-to-screen"); // Change to fit to screen: It fits the screen, can cut parts of the video
 player.setResolution("scale-to-fit"); // Intelligently fit to screen without cut video parts
 console.log(player.getCurrentResolution()); // Get current resolution
+
 
 ```
 
@@ -380,6 +416,7 @@ player.addEventListener('playerready', (event) => {
         player.play();
 });
 
+
 ```
 
 ### on played
@@ -396,6 +433,7 @@ player.addEventListener('played', (event) => {
     });
 });
 
+
 ```
 
 ### on playing
@@ -408,6 +446,7 @@ When: Video is effectively playing
 player.addEventListener('playing', (event) => {
     console.log('Video is playing at', event.currentTime);
 });
+
 
 ```
 
@@ -422,6 +461,7 @@ player.addEventListener('paused', (event) => {
     console.log('Video paused at:', event.currentTime + 's');
 });
 
+
 ```
 
 ### on waiting
@@ -434,6 +474,7 @@ When: Video is buffering and is waiting
 player.addEventListener('waiting', (event) => {
     console.log('Video is buffering...');
 });
+
 
 ```
 
@@ -448,6 +489,7 @@ player.addEventListener('seeking', (event) => {
     console.log('User is seeking to', event.targetTime);
 });
 
+
 ```
 
 ### on seeked
@@ -460,6 +502,7 @@ When: The user have finished seeking and seeked the video
 player.addEventListener('seeked', (event) => {
     console.log('Seek completed at', event.currentTime);
 });
+
 
 ```
 
@@ -474,6 +517,7 @@ player.addEventListener('ended', (e) => {
     console.log('Video terminato!', e.currentTime, e.duration, e.playlistInfo);
 });
 
+
 ```
 
 ### on error
@@ -486,6 +530,7 @@ When: Video have some error on load
 player.addEventListener('error', (event) => {
     console.error('Playback error:', event.message);
 });
+
 
 ```
 
@@ -504,6 +549,7 @@ player.addEventListener('subtitlechange', (event) => {
     }
 });
 
+
 ```
 
 ### on chapters change
@@ -516,6 +562,7 @@ When: User switches chapters tracks
 player.on('chapterchange', (data) => {
     console.log('Chapter changed:', data.chapter.title);
 });
+
 
 ```
 
@@ -530,6 +577,7 @@ player.addEventListener('pipchange', (event) => {
     console.log('Picture-in-Picture:', event.active ? 'Activated' : 'Deactivated');
 });
 
+
 ```
 
 ### on fullscreen change
@@ -543,6 +591,7 @@ player.addEventListener('fullscreenchange', (event) => {
     console.log('Fullscreen:', event.active ? 'Activated' : 'Deactivated');
 });
 
+
 ```
 
 ### on speed change
@@ -555,6 +604,7 @@ When: User modifies playback speed (0.5x, 1x, 1.5x, 2x, etc.)
 player.addEventListener('speedchange', (event) => {
     console.log('Speed changed to:', event.speed + 'x');
 });
+
 
 ```
 
@@ -570,6 +620,7 @@ player.addEventListener('timeupdate', (event) => {
     // Update custom progress bar
     updateProgressBar(event.progress);
 });
+
 
 ```
 
@@ -588,6 +639,7 @@ player.addEventListener('volumechange', (event) => {
     }
 });
 
+
 ```
 
 ### Playlist API
@@ -596,6 +648,7 @@ player.addEventListener('volumechange', (event) => {
 player.addEventListener('playlistchange', (e) => {
     console.log(`From "${e.fromTitle}" to "${e.toTitle}"`);
 });
+
 
 ```
 
@@ -625,6 +678,7 @@ console.log(state);
 }
 */
 
+
 ```
 
 ### Event Listener Management
@@ -644,6 +698,7 @@ const onVideoPlay = (event) => {
 player.addEventListener('played', onVideoPlay);
 // ... later
 player.removeEventListener('played', onVideoPlay);
+
 
 ```
 
@@ -680,6 +735,7 @@ function updateUI(state, time) {
     document.getElementById('player-status').textContent = 
         `Status: ${state} at ${time.toFixed(1)}s`;
 }
+
 
 ```
 
@@ -768,6 +824,7 @@ The player uses CSS custom properties (variables) for easy theming:
 --player-transition-normal: 0.3s ease;
 }
 
+
 ```
 
 ### Pre-built Themes
@@ -781,6 +838,7 @@ The player includes several pre-built themes that you can apply:
 /* Automatically uses blue color scheme */
 }
 
+
 ```
 
 #### Green Theme
@@ -789,6 +847,7 @@ The player includes several pre-built themes that you can apply:
 .video-wrapper.player-theme-green {
 /* Automatically uses green color scheme */
 }
+
 
 ```
 
@@ -799,6 +858,7 @@ The player includes several pre-built themes that you can apply:
 /* Automatically uses red color scheme */
 }
 
+
 ```
 
 #### Dark Theme
@@ -807,6 +867,7 @@ The player includes several pre-built themes that you can apply:
 .video-wrapper.player-theme-dark {
 /* Enhanced dark mode with improved contrast */
 }
+
 
 ```
 
@@ -819,6 +880,7 @@ The player includes several pre-built themes that you can apply:
 /* Bigger buttons and controls for better accessibility */
 }
 
+
 ```
 
 #### Compact Controls
@@ -827,6 +889,7 @@ The player includes several pre-built themes that you can apply:
 .video-wrapper.player-compact-controls {
 /* Smaller, space-efficient controls */
 }
+
 
 ```
 
@@ -843,6 +906,7 @@ The player includes several pre-built themes that you can apply:
 --player-bg-controls: linear-gradient(180deg, transparent 0%, rgba(26, 13, 26, 0.9) 100%);
 }
 
+
 ```
 
 #### High Contrast Theme
@@ -857,6 +921,7 @@ The player includes several pre-built themes that you can apply:
 --player-border-radius: 0; /* Sharp corners for accessibility */
 }
 
+
 ```
 
 #### Minimal Theme
@@ -870,6 +935,7 @@ The player includes several pre-built themes that you can apply:
 --player-volume-height: 2px;
 --player-button-padding: 4px;
 }
+
 
 ```
 
@@ -894,6 +960,7 @@ The player automatically adapts to different screen sizes. You can customize the
     }
 }
 
+
 ```
 
 ### Custom Subtitle Styling
@@ -916,6 +983,7 @@ text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 background: var(--player-primary-color);
 color: black;
 }
+
 
 ```
 
@@ -941,6 +1009,7 @@ transition: none !important;
 animation: none !important;
 }
 
+
 ```
 
 ### Quality Selector Customization
@@ -962,6 +1031,7 @@ font-size: 11px; /* Current playing quality */
 opacity: 0.7;
 }
 
+
 ```
 
 ### Usage Examples
@@ -977,6 +1047,7 @@ const player = new MYETVvideoplayer('video', {
 // Add theme class
 document.querySelector('.video-wrapper').classList.add('player-theme-blue');
 
+
 ```
 
 #### Apply Theme via HTML
@@ -985,6 +1056,7 @@ document.querySelector('.video-wrapper').classList.add('player-theme-blue');
 <div class="video-wrapper player-theme-dark player-large-controls"> 
     <video id="my-video"> </video> 
 </div> 
+
 
 ```
 
@@ -1007,6 +1079,7 @@ function switchTheme(themeName) {
 switchTheme('blue');    // Switch to blue theme
 switchTheme('dark');    // Switch to dark theme
 switchTheme('default'); // Switch to default theme
+
 
 ```
 
@@ -1066,6 +1139,7 @@ language: 'en', // Set to English
 // other options...
 });
 
+
 ```
 
 ### Changing Language Dynamically
@@ -1078,6 +1152,7 @@ player.setLanguage('es');
 
 // Change language to French
 player.setLanguage('fr');
+
 
 ```
 
@@ -1093,6 +1168,7 @@ The player provides several methods to retrieve language information:
 const currentLang = player.getCurrentLanguage();
 console.log(currentLang); // e.g., 'en'
 
+
 ```
 
 #### Get list of supported languages:
@@ -1100,6 +1176,7 @@ console.log(currentLang); // e.g., 'en'
 ```javascript
 const languages = player.getSupportedLanguages();
 console.log(languages); // ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ru', 'ar']
+
 
 ```
 
@@ -1152,6 +1229,7 @@ const player = new VideoPlayer('myVideo', {
     ]
 });
 
+
 ```
 
 ### String format
@@ -1160,6 +1238,7 @@ const player = new VideoPlayer('myVideo', {
 const player = new VideoPlayer('myVideo', {
     chapters: "0:00:00|Introduction|intro.jpg,0:02:00|Main Content|main.jpg,0:05:00|Conclusion"
 });
+
 
 ```
 
@@ -1183,6 +1262,7 @@ The playlist detection will work through HTML attributes on your video elements:
     <source src="video2-720p.mp4" type="video/mp4" data-quality="720p">
     <source src="video2-480p.mp4" type="video/mp4" data-quality="480p">
 </video>
+
 
 ```
 
@@ -1216,6 +1296,7 @@ MyeTV Player supports adaptive bitrate streaming using DASH (Dynamic Adaptive St
     });
 </script>
 
+
 ```
 
 #### Method 2: Using JavaScript Load
@@ -1239,6 +1320,7 @@ src: '[https://example.com/video/playlist.m3u8](https://example.com/video/playli
 type: 'application/x-mpegURL'
 });
 
+
 ```
 
 The player automatically loads the required libraries:
@@ -1258,6 +1340,7 @@ player.getAdaptiveStreamingInfo();
 player.setAdaptiveQuality(1);     // Specify quality
 player.setAdaptiveQuality('auto'); // Auto-switching
 
+
 ```
 
 ### Example Playlist+Adaptive Streaming
@@ -1271,6 +1354,7 @@ player.setAdaptiveQuality('auto'); // Auto-switching
     <source src="ep3-1080p.mp4" data-quality="1080p">
     <source src="ep3-720p.mp4" data-quality="720p">
 </video>
+
 
 ```
 

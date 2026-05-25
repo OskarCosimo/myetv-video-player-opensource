@@ -1,20 +1,21 @@
 /**
  * MYETV Player - Auto Subtitles Plugin
- * Automatically generates subtitles via Transformers.js + Whisper (client-side, no FFmpeg, no server)
+ * Automatically generates subtitles via Transformers.js + Whisper 
+ * OR Translates existing player subtitles on-the-fly.
  *
  * Compatible with myetv-player plugin system (registerMYETVPlugin)
  * Author: Oscar Cosimo - MYETV
  *
  * Options:
- *   language        {string}  Transcription language ('italian','english','it','en',...). Default: null (auto-detect)
- *   modelSize       {string}  'tiny' (~39MB), 'base' (~74MB), 'small' (~244MB). Default: 'base'
- *   autoGenerate    {boolean} Auto-generate subtitles on video load. Default: false
- *   autoTranslation {string}  Auto-translate subtitles into this language on load (ISO 2-letter code, e.g. 'en','it'). Default: null
- *   showButton      {boolean} Show button in the control bar. Default: true
- *   position        {string}  'right', 'left', or 'topbar'. Default: 'right'
- *   subtitleStyle   {object}  Custom CSS style object for the subtitle text div
- *   cacheEnabled    {boolean} Cache transcription in localStorage. Default: true
- *   idCache         {string}  Stable unique ID for localStorage cache key
+ * language        {string}  Transcription language ('italian','english','it','en',...). Default: null (auto-detect)
+ * modelSize       {string}  'tiny' (~39MB), 'base' (~74MB), 'small' (~244MB). Default: 'base'
+ * autoGenerate    {boolean} Auto-generate subtitles on video load. Default: false
+ * autoTranslation {string}  Auto-translate subtitles into this language on load (ISO 2-letter code, e.g. 'en','it'). Default: null
+ * showButton      {boolean} Show button in the control bar. Default: true
+ * position        {string}  'right', 'left', or 'topbar'. Default: 'right'
+ * subtitleStyle   {object}  Custom CSS style object for the subtitle text div
+ * cacheEnabled    {boolean} Cache transcription and translations in localStorage. Default: true
+ * idCache         {string}  Stable unique ID for localStorage cache key
  */
 
 (function () {
@@ -212,7 +213,9 @@
   @media (max-width: 600px) {
     .myetv-autosub-overlay { bottom: 60px; width: 96%; }
     .myetv-autosub-text { font-size: clamp(0.6em, 3.5vw, 0.85em); padding: 3px 8px 4px; }
-    .myetv-autosub-drag-handle { display: none; } /* drag handle hidden on touch devices */
+    .myetv-autosub-drag-handle { display: none; } 
+    .myetv-autosub-overlay { pointer-events: all; cursor: grab; }
+    .myetv-autosub-overlay.dragging { cursor: grabbing; }
   }
   @media (max-width: 400px) {
     .myetv-autosub-text { font-size: clamp(0.55em, 4vw, 0.75em); }
@@ -221,11 +224,9 @@
 
     const ICON_CC = `<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>`;
     const ICON_LOADING = `<svg viewBox="0 0 24 24">
-  <!-- cerchio rotante -->
   <path d="M12 2A10 10 0 0 1 22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
     <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
   </path>
-  <!-- icona CC fissa al centro, scala ridotta -->
   <g transform="translate(4, 5) scale(0.65)">
     <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/>
   </g>
@@ -293,20 +294,25 @@
                 modelSize: 'base',
                 autoGenerate: false,
                 showButton: true,
-                position: 'right',    // 'left' | 'right' | 'topbar'
+                position: 'right',    
                 subtitleStyle: {},
                 cacheEnabled: true,
                 idCache: null,
-                autoTranslation: null,      // ISO 2-letter code, e.g. 'en', 'it'
-                translationEngine: null, // null = MyMemory (default), oppure { type: 'libretranslate', url: 'https://...', apiKey: '' }
+                autoTranslation: null,      
+                translationEngine: null, 
             }, options);
 
             this.isGenerating = false;
-            this.subtitles = [];       // { start, end, text }  original segments
-            this.subtitlesTrans = [];       // { start, end, text }  translated segments (in-memory cache)
-            this.translateLang = 'off';    // currently active translation language
-            this._transCache = {};       // { langCode: [{start,end,text}] }
+            this.subtitles = [];           // Original segments (generated OR imported)
+            this.subtitlesTrans = [];      // Translated segments
+            this.translateLang = 'off';    
+            this._transCache = {};         // Persistent cache for translations { langCode: [...] }
             this.subVisible = false;
+            
+            // Flags for Native Subtitle Integration
+            this.hasNativeTracks = false;
+            this.isImportedSubs = false;
+
             this.updateInterval = null;
             this.btnWrapEl = null;
             this.btnEl = null;
@@ -317,7 +323,7 @@
             this._worker = null;
             // Drag state
             this._drag = { active: false, startX: 0, startY: 0, origLeft: 0, origTop: 0 };
-            // Overlay position (absolute px, or null → uses default bottom:72px from CSS)
+            // Overlay position
             this._overlayPos = null;
         }
 
@@ -326,32 +332,118 @@
             this._createOverlay();
             this._createPanel();
             if (this.opts.showButton) this._createButton();
+            
+            // Integrate with player initialization lifecycle
+            this.player.addEventListener('playerready', () => {
+                this._checkForNativeTracks();
+                
+                // If autoTranslation is enabled and we have native tracks, import immediately!
+                if (this.opts.autoTranslation && this.hasNativeTracks) {
+                    // Give fetch a moment to load custom tracks via the core player
+                    const attemptImport = setInterval(() => {
+                        if (this._importPlayerSubtitles()) {
+                            clearInterval(attemptImport);
+                            if (this.player.options.debug) console.log('[AutoSub] Auto-imported native tracks for translation');
+                            this.subVisible = true;
+                            this._startDisplay();
+                            this._setBtnActive(true);
+                            
+                            // Trigger translation
+                            this._setTranslationLang(this.opts.autoTranslation.toLowerCase().trim().slice(0, 2));
+                        }
+                    }, 500);
+                    // Stop trying after 5 seconds to avoid infinite loops
+                    setTimeout(() => clearInterval(attemptImport), 5000);
+                }
+            });
+
             if (this.opts.autoTranslation) {
                 this._scheduleAutoTranslation();
             }
+            
             if (this.opts.autoGenerate) {
-                this.video.addEventListener('loadedmetadata', () => this.generate(), { once: true });
+                this.video.addEventListener('loadedmetadata', () => {
+                    // Do NOT generate if the player already loaded native tracks
+                    if (!this._checkForNativeTracks()) {
+                        this.generate();
+                    }
+                }, { once: true });
             }
+            
             if (this.player.options.debug) console.log('[AutoSub] Plugin setup complete');
+        }
+
+        // Checks if the player has <track> elements or VTT/SRT data
+        _checkForNativeTracks() {
+            if (this.player.textTracks && this.player.textTracks.length > 0) {
+                this.hasNativeTracks = true;
+                if (this.btnEl) {
+                    this.btnEl.setAttribute('title', 'Translate Subtitles');
+                }
+                return true;
+            }
+            return false;
+        }
+
+        // Steal subtitles from the player's custom parsed arrays
+        _importPlayerSubtitles() {
+            if (this.player.customSubtitles && this.player.customSubtitles.length > 0) {
+                let track = null;
+                
+                // Try current active track first
+                if (this.player.currentCustomTrackIndex >= 0) {
+                     track = this.player.customSubtitles[this.player.currentCustomTrackIndex];
+                }
+                
+                // Fallback to first available track with data
+                if (!track || !track.subtitles || track.subtitles.length === 0) {
+                     track = this.player.customSubtitles.find(t => t.subtitles && t.subtitles.length > 0);
+                }
+
+                if (track && track.subtitles && track.subtitles.length > 0) {
+                    // Deep copy segments
+                    this.subtitles = track.subtitles.map(s => ({ start: s.start, end: s.end, text: s.text }));
+                    this.isImportedSubs = true;
+                    
+                    if (track.language) {
+                        this.opts.language = track.language;
+                        this._lastDetectedLang = track.language;
+                    }
+
+                    // Disable native player subtitles to avoid double rendering (we take control)
+                    if (typeof this.player.disableSubtitles === 'function') {
+                        this.player.disableSubtitles();
+                    }
+                    
+                    // Load any previously cached translations for this imported subtitle
+                    const cached = this._loadFromCache();
+                    if (cached && cached.transCache) {
+                        this._transCache = cached.transCache;
+                    }
+                    
+                    // Save imported state immediately
+                    this._saveToCache(this.subtitles, null, null, this._lastDetectedLang);
+
+                    return true;
+                }
+            }
+            return false;
         }
 
         _scheduleAutoTranslation() {
             const lang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
-
-            // Set translateLang immediately so chunk_done incremental translation kicks in right away
             this.translateLang = lang;
 
             let tries = 0;
             const check = setInterval(() => {
                 tries++;
-                // Wait until transcription is fully complete, then do a full translation pass
-                // to catch any chunks that may have been missed or arrived out of order
+                // Wait until transcription/import is fully complete
                 if (this.subtitles.length > 0 && !this.isGenerating) {
                     clearInterval(check);
                     if (this.player.options.debug) console.log('[AutoSub] autoTranslation final pass, lang:', lang);
-                    // Reset and retranslate everything cleanly at the end
+                    
                     this.subtitlesTrans = [];
-                    this._transCache = {};
+                    // Note: We DO NOT clear this._transCache here, to preserve cached translations!
                     this._setTranslationLang(lang);
                     this._updateMenu();
                     return;
@@ -360,30 +452,68 @@
             }, 1000);
         }
 
-
         async handleButtonClick() {
-            // If cache is enabled and no subtitles are loaded yet, try loading from cache first
-            if (this.subtitles.length === 0 && !this.isGenerating) {
-                const cached = this._loadFromCache();
-                if (cached) {
-                    this.subtitles = cached;
+            // 1. If native tracks exist but haven't been imported yet, try to import them
+            if (this._checkForNativeTracks() && this.subtitles.length === 0) {
+                const imported = this._importPlayerSubtitles();
+                if (imported) {
                     this.subVisible = true;
                     this._startDisplay();
                     this._setBtnActive(true);
                     this._updateMenu();
+                    if (this.player.options.debug) console.log('[AutoSub] Imported subtitles from player on click');
+                    this._toggleMenu();
+                    return;
+                } else {
+                    // Fetch is probably still pending. Check cache just in case we already saved imported subs.
+                    const cached = this._loadFromCache();
+                    if (cached && cached.isImportedSubs) {
+                        this.subtitles = cached.subtitles;
+                        this._transCache = cached.transCache || {};
+                        this.isImportedSubs = true;
+                        this.subVisible = true;
+                        this._startDisplay();
+                        this._setBtnActive(true);
+                        this._updateMenu();
+                        this._toggleMenu();
+                        return;
+                    } else {
+                        // Let the user know we are processing the native tracks
+                        this._updatePanel('Reading native subtitles...', 100);
+                        this._openPanel();
+                        setTimeout(() => this._closePanel(), 1500);
+                        return;
+                    }
+                }
+            }
+
+            // 2. If NO native tracks, check cache for Whisper generated ones
+            if (this.subtitles.length === 0 && !this.isGenerating) {
+                const cached = this._loadFromCache();
+                if (cached) {
+                    this.subtitles = cached.subtitles;
+                    this._transCache = cached.transCache || {};
+                    this.isImportedSubs = cached.isImportedSubs || false;
+                    this.subVisible = true;
+                    this._startDisplay();
+                    this._setBtnActive(true);
+                    this._updateMenu();
+                    
                     if (this.player.options.debug)
-                        console.log('[AutoSub] Loaded from cache:', cached.length, 'segments');
-                    // Open menu so the user can see current state and translation options
+                        console.log('[AutoSub] Loaded from cache:', cached.subtitles.length, 'segments');
+                        
                     this._toggleMenu();
                     return;
                 }
             }
-            // No cache found, or subtitles already loaded — just toggle the menu
+            
+            // Default: Toggle the menu
             this._toggleMenu();
         }
 
         async generate() {
-            if (this.isGenerating) return;
+            // Block generation if we are already using native imported subtitles
+            if (this.isGenerating || this.isImportedSubs) return;
 
             let partialCache = null;
 
@@ -391,6 +521,8 @@
                 const cached = this._loadFromCache();
                 if (cached) {
                     this.subtitles = cached.subtitles;
+                    this._transCache = cached.transCache || {};
+                    this.isImportedSubs = cached.isImportedSubs || false;
                     this.subVisible = true;
                     this._startDisplay();
                     this._setBtnActive(true);
@@ -401,7 +533,7 @@
                         return;
                     }
 
-                    partialCache = cached; // Pass to transcribeChunksStreaming
+                    partialCache = cached; 
                     if (this.player.options.debug)
                         console.log('[AutoSub] Partial cache found — resuming from chunk', cached.chunksCompleted, 'of', cached.totalChunks);
                 }
@@ -411,45 +543,30 @@
             this._setBtnGenerating(true);
             this._updatePanel('Extracting audio...', 5);
             try {
-                this.isGenerating = true;
-                this._setBtnGenerating(true);
-                this._updatePanel('Extracting audio...', 5);
-                try {
-                    const audioData = await this._extractAudio();
-                    this._updatePanel('Downloading Transformers.js bundle...', 30);
-                    await this._ensureBundle();
-                    this._updatePanel('Preparing Whisper worker...', 38);
-                    await this._transcribeChunksStreaming(audioData, partialCache);
+                const audioData = await this._extractAudio();
+                this._updatePanel('Downloading Transformers.js bundle...', 30);
+                await this._ensureBundle();
+                this._updatePanel('Preparing Whisper worker...', 38);
+                await this._transcribeChunksStreaming(audioData, partialCache);
 
-                    // Sort subtitles by start time — partial cache + new chunks may be unsorted
-                    this.subtitles.sort((a, b) => a.start - b.start);
+                this.subtitles.sort((a, b) => a.start - b.start);
 
-                    // Mark cache as complete
-                    this._saveToCache(this.subtitles, null, null, this._lastDetectedLang || null);
-                    this._updatePanel('Subtitles ready!', 100);
-                    this._setBtnActive(true);
-                    this._updateMenu();
+                this._saveToCache(this.subtitles, null, null, this._lastDetectedLang || null);
+                this._updatePanel('Subtitles ready!', 100);
+                this._setBtnActive(true);
+                this._updateMenu();
 
-                    // Re-trigger translation if one was active, using the now-complete subtitles
-                    if (this.translateLang && this.translateLang !== 'off') {
-                        const lang = this.translateLang;
-                        this.translateLang = 'off';       // reset so setTranslationLang doesn't skip
-                        this.subtitlesTrans = [];
-                        this._transCache = {};
-                        await this._setTranslationLang(lang); // re-translate with full subtitles
-                    }
-
-                    setTimeout(() => { this._closePanel(); }, 800);
-
-                    if (this.player.options.debug) console.log('[AutoSub] Generation complete:', this.subtitles.length, 'segments');
-                } catch (err) {
-                    if (this.player.options.debug) console.error('[AutoSub] Generation error:', err);
-                    this._updatePanel('Error: ' + (err.message || String(err)), 0);
-                } finally {
-                    this.isGenerating = false;
-                    this._setBtnGenerating(false);
+                // Re-trigger translation if one was active
+                if (this.translateLang && this.translateLang !== 'off') {
+                    const lang = this.translateLang;
+                    this.translateLang = 'off';       
+                    this.subtitlesTrans = [];
+                    await this._setTranslationLang(lang); 
                 }
 
+                setTimeout(() => { this._closePanel(); }, 800);
+
+                if (this.player.options.debug) console.log('[AutoSub] Generation complete:', this.subtitles.length, 'segments');
             } catch (err) {
                 if (this.player.options.debug) console.error('[AutoSub] Generation error:', err);
                 this._updatePanel('Error: ' + (err.message || String(err)), 0);
@@ -469,6 +586,10 @@
         dispose() {
             this._stopDisplay();
             this._destroyDrag();
+            if (this._resizeObserver) {
+                this._resizeObserver.disconnect();
+                this._resizeObserver = null;
+            }
             if (this._captureTimer) { clearTimeout(this._captureTimer); this._captureTimer = null; }
             if (this._captureProgressInterval) { clearInterval(this._captureProgressInterval); this._captureProgressInterval = null; }
             if (this._worker) { this._worker.terminate(); this._worker = null; }
@@ -507,7 +628,10 @@
 
             const text = document.createElement('div');
             text.className = 'myetv-autosub-text';
-            Object.assign(text.style, this.opts.subtitleStyle);
+
+            const styleWithoutFont = Object.assign({}, this.opts.subtitleStyle);
+            delete styleWithoutFont.fontSize;
+            Object.assign(text.style, styleWithoutFont);
 
             overlay.appendChild(handle);
             overlay.appendChild(text);
@@ -517,11 +641,50 @@
             this.overlayText = text;
 
             this._initDrag(handle, overlay);
+
+            this._resizeObserver = new ResizeObserver(() => {
+                this._applyResponsiveFontSize();
+            });
+            this._resizeObserver.observe(this.container);
+
+            this._applyResponsiveFontSize();
+        }
+
+        _applyResponsiveFontSize() {
+            if (!this.overlayText) return;
+
+            const rect = this.container.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+
+            const REFERENCE_WIDTH = 800;
+
+            let basePx = 18;
+            const userFontSize = this.opts.subtitleStyle?.fontSize;
+            if (userFontSize) {
+                const match = String(userFontSize).match(/([\d.]+)(px|em|rem)?/);
+                if (match) {
+                    const val = parseFloat(match[1]);
+                    const unit = match[2] || 'px';
+                    if (unit === 'px') basePx = val;
+                    else if (unit === 'em' || unit === 'rem') basePx = val * 16;
+                }
+            }
+
+            let size = basePx * (w / REFERENCE_WIDTH);
+
+            if (w < 260 || h < 150) {
+                size = Math.min(size, 8);
+            }
+
+            size = Math.max(size, 8);
+            size = Math.min(size, basePx);
+
+            this.overlayText.style.fontSize = size + 'px';
         }
 
         _initDrag(handle, overlay) {
             const onStart = (e) => {
-                // Prevent conflicts with player controls
                 e.stopPropagation();
                 const isTouch = e.type === 'touchstart';
                 const clientX = isTouch ? e.touches[0].clientX : e.clientX;
@@ -530,7 +693,6 @@
                 const rect = overlay.getBoundingClientRect();
                 const contRect = this.container.getBoundingClientRect();
 
-                // Switch to absolute positioning on first drag
                 if (!this._overlayPos) {
                     const currentLeft = rect.left - contRect.left + rect.width / 2;
                     const currentTop = rect.top - contRect.top + rect.height / 2;
@@ -583,7 +745,9 @@
             };
 
             handle.addEventListener('mousedown', onStart);
+            overlay.addEventListener('touchstart', onStart, { passive: false });
             handle.addEventListener('touchstart', onStart, { passive: false });
+
             this._drag._onEnd = onEnd;
         }
 
@@ -646,7 +810,6 @@
         _createButton() {
             const position = this.opts.position;
 
-            // Button wrapper only (menu is appended directly to body)
             const wrap = document.createElement('div');
             wrap.style.cssText = 'position:relative;display:inline-flex;align-items:center;';
 
@@ -662,13 +825,11 @@
 
             wrap.appendChild(btn);
 
-            // Menu is appended directly to body — escapes any stacking context from the player
             const menu = document.createElement('div');
             menu.className = 'myetv-autosub-menu';
             menu.addEventListener('click', (e) => e.stopPropagation());
             document.body.appendChild(menu);
 
-            // Insert button into the player DOM
             if (position === 'topbar') {
                 const settingsControl = this.container.querySelector('.settings-control');
                 if (settingsControl) settingsControl.insertBefore(wrap, settingsControl.firstChild);
@@ -692,7 +853,6 @@
             this.btnEl = btn;
             this.menuEl = menu;
 
-            // Close menu when clicking outside
             this._menuOutsideHandler = (e) => {
                 if (!menu.contains(e.target) && e.target !== btn) {
                     this._closeMenuNow();
@@ -700,7 +860,6 @@
             };
             document.addEventListener('click', this._menuOutsideHandler);
 
-            // Close menu on Escape key
             this._menuEscHandler = (e) => {
                 if (e.key === 'Escape') this._closeMenuNow();
             };
@@ -718,10 +877,8 @@
                 return;
             }
 
-            // Rebuild menu content
             this._buildMenu();
 
-            // Position before showing (measure offset first)
             this.menuEl.style.visibility = 'hidden';
             this.menuEl.style.display = 'block';
 
@@ -731,14 +888,12 @@
             const vpH = window.innerHeight;
             const vpW = window.innerWidth;
 
-            // Open above or below depending on available space
             const spaceAbove = btnRect.top - 8;
             const spaceBelow = vpH - btnRect.bottom - 8;
             let top = (spaceAbove >= menuH || spaceAbove >= spaceBelow)
                 ? btnRect.top - menuH - 8
                 : btnRect.bottom + 8;
 
-            // Align to the right edge of the button, clamped to viewport
             let left = btnRect.right - menuW;
             left = Math.max(4, Math.min(vpW - menuW - 4, left));
             top = Math.max(4, Math.min(vpH - menuH - 4, top));
@@ -783,27 +938,29 @@
             sec1.appendChild(itemOff);
             this.menuEl.appendChild(sec1);
 
-            // ── SECTION 2: GENERATE / PANEL ──────────────────────────────────────
-            const sec2 = this._menuSection('Management');
+            // ── SECTION 2: GENERATE / PANEL (Only if NOT using native imported subs)
+            if (!this.isImportedSubs) {
+                const sec2 = this._menuSection('Management');
 
-            const genLabel = isGenerating ? '⏳ Generating...' : hasSubs ? '🔄 Regenerate transcription' : '🎙️ Generate subtitles';
-            const itemGen = this._menuItem(genLabel, false, isGenerating, () => {
-                this._deleteCache();
-                this.subtitles = [];
-                this.subtitlesTrans = [];
-                this.transCache = {};
-                this.closeMenuNow();
-                this._generate();
-            });
+                const genLabel = isGenerating ? '⏳ Generating...' : hasSubs ? '🔄 Regenerate transcription' : '🎙️ Generate subtitles';
+                const itemGen = this._menuItem(genLabel, false, isGenerating, () => {
+                    this._deleteCache();
+                    this.subtitles = [];
+                    this.subtitlesTrans = [];
+                    this._transCache = {};
+                    this._closeMenuNow();
+                    this.generate(); 
+                });
 
-            const itemPanel = this._menuItem('📊 Show progress', false, !isGenerating, () => {
-                this._closeMenuNow();
-                this._openPanel();
-            });
+                const itemPanel = this._menuItem('📊 Show progress', false, !isGenerating, () => {
+                    this._closeMenuNow();
+                    this._openPanel();
+                });
 
-            sec2.appendChild(itemGen);
-            if (isGenerating) sec2.appendChild(itemPanel);
-            this.menuEl.appendChild(sec2);
+                sec2.appendChild(itemGen);
+                if (isGenerating) sec2.appendChild(itemPanel);
+                this.menuEl.appendChild(sec2);
+            }
 
             // ── SECTION 3: TRANSLATION ────────────────────────────────────────────
             if (hasSubs) {
@@ -884,7 +1041,6 @@
                 return;
             }
 
-            // Skip if source language equals target language
             const sourceLang = this._resolveLanguage(this.opts.language);
             if (sourceLang && sourceLang === langCode.slice(0, 2)) {
                 if (this.player.options.debug) console.log('[AutoSub] Source = target lang, skipping translation');
@@ -893,7 +1049,6 @@
                 return;
             }
 
-            // Already cached in memory?
             if (this._transCache[langCode]) {
                 this.subtitlesTrans = this._transCache[langCode];
                 if (this.player.options.debug) console.log('[AutoSub] Translation cache hit:', langCode);
@@ -904,10 +1059,13 @@
             this._setBtnGenerating(true);
 
             try {
-                // Batch segments to minimize API requests (max ~400 chars per request)
                 const translated = await this._translateBatch(this.subtitles, langCode);
                 this.subtitlesTrans = translated;
                 this._transCache[langCode] = translated;
+                
+                // Save translations persistently to cache
+                this._saveToCache(this.subtitles, null, null, this._lastDetectedLang);
+
                 if (this.player.options.debug) console.log('[AutoSub] Translation done:', translated.length, 'segments');
             } catch (err) {
                 if (this.player.options.debug) console.warn('[AutoSub] Translation error:', err.message);
@@ -921,7 +1079,6 @@
         async _translateText(text, sourceLang, targetLang) {
             const engine = this.opts.translationEngine;
 
-            // ── MyMemory (default) ──────────────────────────────────────────────
             if (!engine || engine.type === 'mymemory') {
                 const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
                 const resp = await fetch(url);
@@ -932,7 +1089,6 @@
                 return json.responseData?.translatedText ?? text;
             }
 
-            // ── LibreTranslate ──────────────────────────────────────────────────
             if (engine.type === 'libretranslate') {
                 const body = { q: text, source: sourceLang, target: targetLang, format: 'text' };
                 if (engine.apiKey) body.api_key = engine.apiKey;
@@ -947,7 +1103,6 @@
                 return json.translatedText ?? text;
             }
 
-            // ── MarianMT (Argos Translate API / custom REST endpoint) ───────────
             if (engine.type === 'marianmt') {
                 const resp = await fetch(engine.url.replace(/\/$/, '') + '/translate', {
                     method: 'POST',
@@ -966,7 +1121,6 @@
             const SEP = ' ||| ';
             const BATCH_CHARS = 400;
 
-            // Detect source language
             let sourceLang = null;
             if (this.opts.language) {
                 const lower = this.opts.language.toLowerCase().trim();
@@ -985,7 +1139,6 @@
             }
             if (!sourceLang) sourceLang = 'en';
 
-            // Normalize target to 2-letter code
             const normTarget = LANGUAGE_MAP[targetLang]
                 ? targetLang
                 : (Object.entries(LANGUAGE_MAP).find(([k, v]) => v === targetLang)?.[0] ?? targetLang.slice(0, 2));
@@ -999,7 +1152,6 @@
 
             const engine = this.opts.translationEngine;
 
-            // ── LibreTranslate: array nativo, mapping 1:1 garantito ──────────
             if (engine?.type === 'libretranslate') {
                 const BATCH_SIZE = 50;
                 const result = [];
@@ -1009,7 +1161,7 @@
                     const batch = segments.slice(i, i + BATCH_SIZE);
                     try {
                         const body = {
-                            q: batch.map(s => s.text),   // array → risposta è array nella stessa posizione
+                            q: batch.map(s => s.text),  
                             source: sourceLang,
                             target: normTarget,
                             format: 'text'
@@ -1044,7 +1196,6 @@
                 return result;
             }
 
-            // ── MyMemory fallback ────────────────────────────────────────────
             const batches = [];
             let current = [], charCount = 0;
             for (const seg of segments) {
@@ -1074,13 +1225,13 @@
             return result;
         }
 
-
         // ─────────────────────────────────────────────────────────────────────────
         // PRIVATE — DISPLAY
         // ─────────────────────────────────────────────────────────────────────────
 
         _startDisplay() {
             this._stopDisplay();
+            this._applyResponsiveFontSize(); 
             this.updateInterval = setInterval(() => this._tick(), 80);
         }
 
@@ -1096,7 +1247,6 @@
         _tick() {
             if (!this.subVisible) return;
 
-            // Use translated segments if available, otherwise fall back to originals
             const pool = (this.translateLang !== 'off' && this.subtitlesTrans.length > 0)
                 ? this.subtitlesTrans
                 : this.subtitles;
@@ -1133,7 +1283,6 @@
 
         _resolveMpdUrl() {
             try {
-                // Salvato sul container dal player al momento di initialize()
                 const url = this.container.dataset.mpdUrl || this.video.dataset.mpdUrl || null;
                 if (url && !url.startsWith('blob:')) return url;
             } catch (_) { }
@@ -1158,7 +1307,6 @@
             if (this.player.options.debug)
                 console.log('[AutoSub] _extractAudio — currentSrc:', this.video.currentSrc, '| adaptiveStreamingType:', this.player.adaptiveStreamingType);
 
-            // ── DASH: resolve real MPD URL via dash.js instance ───────────────────
             const mpdUrl = this._resolveMpdUrl();
             if (mpdUrl) {
                 if (this.player.options.debug) console.log('[AutoSub] DASH mode — mpdUrl:', mpdUrl);
@@ -1169,13 +1317,11 @@
                 }
             }
 
-            // ── HLS ───────────────────────────────────────────────────────────────
             const src = this.video.currentSrc || this.video.src || '';
             if (src.includes('.m3u8') || this.player.adaptiveStreamingType === 'hls') {
                 return await this._extractAudioFromCaptureStream();
             }
 
-            // ── Normal MP4 / WebM — direct fetch ─────────────────────────────────
             try { return await this._extractAudioFromFetch(); }
             catch (err) {
                 if (this.player.options.debug) console.warn('[AutoSub] Fetch strategy failed:', err.message, '— fallback to captureStream');
@@ -1193,7 +1339,6 @@
             const parser = new DOMParser();
             const mpdDoc = parser.parseFromString(mpdText, 'application/xml');
 
-            // Check for XML parse errors
             const parseErr = mpdDoc.querySelector('parsererror');
             if (parseErr) throw new Error('MPD XML parse error: ' + parseErr.textContent.slice(0, 100));
 
@@ -1213,7 +1358,6 @@
 
             this._updatePanel('Downloading audio segments (0/' + segmentUrls.length + ')...', 12);
 
-            // Download segments in parallel batches of 5
             const BATCH = 5;
             const segmentBuffers = new Array(segmentUrls.length);
 
@@ -1233,7 +1377,6 @@
                 );
             }
 
-            // Concatenate all segment buffers into one
             this._updatePanel('Decoding audio...', 30);
             const totalBytes = segmentBuffers.reduce((s, b) => s + b.byteLength, 0);
             const combined = new Uint8Array(totalBytes);
@@ -1269,13 +1412,11 @@
 
         _findAudioAdaptationSet(mpdDoc) {
             const sets = Array.from(mpdDoc.querySelectorAll('AdaptationSet'));
-            // Prefer explicit audio contentType or mimeType
             return sets.find(s =>
                 s.getAttribute('contentType') === 'audio' ||
                 (s.getAttribute('mimeType') || '').startsWith('audio') ||
                 s.querySelector('Representation[mimeType^="audio"]') !== null
             ) || sets.find(s =>
-                // Fallback: AdaptationSet that is not video
                 !(s.getAttribute('mimeType') || '').startsWith('video') &&
                 s.getAttribute('contentType') !== 'video'
             );
@@ -1294,7 +1435,6 @@
         _buildSegmentUrlList(mpdDoc, adaptationSet, representation, baseUrl) {
             const urls = [];
 
-            // ── SegmentList ──────────────────────────────────────────────────────
             const segList = representation.querySelector('SegmentList')
                 || adaptationSet.querySelector('SegmentList');
             if (segList) {
@@ -1310,7 +1450,6 @@
                 return urls;
             }
 
-            // ── SegmentTemplate ──────────────────────────────────────────────────
             const segTpl = representation.querySelector('SegmentTemplate')
                 || adaptationSet.querySelector('SegmentTemplate');
             if (segTpl) {
@@ -1345,7 +1484,6 @@
                 return urls;
             }
 
-            // ── BaseURL (single audio file) ───────────────────────────────────────
             const baseURLEl = representation.querySelector('BaseURL')
                 || adaptationSet.querySelector('BaseURL');
             if (baseURLEl) {
@@ -1363,7 +1501,6 @@
         }
 
         _parseDuration(iso) {
-            // Parse ISO 8601 duration: PT1H2M3.5S
             const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?/);
             if (!m) return 0;
             return (parseFloat(m[1] || 0) * 3600) +
@@ -1437,7 +1574,6 @@
                     if (e.data.size === 0) return;
                     chunkQueue.push(e.data);
 
-                    // Estimate accumulated seconds using rough bitrate of 16 kbps (opus)
                     const totalSize = chunkQueue.reduce((s, b) => s + b.size, 0);
                     const estimatedSec = totalSize / (16000 / 8);
 
@@ -1451,7 +1587,6 @@
                 };
 
                 recorder.onstop = async () => {
-                    // Flush any remaining audio as the last chunk
                     if (chunkQueue.length > 0 && this._onAudioChunkReady) {
                         const blob = new Blob([...chunkQueue], { type: recorder.mimeType || 'audio/webm' });
                         chunkQueue.length = 0;
@@ -1463,7 +1598,6 @@
 
                 recorder.onerror = e => reject(e.error || new Error('MediaRecorder error'));
 
-                // Update capture progress based on video currentTime
                 const duration = isFinite(this.video.duration) && this.video.duration > 0
                     ? this.video.duration : null;
 
@@ -1487,10 +1621,8 @@
 
                 this.video.addEventListener('ended', stop, { once: true });
 
-                // Slice every 2s so ondataavailable fires frequently
                 recorder.start(2000);
 
-                // Resolve immediately with sentinel — actual transcription flows via callbacks
                 resolve({ _captureMode: true, stop });
             });
         }
@@ -1544,14 +1676,12 @@ self.onmessage = async function(e) {
         const opts = { return_timestamps: true, task: 'transcribe', chunk_length_s: payload.chunkSec };
         if (payload.lang) opts.language = payload.lang;
         const result = await transcriber(audio, opts);
-        // Include detected language in the response so the main thread can reuse it
         const detectedLang = result.language || payload.lang || null;
         self.postMessage({ type: 'chunk_done', payload: { result, timeOffset: payload.timeOffset, chunkIndex: payload.chunkIndex, totalChunks: payload.totalChunks, isLast: payload.isLast, detectedLang } });
     } catch(err) {
         self.postMessage({ type: 'error', payload: err.message || String(err) });
     }
-}
-
+  }
 };
       `;
 
@@ -1578,8 +1708,6 @@ self.onmessage = async function(e) {
         }
 
         async _transcribeChunksStreaming(audioData, partialCache = null) {
-
-            // ── CAPTURE STREAM MODE (HLS or DASH fallback) ───────────────────────
             if (audioData?._captureMode) {
                 const SAMPLE_RATE = 16000;
                 const lang = this._resolveLanguage(this.opts.language);
@@ -1587,7 +1715,6 @@ self.onmessage = async function(e) {
 
                 if (!this.subVisible) { this.subVisible = true; this._startDisplay(); }
 
-                // Worker starts in parallel while audio is still being captured
                 const worker = this._createTranscriberWorker();
                 this._worker = worker;
 
@@ -1716,7 +1843,6 @@ self.onmessage = async function(e) {
                 return promise;
             }
 
-            // ── NORMAL MODE (Float32Array from fetch or DASH segment download) ────
             const float32Audio = audioData;
             const SAMPLE_RATE = 16000;
             const CHUNK_SEC = 30;
@@ -1726,7 +1852,6 @@ self.onmessage = async function(e) {
             let detectedLang = lang || partialCache?.detectedLang || null;
             const modelId = WHISPER_MODELS[this.opts.modelSize] || WHISPER_MODELS.base;
 
-            // Use partialCache passed from generate() — no second localStorage read
             const startChunk = (partialCache?.chunksCompleted != null && partialCache.chunksCompleted < totalChunks)
                 ? partialCache.chunksCompleted
                 : 0;
@@ -1766,7 +1891,6 @@ self.onmessage = async function(e) {
                     if (type === 'chunk_done') {
                         const { result, timeOffset, chunkIndex } = payload;
 
-                        // On first processed chunk, save the detected language and reuse it for all subsequent chunks
                         if (chunkIndex === startChunk && payload.detectedLang && !detectedLang) {
                             detectedLang = payload.detectedLang;
                             if (this.player.options.debug) console.log('[AutoSub] Language auto-detected:', detectedLang);
@@ -1788,20 +1912,16 @@ self.onmessage = async function(e) {
                         const normalized = this._normalizeChunks(rawChunks);
                         this.subtitles.push(...normalized);
 
-                        // Save partial progress after every chunk
                         this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
 
-                        // If translation is active, translate this chunk immediately and append
                         if (this.translateLang && this.translateLang !== 'off' && normalized.length > 0) {
                             const currentLang = this.translateLang;
                             this._translateBatch(normalized, currentLang).then(translated => {
-                                // Only append if translation lang hasn't changed in the meantime
                                 if (this.translateLang === currentLang) {
                                     this.subtitlesTrans.push(...translated);
                                     this.subtitlesTrans.sort((a, b) => a.start - b.start);
                                 }
                             }).catch(() => {
-                                // On error push originals so display doesn't go blank
                                 if (this.translateLang === currentLang) {
                                     this.subtitlesTrans.push(...normalized);
                                     this.subtitlesTrans.sort((a, b) => a.start - b.start);
@@ -1814,17 +1934,13 @@ self.onmessage = async function(e) {
                         if (next < totalChunks) {
                             const pct = 64 + Math.round((next / totalChunks) * 33);
                             this._updatePanel('Transcribing chunk ' + (next + 1) + ' of ' + totalChunks + '...', pct);
-                            // Use detectedLang instead of lang so all chunks use the same detected language
                             this._sendChunk(worker, float32Audio, next, chunkSize, totalChunks, detectedLang, CHUNK_SEC);
                         } else {
                             if (this.player.options.debug) console.log('[AutoSub] All chunks done, subtitles:', this.subtitles.length);
                             worker.terminate(); this._worker = null;
                             resolve();
-                            // generate() chiamerà _saveToCache(subtitles, null, null, detectedLang)
-                            // ma detectedLang non è accessibile lì — salvalo su this
                             this._lastDetectedLang = detectedLang;
                         }
-
                     }
 
                     if (type === 'error') {
@@ -1881,7 +1997,6 @@ self.onmessage = async function(e) {
                 const safe = String(this.opts.idCache).replace(/[^a-zA-Z0-9_-]/g, '_');
                 return CACHE_PREFIX + safe;
             }
-            // Use the MPD URL or player.options.src as stable key — currentSrc may be a blob URL
             const src = this._resolveMpdUrl()
                 || this.player.options?.src
                 || this.video.currentSrc
@@ -1909,7 +2024,9 @@ self.onmessage = async function(e) {
                     subtitles: parsed.subtitles,
                     chunksCompleted: parsed.chunksCompleted ?? null,
                     totalChunks: parsed.totalChunks ?? null,
-                    detectedLang: parsed.detectedLang ?? null   // ← aggiunto
+                    detectedLang: parsed.detectedLang ?? null,
+                    transCache: parsed.transCache || {},
+                    isImportedSubs: parsed.isImportedSubs || false
                 };
             } catch {
                 return null;
@@ -1925,6 +2042,8 @@ self.onmessage = async function(e) {
                     chunksCompleted,
                     totalChunks,
                     detectedLang,
+                    transCache: this._transCache || {},
+                    isImportedSubs: this.isImportedSubs || false,
                     savedAt: Date.now()
                 });
                 try {

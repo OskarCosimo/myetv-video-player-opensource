@@ -98,7 +98,7 @@
         '.radio-stat-total{color:#00d8ff;}',
 
         /* STATS MODAL */
-        '.radio-stats-modal-content{padding:15px; font-size:12px;}',
+        '.radio-stats-modal-content{padding:15px; font-size:12px; max-height:75vh; overflow-y:auto; scrollbar-width:thin;}',
         '.radio-stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}',
         '.radio-stats-card{background:rgba(255,255,255,0.05); padding:10px; border-radius:4px; text-align:center; border:1px solid rgba(255,255,255,0.1);}',
         '.radio-stats-value{font-size:18px; font-weight:bold; margin-top:5px; color:#f0c040;}',
@@ -477,11 +477,13 @@
         liveStats.innerHTML = '<span class="radio-status playing" style="width:6px;height:6px;margin:0;"></span> <span class="val">0</span> LIVE';
         this.liveStatsEl = liveStats.querySelector('.val');
 
+        // Total views only in the main bar
         var totalStats = document.createElement('div');
         totalStats.className = 'radio-stat-item radio-stat-total';
-        totalStats.innerHTML = '&#128065; <span class="val">0</span> VIEWS'; // Eye icon html entity
-        this.totalStatsEl = totalStats.querySelector('.val');
+        totalStats.innerHTML = '&#128065; <span class="val-t">0</span> VIEWS';
+        this.hitsStatsEl = totalStats.querySelector('.val-t');
 
+        var self = this;
         totalStats.addEventListener('click', function (e) {
             e.stopPropagation();
             self._openStatsModal();
@@ -922,13 +924,26 @@
                         self._clearBufferTimeout();
                         self._clearError();
                         self._setStatus('playing');
+                        
+                        // [CRITICAL FIX] Force screen wake lock immediately when stream successfully starts
+                        self._manageWakeLock(true);
+                        
                     }).catch(function (err) {
                         if (self._tuneId !== currentTuneId) return;
                         if (err.name !== 'AbortError') {
                             self._setError('PLAYBACK ERROR');
+                            // Release wake lock on playback error
+                            self._manageWakeLock(false);
                         }
                     });
+                } else {
+                    // Fallback for older engines that do not return a Promise
+                    self._setStatus('playing');
+                    self._manageWakeLock(true);
                 }
+            } else {
+                // Explicitly release wake lock if we prepare a stream without playing it
+                self._manageWakeLock(false);
             }
         }, 50);
     };
@@ -982,17 +997,66 @@
 
     RadioPlugin.prototype._manageWakeLock = function (play) {
         var self = this;
+
+        // 1. Try Native Android Bridge first
+        if (window.AndroidBridge && typeof window.AndroidBridge.setKeepScreenOn === 'function') {
+            window.AndroidBridge.setKeepScreenOn(play);
+            return;
+        }
+
+        // 2. Try Standard HTML5 WakeLock API
         if ('wakeLock' in navigator) {
             if (play) {
                 if (!this._wakeLock) {
                     navigator.wakeLock.request('screen').then(function (lock) {
                         self._wakeLock = lock;
-                    }).catch(function () { });
+                    }).catch(function (err) {
+                        // WakeLock API failed or is not permitted in this WebView
+                        console.warn('MYETV Radio: Standard WakeLock failed. Using fallback.', err);
+                        self._fallbackNoSleep(true);
+                    });
                 }
-            } else if (this._wakeLock) {
-                this._wakeLock.release().catch(function () { });
-                this._wakeLock = null;
+            } else {
+                if (this._wakeLock) {
+                    this._wakeLock.release().catch(function () { });
+                    this._wakeLock = null;
+                }
+                self._fallbackNoSleep(false);
             }
+        } else {
+            // WakeLock API not supported, use fallback directly
+            this._fallbackNoSleep(play);
+        }
+    };
+
+    // Helper method to keep screen awake using an invisible looping video
+    RadioPlugin.prototype._fallbackNoSleep = function (play) {
+        if (!this._noSleepVideo) {
+            // Create a tiny, muted, invisible video element
+            this._noSleepVideo = document.createElement('video');
+            this._noSleepVideo.setAttribute('playsinline', '');
+            this._noSleepVideo.setAttribute('muted', '');
+            this._noSleepVideo.setAttribute('loop', '');
+            
+            // Base64 string of a 1x1 blank MP4 video
+            this._noSleepVideo.src = 'data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthkQIvQcREiEXEQAAAA+bW9vdgAAAExtdmhkAAAAAM9cO3DPXDtwAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAzB0cmFrAAAAXHRraGQAAAADz1w7cM9cO3AAAAABAAAAAAAACgAAAAAAAAAAAAAAAAABAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAEAAQAAAAAAJmVkdHMAAAAcZWxzdAAAAAAAAAABAAAACgAAAAAAAQAAAAAAuG1kaWEAAABgbWRoZAAAAADPXDtwz1w7cAAAABAAAAAKVU5EAAAAAAAhaGRscgAAAAAAAAAAdmlkZQAAAAAAAAAAAAAAAFZpZGVvSGFuZGxlcgAAAAAxbWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcYnJlZgAAAAAAAAABAAAADHVybCAAAAABAAABHG10YnQAAABQc3RzZAAAAAAAAAABAAAAVGhhdmMxAQAABgAA//8AABwAAAAAABIAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBQAAABhzdHRzAAAAAAAAAAEAAAABAAQAAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAABAAAAAQAAACRzdHN6AAAAAAAAAAAAAAABAAAAHgAAAAEAAAAQc3RjbwAAAAAAAAABAAAAHAAAAEd1ZHRhAAAAP21ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAKGlsc3QAAAAQwq10b28AAAAMZGF0YQAAAAEAAAAA';
+            
+            // Hide the video completely
+            this._noSleepVideo.style.display = 'none';
+            this._noSleepVideo.style.position = 'absolute';
+            this._noSleepVideo.style.width = '1px';
+            this._noSleepVideo.style.height = '1px';
+            
+            document.body.appendChild(this._noSleepVideo);
+        }
+
+        if (play) {
+            // Ignore potential play promise errors
+            this._noSleepVideo.play().catch(function(e) {
+                console.warn('MYETV Radio: Fallback video playback blocked', e);
+            });
+        } else {
+            this._noSleepVideo.pause();
         }
     };
 
@@ -1040,21 +1104,35 @@
         }
 
         fetch(url)
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (data && data.success) {
-                    self.currentStats = data.stats || { live: 0, total: 0, daily: 0, weekly: 0, monthly: 0, yearly: 0 };
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP status ' + response.status);
+                return response.json();
+            })
+            .then(function (res) {
+                // Supportiamo sia res.data (nuovo PHP) che res.stats (vecchio PHP)
+                var payload = res.data || res.stats;
+                if (res && res.success && payload) {
+                    self.currentStats = payload;
                     self._updateStatsUI();
                 }
             })
             .catch(function (err) {
-                console.warn('MYETV Radio: Failed to fetch stats', err);
+                console.warn('MYETV Radio: Problema di lettura statistiche. Il PHP potrebbe restituire un errore invece di un JSON valido.', err);
             });
     };
 
     RadioPlugin.prototype._updateStatsUI = function () {
-        if (this.liveStatsEl) this.liveStatsEl.textContent = this.currentStats.live || 0;
-        if (this.totalStatsEl) this.totalStatsEl.textContent = this.currentStats.total || 0;
+        if (!this.currentStats) return;
+
+        // Update live counter
+        if (this.liveStatsEl) {
+            this.liveStatsEl.textContent = this.currentStats.live || 0;
+        }
+
+        // Update total hits counter in the main UI bar
+        if (this.hitsStatsEl) {
+            this.hitsStatsEl.textContent = this.currentStats.total_hits || 0;
+        }
     };
 
     // ============================================================
@@ -1409,6 +1487,9 @@
         overlay.addEventListener('click', function (e) { if (e.target === overlay) self._closeStatsModal(); });
     };
 
+    // ============================================================
+    // STATS MODAL
+    // ============================================================
     RadioPlugin.prototype._openStatsModal = function () {
         if (!this._statsModalOverlay) return;
 
@@ -1418,36 +1499,42 @@
         }
 
         if (this._statsModalContent) {
-            var stats = this.currentStats;
-            this._statsModalContent.innerHTML = `
-                <div style="text-align:center; opacity:0.8; margin-bottom:10px;">Viewer History</div>
-                <div class="radio-stats-grid">
-                    <div class="radio-stats-card">
-                        <div>LIVE NOW</div>
-                        <div class="radio-stats-value" style="color:#00ff44;">${stats.live || 0}</div>
-                    </div>
-                    <div class="radio-stats-card">
-                        <div>TODAY</div>
-                        <div class="radio-stats-value">${stats.daily || 0}</div>
-                    </div>
-                    <div class="radio-stats-card">
-                        <div>THIS WEEK</div>
-                        <div class="radio-stats-value">${stats.weekly || 0}</div>
-                    </div>
-                    <div class="radio-stats-card">
-                        <div>THIS MONTH</div>
-                        <div class="radio-stats-value">${stats.monthly || 0}</div>
-                    </div>
-                    <div class="radio-stats-card">
-                        <div>THIS YEAR</div>
-                        <div class="radio-stats-value">${stats.yearly || 0}</div>
-                    </div>
-                    <div class="radio-stats-card">
-                        <div>ALL TIME TOTAL</div>
-                        <div class="radio-stats-value" style="color:#00d8ff;">${stats.total || 0}</div>
-                    </div>
-                </div>
-            `;
+            // Retrieve current stats or set defaults
+            var data = this.currentStats || {};
+            var stats = data.stats || {
+                daily: { unique: 0, hits: 0 },
+                weekly: { unique: 0, hits: 0 },
+                monthly: { unique: 0, hits: 0 },
+                yearly: { unique: 0, hits: 0 }
+            };
+
+            // Helper function to build stat cards dynamically
+            var formatCard = function (label, u, h) {
+                return '<div class="radio-stats-card">' +
+                    '<div style="font-weight:bold; margin-bottom:4px;">' + label + '</div>' +
+                    '<div style="font-size:9px; opacity:0.7;">UNIQUE / TOTAL</div>' +
+                    '<div class="radio-stats-value">' + (u || 0) + ' <span style="font-size:12px; opacity:0.5;">/</span> ' + (h || 0) + '</div>' +
+                    '</div>';
+            };
+
+            // Build the HTML grid
+            this._statsModalContent.innerHTML =
+                '<div style="text-align:center; opacity:0.8; margin-bottom:10px;">Viewer History</div>' +
+                '<div class="radio-stats-grid">' +
+                '<div class="radio-stats-card">' +
+                '<div style="font-weight:bold; margin-bottom:4px;">LIVE NOW</div>' +
+                '<div class="radio-stats-value" style="color:#00ff44; padding-top:10px;">' + (data.live || 0) + '</div>' +
+                '</div>' +
+                '<div class="radio-stats-card">' +
+                '<div style="font-weight:bold; margin-bottom:4px;">ALL TIME</div>' +
+                '<div style="font-size:9px; opacity:0.7;">UNIQUE / TOTAL</div>' +
+                '<div class="radio-stats-value" style="color:#00d8ff;">' + (data.total_unique || 0) + ' <span style="font-size:12px; opacity:0.5;">/</span> ' + (data.total_hits || 0) + '</div>' +
+                '</div>' +
+                formatCard('TODAY', stats.daily.unique, stats.daily.hits) +
+                formatCard('THIS WEEK', stats.weekly.unique, stats.weekly.hits) +
+                formatCard('THIS MONTH', stats.monthly.unique, stats.monthly.hits) +
+                formatCard('THIS YEAR', stats.yearly.unique, stats.yearly.hits) +
+                '</div>';
         }
 
         this._statsModalOverlay.style.display = 'flex';
@@ -1530,6 +1617,10 @@
         var v = this.player.video;
         if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
         this._setStatus('');
+        
+        // Explicitly release the wake lock when stopping the plugin manually
+        this._manageWakeLock(false);
+        
         if (this._statsIntervalId) clearInterval(this._statsIntervalId);
         return this;
     };

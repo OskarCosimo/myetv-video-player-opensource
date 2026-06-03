@@ -494,10 +494,23 @@
                     this.subtitles = cached.subtitles;
                     this._transCache = cached.transCache || {};
                     this.isImportedSubs = cached.isImportedSubs || false;
+                    
+                    if (this.opts.autoTranslation) {
+                        const tLang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
+                        this.translateLang = tLang;
+                        if (this._transCache[tLang]) {
+                            this.subtitlesTrans = [...this._transCache[tLang]];
+                        }
+                    }
+
                     this.subVisible = true;
                     this._startDisplay();
                     this._setBtnActive(true);
                     this._updateMenu();
+
+                    if (this.translateLang && this.translateLang !== 'off') {
+                        this._setTranslationLang(this.translateLang);
+                    }
                     
                     if (this.player.options.debug)
                         console.log('[AutoSub] Loaded from cache:', cached.subtitles.length, 'segments');
@@ -523,6 +536,15 @@
                     this.subtitles = cached.subtitles;
                     this._transCache = cached.transCache || {};
                     this.isImportedSubs = cached.isImportedSubs || false;
+                    
+                    if (this.opts.autoTranslation) {
+                        const tLang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
+                        this.translateLang = tLang;
+                        if (this._transCache[tLang]) {
+                            this.subtitlesTrans = [...this._transCache[tLang]];
+                        }
+                    }
+
                     this.subVisible = true;
                     this._startDisplay();
                     this._setBtnActive(true);
@@ -1155,7 +1177,9 @@
             if (engine?.type === 'libretranslate') {
                 const BATCH_SIZE = 50;
                 const result = [];
-                const url = `${engine.url.replace(/\/$/, '')}/translate`;
+                
+                let url = engine.url.replace(/\/$/, '');
+                if (!url.endsWith('/translate') && !url.includes('.php')) url += '/translate';
 
                 for (let i = 0; i < segments.length; i += BATCH_SIZE) {
                     const batch = segments.slice(i, i + BATCH_SIZE);
@@ -1920,6 +1944,11 @@ self.onmessage = async function(e) {
                                 if (this.translateLang === currentLang) {
                                     this.subtitlesTrans.push(...translated);
                                     this.subtitlesTrans.sort((a, b) => a.start - b.start);
+
+                                    if (!this._transCache[currentLang]) this._transCache[currentLang] = [];
+                                    this._transCache[currentLang].push(...translated);
+                                    this._transCache[currentLang].sort((a, b) => a.start - b.start);
+                                    this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
                                 }
                             }).catch(() => {
                                 if (this.translateLang === currentLang) {

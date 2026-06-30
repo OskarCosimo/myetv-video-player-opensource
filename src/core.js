@@ -189,9 +189,28 @@ constructor(videoElement, options = {}) {
     if (this.options.language && this.isI18nAvailable()) {
         VideoPlayerTranslations.setLanguage(this.options.language);
     }
-    // Apply autoplay if enabled
-    if (options.autoplay) {
-        this.video.autoplay = true;
+
+    this.savedAutoplayIntent = options.autoplay || false;
+    this.options.autoplay = false;
+
+    if (this.video) {
+        if (this.video.hasAttribute('autoplay')) {
+            this.savedAutoplayIntent = true;
+            this.video.removeAttribute('autoplay');
+        }
+
+        // Physically stop the browser engine from pre-loading and playing
+        this.video.pause();
+        this.video.preload = 'none';
+
+        if (this.video.hasAttribute('poster')) {
+            this.savedPoster = this.video.getAttribute('poster');
+
+            this.video.setAttribute('poster', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        }
+
+        // Hide the native video element instantly during boot.
+        this.video.style.opacity = '0';
     }
 
     try {
@@ -283,23 +302,8 @@ constructor(videoElement, options = {}) {
         this.updateVolumeSliderVisual();
         this.initVolumeTooltip();
         this.updateTooltips();
-        this.markPlayerReady();
+
         this.initializePluginSystem();
-        this.restoreSourcesAsync();
-
-        this.initializeSubtitles();
-        this.initializeQualityMonitoring();
-
-        this.initializeResolution();
-        this.initializeChapters();
-        this.initializePoster();
-        this.initializeWatermark();
-
-        // Check if external subtitle tracks were provided and the array is not empty
-        if (this.options.externalSubtitleTracks && this.options.externalSubtitleTracks.length > 0) {
-            // Call the PLURAL method and pass ONLY the array
-            this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
-        }
 
     } catch (error) {
         if (this.options.debug) console.error('Video player initialization error:', error);
@@ -431,6 +435,8 @@ interceptAutoLoading() {
     }
 
     this.hideNativePlayer();
+
+    this.video.load();
 
     if (this.options.debug) console.log('📁 Sources temporarily disabled to prevent blocking');
 }
@@ -1384,6 +1390,12 @@ updateSeekTooltip(e) {
 }
 
 play() {
+    if (!this.isPlayerReady) {
+        this.savedAutoplayIntent = true;
+        if (this.options.debug) console.log('🛑 Play requested but player is booting. Intent saved for later.');
+        return Promise ? Promise.resolve() : undefined;
+    }
+
     if (!this.video || this.isChangingQuality) return;
 
     this.video.play().catch(err => {
@@ -1393,7 +1405,6 @@ play() {
     if (this.playIcon) this.playIcon.classList.add('hidden');
     if (this.pauseIcon) this.pauseIcon.classList.remove('hidden');
 
-    // Trigger event played
     this.triggerEvent('played', {
         currentTime: this.getCurrentTime(),
         duration: this.getDuration()
@@ -1401,6 +1412,11 @@ play() {
 }
 
 pause() {
+    if (!this.isPlayerReady) {
+        this.savedAutoplayIntent = false;
+        return;
+    }
+
     if (!this.video) return;
 
     this.video.pause();

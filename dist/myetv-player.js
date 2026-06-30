@@ -844,9 +844,28 @@ constructor(videoElement, options = {}) {
     if (this.options.language && this.isI18nAvailable()) {
         VideoPlayerTranslations.setLanguage(this.options.language);
     }
-    // Apply autoplay if enabled
-    if (options.autoplay) {
-        this.video.autoplay = true;
+
+    this.savedAutoplayIntent = options.autoplay || false;
+    this.options.autoplay = false;
+
+    if (this.video) {
+        if (this.video.hasAttribute('autoplay')) {
+            this.savedAutoplayIntent = true;
+            this.video.removeAttribute('autoplay');
+        }
+
+        // Physically stop the browser engine from pre-loading and playing
+        this.video.pause();
+        this.video.preload = 'none';
+
+        if (this.video.hasAttribute('poster')) {
+            this.savedPoster = this.video.getAttribute('poster');
+
+            this.video.setAttribute('poster', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        }
+
+        // Hide the native video element instantly during boot.
+        this.video.style.opacity = '0';
     }
 
     try {
@@ -938,23 +957,8 @@ constructor(videoElement, options = {}) {
         this.updateVolumeSliderVisual();
         this.initVolumeTooltip();
         this.updateTooltips();
-        this.markPlayerReady();
+
         this.initializePluginSystem();
-        this.restoreSourcesAsync();
-
-        this.initializeSubtitles();
-        this.initializeQualityMonitoring();
-
-        this.initializeResolution();
-        this.initializeChapters();
-        this.initializePoster();
-        this.initializeWatermark();
-
-        // Check if external subtitle tracks were provided and the array is not empty
-        if (this.options.externalSubtitleTracks && this.options.externalSubtitleTracks.length > 0) {
-            // Call the PLURAL method and pass ONLY the array
-            this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
-        }
 
     } catch (error) {
         if (this.options.debug) console.error('Video player initialization error:', error);
@@ -1086,6 +1090,8 @@ interceptAutoLoading() {
     }
 
     this.hideNativePlayer();
+
+    this.video.load();
 
     if (this.options.debug) console.log('📁 Sources temporarily disabled to prevent blocking');
 }
@@ -2039,6 +2045,12 @@ updateSeekTooltip(e) {
 }
 
 play() {
+    if (!this.isPlayerReady) {
+        this.savedAutoplayIntent = true;
+        if (this.options.debug) console.log('🛑 Play requested but player is booting. Intent saved for later.');
+        return Promise ? Promise.resolve() : undefined;
+    }
+
     if (!this.video || this.isChangingQuality) return;
 
     this.video.play().catch(err => {
@@ -2048,7 +2060,6 @@ play() {
     if (this.playIcon) this.playIcon.classList.add('hidden');
     if (this.pauseIcon) this.pauseIcon.classList.remove('hidden');
 
-    // Trigger event played
     this.triggerEvent('played', {
         currentTime: this.getCurrentTime(),
         duration: this.getDuration()
@@ -2056,6 +2067,11 @@ play() {
 }
 
 pause() {
+    if (!this.isPlayerReady) {
+        this.savedAutoplayIntent = false;
+        return;
+    }
+
     if (!this.video) return;
 
     this.video.pause();
@@ -8846,48 +8862,126 @@ setDashQuality(qualityIndex) {
 // CLASS METHODS - Will be placed INSIDE the class
 // ===================================================================
 
-/**
- * Initialize plugin system for player instance
- * This method should be called in the player constructor
- */
-initializePluginSystem() {
-    // Plugin instances storage
-    this.plugins = {};
+    /**
+     * Initialize plugin system for player instance
+     */
+    initializePluginSystem() {
+        this.plugins = {};
+        this.pluginHooks = {
+            'beforeInit': [], 'afterInit': [], 'beforePlay': [], 'afterPlay': [],
+            'beforePause': [], 'afterPause': [], 'beforeQualityChange': [], 
+            'afterQualityChange': [], 'beforeDestroy': [], 'afterDestroy': []
+        };
 
-    // Plugin hooks for lifecycle events
-    this.pluginHooks = {
-        'beforeInit': [],
-        'afterInit': [],
-        'beforePlay': [],
-        'afterPlay': [],
-        'beforePause': [],
-        'afterPause': [],
-        'beforeQualityChange': [],
-        'afterQualityChange': [],
-        'beforeDestroy': [],
-        'afterDestroy': []
-    };
+        if (this.options.debug) console.log('🔌 Plugin system initialized');
 
-    if (this.options.debug) {
-        console.log('🔌 Plugin system initialized');
+        // Load plugins sequentially if present, otherwise finalize player immediately
+        if (this.options.plugins && typeof this.options.plugins === 'object') {
+            this.loadPluginsSequentially(this.options.plugins);
+        } else {
+            this.finalizePlayerSetup();
+        }
     }
 
-    // Load plugins specified in options
-    if (this.options.plugins && typeof this.options.plugins === 'object') {
-        this.loadPlugins(this.options.plugins);
+    /**
+     * Loads plugins one by one based on their 'order' option.
+     * Prevents any plugin from loading until the previous blocking plugin finishes.
+     * @param {Object} pluginsConfig 
+     */
+    async loadPluginsSequentially(pluginsConfig) {
+    // 1. Sort plugins by order (default 99 means load last)
+    const pluginList = Object.keys(pluginsConfig).map(pluginName => {
+        return {
+            name: pluginName,
+            config: pluginsConfig[pluginName],
+            order: pluginsConfig[pluginName] && pluginsConfig[pluginName].order !== undefined
+                ? pluginsConfig[pluginName].order : 99
+        };
+    }).sort((a, b) => a.order - b.order);
+
+    // 2. Process each plugin sequentially
+    for (const pluginData of pluginList) {
+        if (this.options.debug) console.log(`🔌 Loading plugin: ${pluginData.name} (order: ${pluginData.order})`);
+
+        // Instantiate the plugin NOW (plugins with higher order do not exist yet)
+        const pluginInstance = this.usePlugin(pluginData.name, pluginData.config);
+
+        // If the plugin has an async barrier, pause the ENTIRE loop
+        if (pluginInstance && typeof pluginInstance.waitForCompletion === 'function') {
+            if (this.options.debug) console.log(`🔌 Pausing queue. Waiting for ${pluginData.name} to complete...`);
+            await pluginInstance.waitForCompletion();
+            if (this.options.debug) console.log(`🔌 ${pluginData.name} completed. Resuming queue.`);
+        }
     }
+
+    // 3. All plugins processed. Now we can safely boot the main HTML5 player
+    this.finalizePlayerSetup();
 }
 
-/**
- * Load multiple plugins from options
- * @param {Object} pluginsConfig - Object with plugin names as keys and options as values
- */
-loadPlugins(pluginsConfig) {
-    for (const pluginName in pluginsConfig) {
-        if (pluginsConfig.hasOwnProperty(pluginName)) {
-            const pluginOptions = pluginsConfig[pluginName];
-            this.usePlugin(pluginName, pluginOptions);
+    /**
+     * Boots up the core HTML5 player features after all blocking plugins have finished.
+     * This function ensures that the main player components (like poster, sources, and watermark)
+     * are initialized only after the plugin queue (including the loader) is fully resolved.
+     */
+finalizePlayerSetup() {
+    if (this.options.debug) {
+        console.log('🚀 Finalizing main player setup...');
+    }
+
+    // Restore the autoplay intent BEFORE initializing the poster.
+    // This ensures initializePoster() knows we are autoplaying and won't flash the image.
+    if (this.savedAutoplayIntent) {
+        this.options.autoplay = true;
+    }
+
+    // Trigger the global 'playerready' event.
+    // Firing it ONLY NOW guarantees that third-party plugins (like YouTube) 
+    // safely instantiate their iframes only after the loader has finished its countdown.
+    this.markPlayerReady();
+
+    this.restoreSourcesAsync();
+    this.initializeSubtitles();
+    this.initializeQualityMonitoring();
+    this.initializeResolution();
+    this.initializeChapters();
+
+    // Prevent the final poster flash if a third-party iframe (YouTube/Vimeo/Twitch) is active.
+    const hasExternalIframe = this.options.plugins && (
+        this.options.plugins.youtube ||
+        this.options.plugins.vimeo ||
+        this.options.plugins.twitch
+    );
+
+    if (!hasExternalIframe) {
+        this.initializePoster();
+    }
+
+    this.initializeWatermark();
+
+    // Check if external subtitle tracks were provided and the array is not empty
+    if (this.options.externalSubtitleTracks && this.options.externalSubtitleTracks.length > 0) {
+        this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
+    }
+
+    // Restore Autoplay ONLY AFTER everything is fully loaded and the queue is unlocked.
+    if (this.savedAutoplayIntent) {
+        if (this.options.debug) {
+            console.log('🚀 Triggering delayed autoplay...');
         }
+
+        // Re-apply the attribute and fade the video back in safely
+        if (this.video) {
+            this.video.setAttribute('autoplay', '');
+            this.video.style.opacity = '1';
+        }
+
+        // Short delay to ensure restoreSourcesAsync has loaded the media
+        setTimeout(() => {
+            this.play();
+        }, 300);
+    } else if (this.video) {
+        // Ensure opacity is restored even if autoplay is off
+        this.video.style.opacity = '1';
     }
 }
 

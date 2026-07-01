@@ -205,12 +205,17 @@ constructor(videoElement, options = {}) {
 
         if (this.video.hasAttribute('poster')) {
             this.savedPoster = this.video.getAttribute('poster');
-
             this.video.setAttribute('poster', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
         }
 
-        // Hide the native video element instantly during boot.
+        this.video.pause();
+        this.video.preload = 'none';
+
+        this.video.removeAttribute('src');
+        this.video.load();
+
         this.video.style.opacity = '0';
+        this.video.style.visibility = 'hidden';
     }
 
     try {
@@ -606,6 +611,7 @@ markPlayerReady() {
             this.video.style.visibility = '';
             this.video.style.opacity = '';
             this.video.style.pointerEvents = '';
+            this.video.style.display = '';
         }
 
         // UPDATE SETTINGS MENU VISIBILITY IF APPLICABLE

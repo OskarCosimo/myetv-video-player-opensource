@@ -141,25 +141,22 @@ finalizePlayerSetup() {
         this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
     }
 
-    // Restore Autoplay ONLY AFTER everything is fully loaded and the queue is unlocked.
+    // 🚀 Restore Autoplay ONLY AFTER everything is fully loaded and the queue is unlocked
     if (this.savedAutoplayIntent) {
-        if (this.options.debug) {
-            console.log('🚀 Triggering delayed autoplay...');
-        }
+        if (this.options.debug) console.log('🚀 Triggering delayed autoplay...');
 
-        // Re-apply the attribute and fade the video back in safely
         if (this.video) {
             this.video.setAttribute('autoplay', '');
             this.video.style.opacity = '1';
+            this.video.style.visibility = '';
         }
 
-        // Short delay to ensure restoreSourcesAsync has loaded the media
         setTimeout(() => {
             this.play();
         }, 300);
     } else if (this.video) {
-        // Ensure opacity is restored even if autoplay is off
         this.video.style.opacity = '1';
+        this.video.style.visibility = '';
     }
 }
 

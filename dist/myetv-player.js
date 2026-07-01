@@ -860,12 +860,17 @@ constructor(videoElement, options = {}) {
 
         if (this.video.hasAttribute('poster')) {
             this.savedPoster = this.video.getAttribute('poster');
-
             this.video.setAttribute('poster', 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
         }
 
-        // Hide the native video element instantly during boot.
+        this.video.pause();
+        this.video.preload = 'none';
+
+        this.video.removeAttribute('src');
+        this.video.load();
+
         this.video.style.opacity = '0';
+        this.video.style.visibility = 'hidden';
     }
 
     try {
@@ -1261,6 +1266,7 @@ markPlayerReady() {
             this.video.style.visibility = '';
             this.video.style.opacity = '';
             this.video.style.pointerEvents = '';
+            this.video.style.display = '';
         }
 
         // UPDATE SETTINGS MENU VISIBILITY IF APPLICABLE
@@ -8963,25 +8969,22 @@ finalizePlayerSetup() {
         this.injectExternalSubtitleTracks(this.options.externalSubtitleTracks);
     }
 
-    // Restore Autoplay ONLY AFTER everything is fully loaded and the queue is unlocked.
+    // 🚀 Restore Autoplay ONLY AFTER everything is fully loaded and the queue is unlocked
     if (this.savedAutoplayIntent) {
-        if (this.options.debug) {
-            console.log('🚀 Triggering delayed autoplay...');
-        }
+        if (this.options.debug) console.log('🚀 Triggering delayed autoplay...');
 
-        // Re-apply the attribute and fade the video back in safely
         if (this.video) {
             this.video.setAttribute('autoplay', '');
             this.video.style.opacity = '1';
+            this.video.style.visibility = '';
         }
 
-        // Short delay to ensure restoreSourcesAsync has loaded the media
         setTimeout(() => {
             this.play();
         }, 300);
     } else if (this.video) {
-        // Ensure opacity is restored even if autoplay is off
         this.video.style.opacity = '1';
+        this.video.style.visibility = '';
     }
 }
 

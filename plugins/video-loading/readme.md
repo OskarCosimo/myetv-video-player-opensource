@@ -69,7 +69,7 @@ The following options can be passed inside the `videoloader` object to customize
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `order` | `Number` | `99` | **Mandatory to set it to `1**`. Defines the priority in the core player's loading Pipeline. |
-| `videoUrl` | `String` | `null` | The direct URL of the video (e.g., `.mp4`) to use as the loading screen. If left null, the plugin skips execution, instantly unlocking the queue. |
+| `videoUrl` | `String` | `null` | The direct URL of the video (supported: `.mp4`,`.webm`,`all videos`,`.webp`,`.gif`,`.png`,`.jpg`) to use as the loading screen. If left null, the plugin skips execution, instantly unlocking the queue. |
 | `timeout` | `Number` | `3000` | Exact duration (in milliseconds) to display the loader before unlocking the main player. |
 | `backgroundColor` | `String` | `'#000'` | Background color of the overlay behind the loading video. It completely covers the underlying DOM. |
 | `muted` | `Boolean` | `true` | If `true`, the loading video plays without audio. It is **strongly recommended** to leave it as `true` to prevent modern browsers from blocking the page's autoplay. |

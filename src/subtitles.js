@@ -71,33 +71,6 @@ createCustomSubtitleOverlay() {
     if (this.options.debug) console.log('✅ Custom subtitle overlay created with responsive settings');
 }
 
-// Universal time parser for both SRT (00:00:00,000) and VTT (00:00.000)
-parseTimeToSecondsUniversal(timeString) {
-    if (!timeString) return 0;
-
-    // Normalize comma to dot for consistency
-    let normalized = timeString.replace(',', '.');
-    let parts = normalized.split('.');
-
-    let timeParts = parts[0].split(':');
-    let ms = parts[1] ? parseInt(parts[1], 10) / 1000 : 0;
-
-    let hours = 0, minutes = 0, seconds = 0;
-
-    if (timeParts.length === 3) {
-        // SRT Format: HH:MM:SS
-        hours = parseInt(timeParts[0], 10);
-        minutes = parseInt(timeParts[1], 10);
-        seconds = parseInt(timeParts[2], 10);
-    } else if (timeParts.length === 2) {
-        // VTT Short Format: MM:SS
-        minutes = parseInt(timeParts[0], 10);
-        seconds = parseInt(timeParts[1], 10);
-    }
-
-    return (hours * 3600) + (minutes * 60) + seconds + ms;
-}
-
 customTimeToSeconds(timeString) {
     if (!timeString) return 0;
 
@@ -505,7 +478,6 @@ disableSubtitles() {
     this.updateSubtitlesButton();
     this.populateSubtitlesMenu();
 
-    // 👉 L'AGGIUNTA FONDAMENTALE: Sincronizza il menu Settings!
     if (typeof this.updateSettingsMenuUI === 'function') {
         this.updateSettingsMenuUI();
     }
@@ -578,18 +550,25 @@ updateSubtitlesButton() {
 }
 
 populateSubtitlesMenu() {
-    var subtitlesMenu = this.controls && this.controls.querySelector('.subtitles-menu');
+    const subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
     if (!subtitlesMenu) return;
 
-    var menuHTML = '<div class="subtitles-option ' + (!this.subtitlesEnabled ? 'active' : '') + '" data-track="off">Off</div>';
+    subtitlesMenu.textContent = '';
 
-    for (var i = 0; i < this.textTracks.length; i++) {
-        var trackData = this.textTracks[i];
-        var isActive = this.currentSubtitleTrack === trackData.track;
-        menuHTML += '<div class="subtitles-option ' + (isActive ? 'active' : '') + '" data-track="' + i + '">' + trackData.label + '</div>';
-    }
+    const offOption = document.createElement('div');
+    offOption.className = `subtitles-option ${!this.subtitlesEnabled ? 'active' : ''}`;
+    offOption.setAttribute('data-track', 'off');
+    offOption.textContent = this.t('subtitlesoff') || 'Off';
+    subtitlesMenu.appendChild(offOption);
 
-    subtitlesMenu.innerHTML = menuHTML;
+    this.textTracks.forEach((trackData, index) => {
+        const isActive = this.currentSubtitleTrack === trackData.track;
+        const option = document.createElement('div');
+        option.className = `subtitles-option ${isActive ? 'active' : ''}`;
+        option.setAttribute('data-track', String(index));
+        option.textContent = trackData.label;
+        subtitlesMenu.appendChild(option);
+    });
 }
 
 updateSubtitlesUI() {

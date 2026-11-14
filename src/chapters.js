@@ -400,51 +400,47 @@ bindChapterEvents() {
         }
 
         if (currentChapter) {
-            // Build tooltip HTML
-            let tooltipHTML = '<div style="display: flex; flex-direction: column; gap: 6px;">';
+            chapterTooltip.textContent = '';
 
-            // Add image if available
-            if (currentChapter.image) {
-                tooltipHTML += `
-                    <div style="
-                        width: 100%;
-                        height: 120px;
-                        background-image: url('${currentChapter.image}');
-                        background-size: cover;
-                        background-position: center;
-                        border-radius: 3px;
-                    "></div>
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display: flex; flex-direction: column; gap: 6px;';
+
+            const safeChapterImg = this.sanitizeUrl(currentChapter.image);
+            if (safeChapterImg) {
+                const imgDiv = document.createElement('div');
+                imgDiv.style.cssText = `
+                    width: 100%;
+                    height: 120px;
+                    background-size: cover;
+                    background-position: center;
+                    border-radius: 3px;
                 `;
+                imgDiv.style.backgroundImage = `url("${safeChapterImg}")`;
+                wrapper.appendChild(imgDiv);
             }
 
-            // Add title
-            tooltipHTML += `
-                <div style="
-                    font-size: 13px;
-                    font-weight: 600;
-                    max-width: 280px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                ">
-                    ${currentChapter.title}
-                </div>
+            const titleDiv = document.createElement('div');
+            titleDiv.style.cssText = `
+                font-size: 13px;
+                font-weight: 600;
+                max-width: 280px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             `;
+            titleDiv.textContent = currentChapter.title;
+            wrapper.appendChild(titleDiv);
 
-            // Add time
-            tooltipHTML += `
-                <div style="
-                    font-size: 12px;
-                    font-weight: 400;
-                    color: rgba(255, 255, 255, 0.8);
-                ">
-                    ${this.formatTime(currentChapter.time)}
-                </div>
+            const timeDiv = document.createElement('div');
+            timeDiv.style.cssText = `
+                font-size: 12px;
+                font-weight: 400;
+                color: rgba(255, 255, 255, 0.8);
             `;
+            timeDiv.textContent = this.formatTime(currentChapter.time);
+            wrapper.appendChild(timeDiv);
 
-            tooltipHTML += '</div>';
-
-            chapterTooltip.innerHTML = tooltipHTML;
+            chapterTooltip.appendChild(wrapper);
             chapterTooltip.style.visibility = 'visible';
             chapterTooltip.style.opacity = '1';
 
@@ -567,9 +563,10 @@ showChapterTooltip(chapterIndex, e) {
     const timeEl = this.chapterTooltip.querySelector('.chapter-tooltip-time');
 
     // Set image
-    if (chapter.image) {
+    const safeChapterImg = this.sanitizeUrl(chapter.image);
+    if (safeChapterImg) {
         imageEl.style.display = 'block';
-        imageEl.style.backgroundImage = `url(${chapter.image})`;
+        imageEl.style.backgroundImage = `url("${safeChapterImg}")`;
     } else {
         imageEl.style.display = 'none';
     }

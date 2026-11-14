@@ -76,95 +76,92 @@
         }
     }
 
-    setupVolumeTooltipEvents() {
-        const volumeSlider = this.controls?.querySelector('.volume-slider');
-        if (!volumeSlider) return;
+setupVolumeTooltipEvents() {
+    const volumeSlider = this.controls?.querySelector('.volume-slider');
+    if (!volumeSlider) return;
 
-        let isMouseOverVolume = false;
-        let isDragging = false;
+    let isMouseOverVolume = false;
+    let isDragging = false;
 
-        volumeSlider.addEventListener('mouseenter', () => {
-            isMouseOverVolume = true;
-            // IMPORTANT: Set position FIRST, then show tooltip
-            this.updateVolumeTooltipPosition(this.video.volume);
-            this.updateVolumeTooltip();
-            if (this.volumeTooltip) {
-                this.volumeTooltip.classList.add('visible');
-            }
-        });
+    volumeSlider.addEventListener('mouseenter', () => {
+        isMouseOverVolume = true;
+        // Set position first, then show tooltip
+        this.updateVolumeTooltipPosition(this.video.volume);
+        this.updateVolumeTooltip();
+        if (this.volumeTooltip) {
+            this.volumeTooltip.classList.add('visible');
+        }
+    });
 
-        volumeSlider.addEventListener('mouseleave', () => {
-            isMouseOverVolume = false;
-            if (!isDragging) {
-                setTimeout(() => {
-                    if (!isMouseOverVolume && !isDragging && this.volumeTooltip) {
-                        this.volumeTooltip.classList.remove('visible');
-                    }
-                }, 150);
-            }
-        });
-
-        volumeSlider.addEventListener('mousemove', (e) => {
-            if (isMouseOverVolume && this.volumeTooltip && !isDragging) {
-                const rect = volumeSlider.getBoundingClientRect();
-                const offsetX = e.clientX - rect.left;
-                const sliderWidth = rect.width;
-
-                const thumbSize = 14;
-                const availableWidth = sliderWidth - thumbSize;
-                let volumeAtPosition = (offsetX - thumbSize / 2) / availableWidth;
-                volumeAtPosition = Math.max(0, Math.min(1, volumeAtPosition));
-
-                const hoverVolume = Math.round(volumeAtPosition * 100);
-
-                // Set position first, then update text to avoid flicker
-                this.updateVolumeTooltipPosition(volumeAtPosition);
-                this.volumeTooltip.textContent = hoverVolume + '%';
-            }
-        });
-
-        // During dragging - set position immediately
-        volumeSlider.addEventListener('mousedown', () => {
-            isDragging = true;
-            if (this.volumeTooltip) {
-                // Ensure position is set before showing
-                this.updateVolumeTooltipPosition(this.video.volume);
-                this.volumeTooltip.classList.add('visible');
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                setTimeout(() => {
-                    if (!isMouseOverVolume && this.volumeTooltip) {
-                        this.volumeTooltip.classList.remove('visible');
-                    }
-                }, 500);
-            }
-        });
-
-        volumeSlider.addEventListener('input', (e) => {
-            const volumeValue = parseFloat(e.target.value);
-            const volume = Math.round(volumeValue * 100);
-            if (this.volumeTooltip) {
-                // Update position first, then text
-                this.updateVolumeTooltipPosition(volumeValue);
-                this.volumeTooltip.textContent = volume + '%';
-            }
-            isDragging = true;
-        });
-
-        volumeSlider.addEventListener('change', () => {
-            // Ensure final position is correct
-            this.updateVolumeTooltip();
+    volumeSlider.addEventListener('mouseleave', () => {
+        isMouseOverVolume = false;
+        if (!isDragging) {
             setTimeout(() => {
-                isDragging = false;
-            }, 100);
-        });
-    }
+                if (!isMouseOverVolume && !isDragging && this.volumeTooltip) {
+                    this.volumeTooltip.classList.remove('visible');
+                }
+            }, 150);
+        }
+    });
 
-    bindEvents() {
+    volumeSlider.addEventListener('mousemove', (e) => {
+        if (isMouseOverVolume && this.volumeTooltip && !isDragging) {
+            const rect = volumeSlider.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const sliderWidth = rect.width;
+
+            const thumbSize = 14;
+            const availableWidth = sliderWidth - thumbSize;
+            let volumeAtPosition = (offsetX - thumbSize / 2) / availableWidth;
+            volumeAtPosition = Math.max(0, Math.min(1, volumeAtPosition));
+
+            const hoverVolume = Math.round(volumeAtPosition * 100);
+
+            // Set position first, then update text to avoid flicker
+            this.updateVolumeTooltipPosition(volumeAtPosition);
+            this.volumeTooltip.textContent = hoverVolume + '%';
+        }
+    });
+
+    // During dragging - set position immediately
+    volumeSlider.addEventListener('mousedown', () => {
+        isDragging = true;
+        if (this.volumeTooltip) {
+            this.updateVolumeTooltipPosition(this.video.volume);
+            this.volumeTooltip.classList.add('visible');
+        }
+    });
+
+    this.addTrackedListener(document, 'mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            setTimeout(() => {
+                if (!isMouseOverVolume && this.volumeTooltip) {
+                    this.volumeTooltip.classList.remove('visible');
+                }
+            }, 500);
+        }
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+        const volumeValue = parseFloat(e.target.value);
+        const volume = Math.round(volumeValue * 100);
+        if (this.volumeTooltip) {
+            this.updateVolumeTooltipPosition(volumeValue);
+            this.volumeTooltip.textContent = volume + '%';
+        }
+        isDragging = true;
+    });
+
+    volumeSlider.addEventListener('change', () => {
+        this.updateVolumeTooltip();
+        setTimeout(() => {
+            isDragging = false;
+        }, 100);
+    });
+}
+
+bindEvents() {
     if (this.video) {
 
         // Play from start button
@@ -190,21 +187,17 @@
             if (this.options.autoHide && this.autoHideInitialized) {
                 if (this.options.debug) console.log('Video playing - reset auto-hide timer');
 
-                // show controls immediately when play starts (in case they were hidden)
                 this.showControlsNow();
 
-                // delete timer
                 if (this.autoHideTimer) {
                     clearTimeout(this.autoHideTimer);
                     this.autoHideTimer = null;
                     if (this.options.debug) console.log('Cleared existing timer before reset');
                 }
 
-                // start new timer
                 this.resetAutoHideTimer();
             }
 
-            // Trigger playing event - video is now actually playing
             this.triggerEvent('playing', {
                 currentTime: this.getCurrentTime(),
                 duration: this.getDuration()
@@ -217,7 +210,6 @@
                 if (this.options.debug) console.log('Video paused - show controls and cancel timer');
                 this.showControlsNow();
 
-                // Cancel timer so controls stay visible while paused
                 if (this.autoHideTimer) {
                     clearTimeout(this.autoHideTimer);
                     this.autoHideTimer = null;
@@ -228,7 +220,7 @@
         this.video.addEventListener('waiting', () => {
             if (!this.isChangingQuality) {
                 this.showLoading();
-                // Trigger waiting event - video is buffering
+                this.updateTimeDisplay();
                 this.triggerEvent('waiting', {
                     currentTime: this.getCurrentTime()
                 });
@@ -236,7 +228,6 @@
         });
 
         this.video.addEventListener('seeking', () => {
-            // Trigger seeking event - seek operation started
             this.triggerEvent('seeking', {
                 currentTime: this.getCurrentTime(),
                 targetTime: this.video.currentTime
@@ -244,7 +235,6 @@
         });
 
         this.video.addEventListener('seeked', () => {
-            // Trigger seeked event - seek operation completed
             this.triggerEvent('seeked', {
                 currentTime: this.getCurrentTime()
             });
@@ -256,27 +246,20 @@
                 this.showLoading();
             }
 
-            // Update time display to show "Loading..." during initial buffering
             this.updateTimeDisplay();
-
-            // Trigger loadstart event - browser started loading media
             this.triggerEvent('loadstart');
         });
 
         this.video.addEventListener('loadedmetadata', () => {
             this.updateDuration();
-
-            // Update time display when metadata is loaded
             this.updateTimeDisplay();
 
-            // Trigger loadedmetadata event - video metadata loaded
             this.triggerEvent('loadedmetadata', {
                 duration: this.getDuration(),
                 videoWidth: this.video.videoWidth,
                 videoHeight: this.video.videoHeight
             });
 
-            // Initialize subtitles after metadata is loaded
             setTimeout(() => {
                 this.initializeSubtitles();
             }, 100);
@@ -287,10 +270,7 @@
                 this.hideLoading();
             }
 
-            // Update time display when data is loaded
             this.updateTimeDisplay();
-
-            // Trigger loadeddata event - current frame data loaded
             this.triggerEvent('loadeddata', {
                 currentTime: this.getCurrentTime()
             });
@@ -301,34 +281,15 @@
                 this.hideLoading();
             }
 
-            // Update time display when video can play
             this.updateTimeDisplay();
-
-            // Trigger canplay event - video can start playing
             this.triggerEvent('canplay', {
                 currentTime: this.getCurrentTime(),
                 duration: this.getDuration()
             });
         });
 
-        // Also add to waiting event
-        this.video.addEventListener('waiting', () => {
-            if (!this.isChangingQuality) {
-                this.showLoading();
-
-                // Update time display during buffering
-                this.updateTimeDisplay();
-
-                // Trigger waiting event - video is buffering
-                this.triggerEvent('waiting', {
-                    currentTime: this.getCurrentTime()
-                });
-            }
-        });
-
         this.video.addEventListener('progress', () => {
             this.updateBuffer();
-            // Trigger progress event - browser is downloading media
             this.triggerEvent('progress', {
                 buffered: this.getBufferedTime(),
                 duration: this.getDuration()
@@ -337,7 +298,6 @@
 
         this.video.addEventListener('durationchange', () => {
             this.updateDuration();
-            // Trigger durationchange event - video duration changed
             this.triggerEvent('durationchange', {
                 duration: this.getDuration()
             });
@@ -346,7 +306,6 @@
         // Error events
         this.video.addEventListener('error', (e) => {
             this.onVideoError(e);
-            // Trigger error event - media loading/playback error occurred
             this.triggerEvent('error', {
                 code: this.video.error?.code,
                 message: this.video.error?.message,
@@ -355,98 +314,87 @@
         });
 
         this.video.addEventListener('stalled', () => {
-            // Trigger stalled event - browser is trying to fetch data but it's not available
             this.triggerEvent('stalled', {
                 currentTime: this.getCurrentTime()
             });
         });
 
+        this.video.addEventListener('timeupdate', () => this.updateProgress());
+        this.video.addEventListener('ended', () => this.onVideoEnded());
 
-            this.video.addEventListener('timeupdate', () => this.updateProgress());
+        // Complete video click logic with doubleTapPause support (DESKTOP)
+        this.video.addEventListener('click', () => {
+            if (!this.options.pauseClick) return;
 
-            this.video.addEventListener('ended', () => this.onVideoEnded());
+            if (this.options.doubleTapPause) {
+                const controlsVisible = this.controls && this.controls.classList.contains('show');
 
-            // Complete video click logic with doubleTapPause support (DESKTOP)
-            this.video.addEventListener('click', () => {
-                if (!this.options.pauseClick) return;
-
-                if (this.options.doubleTapPause) {
-                    // DOUBLE TAP MODE: primo click mostra controlli, secondo pausa
-                    const controlsVisible = this.controls && this.controls.classList.contains('show');
-
-                    if (controlsVisible) {
-                        // Controlbar VISIBILE - pausa video
-                        this.togglePlayPause();
-                    } else {
-                        // Controlbar NASCOSTA - solo mostra controlli
-                        this.showControlsNow();
-                        this.resetAutoHideTimer();
-                    }
-                } else {
-                    // NORMAL MODE: sempre pausa (comportamento originale)
+                if (controlsVisible) {
                     this.togglePlayPause();
-                }
-            });
-            this.video.addEventListener('volumechange', () => this.updateVolumeSliderVisual());
-
-            // Complete touch logic with doubleTapPause support (MOBILE)
-            this.video.addEventListener('touchend', (e) => {
-                // Prevent click event from firing after touchend
-                e.preventDefault();
-
-                if (!this.options.pauseClick) return;
-
-                if (this.options.doubleTapPause) {
-                    // DOUBLE TAP MODE: primo tap mostra controlli, secondo pausa (SAME as desktop)
-                    const controlsVisible = this.controls && this.controls.classList.contains('show');
-
-                    if (controlsVisible) {
-                        // Controlbar VISIBILE - pausa video
-                        this.togglePlayPause();
-                    } else {
-                        // Controlbar NASCOSTA - solo mostra controlli
-                        this.showControlsNow();
-                        this.resetAutoHideTimer();
-                    }
                 } else {
-                    // NORMAL MODE: sempre pausa (comportamento originale, SAME as desktop)
-                    this.togglePlayPause();
+                    this.showControlsNow();
+                    this.resetAutoHideTimer();
                 }
+            } else {
+                this.togglePlayPause();
+            }
+        });
+
+        this.video.addEventListener('volumechange', () => this.updateVolumeSliderVisual());
+
+        // Complete touch logic with doubleTapPause support (MOBILE)
+        this.video.addEventListener('touchend', (e) => {
+            e.preventDefault();
+
+            if (!this.options.pauseClick) return;
+
+            if (this.options.doubleTapPause) {
+                const controlsVisible = this.controls && this.controls.classList.contains('show');
+
+                if (controlsVisible) {
+                    this.togglePlayPause();
+                } else {
+                    this.showControlsNow();
+                    this.resetAutoHideTimer();
+                }
+            } else {
+                this.togglePlayPause();
+            }
+        });
+
+        // Picture-in-Picture Events
+        this.video.addEventListener('enterpictureinpicture', () => {
+            this.onEnterPiP();
+            this.triggerEvent('pipchange', {
+                active: true,
+                mode: 'enter'
             });
+        });
 
-            // Picture-in-Picture Events
-            this.video.addEventListener('enterpictureinpicture', () => {
-                this.onEnterPiP();
-                this.triggerEvent('pipchange', {
-                    active: true,
-                    mode: 'enter'
-                });
+        this.video.addEventListener('leavepictureinpicture', () => {
+            this.onLeavePiP();
+            this.triggerEvent('pipchange', {
+                active: false,
+                mode: 'exit'
             });
+        });
+    }
 
-            this.video.addEventListener('leavepictureinpicture', () => {
-                this.onLeavePiP();
-                this.triggerEvent('pipchange', {
-                    active: false,
-                    mode: 'exit'
-                });
-            });
-        }
+    if (this.playPauseBtn) {
+        this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+    }
 
-        if (this.playPauseBtn) {
-            this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
-        }
+    if (this.muteBtn) {
+        this.muteBtn.addEventListener('click', () => this.toggleMute());
+    }
 
-        if (this.muteBtn) {
-            this.muteBtn.addEventListener('click', () => this.toggleMute());
-        }
+    if (this.fullscreenBtn) {
+        this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+    }
 
-        if (this.fullscreenBtn) {
-            this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-        }
-
-        if (this.pipBtn) {
-            this.pipBtn.addEventListener('click', () => this.togglePictureInPicture());
-        }
+    if (this.pipBtn) {
+        this.pipBtn.addEventListener('click', () => this.togglePictureInPicture());
+    }
 
     if (this.volumeSlider) {
         let isDraggingVolume = false;
@@ -459,15 +407,15 @@
         });
 
         // MOUSE DRAG - Start
-        this.volumeSlider.addEventListener('mousedown', (e) => {
+        this.volumeSlider.addEventListener('mousedown', () => {
             isDraggingVolume = true;
             if (this.volumeTooltip) {
                 this.volumeTooltip.classList.add('visible');
             }
         });
 
-        // MOUSE DRAG - Move
-        document.addEventListener('mousemove', (e) => {
+        // MOUSE DRAG - Move (tracked for cleanup)
+        this.addTrackedListener(document, 'mousemove', (e) => {
             if (isDraggingVolume && this.volumeSlider) {
                 const rect = this.volumeSlider.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
@@ -483,8 +431,8 @@
             }
         });
 
-        // MOUSE DRAG - End
-        document.addEventListener('mouseup', () => {
+        // MOUSE DRAG - End (tracked for cleanup)
+        this.addTrackedListener(document, 'mouseup', () => {
             if (isDraggingVolume) {
                 isDraggingVolume = false;
                 if (this.volumeTooltip) {
@@ -496,7 +444,7 @@
         });
 
         // TOUCH DRAG - Start
-        this.volumeSlider.addEventListener('touchstart', (e) => {
+        this.volumeSlider.addEventListener('touchstart', () => {
             isDraggingVolume = true;
             if (this.volumeTooltip) {
                 this.volumeTooltip.classList.add('visible');
@@ -538,10 +486,6 @@
         // Mouse events (desktop)
         this.progressContainer.addEventListener('click', (e) => this.seek(e));
         this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
-        if (this.progressHandle) {
-            this.progressHandle.addEventListener('mousedown', this.startSeeking.bind(this));
-            this.progressHandle.addEventListener('touchstart', this.startSeeking.bind(this), { passive: false });
-        }
 
         // Touch events (mobile)
         this.progressContainer.addEventListener('touchstart', (e) => {
@@ -552,48 +496,58 @@
         this.setupSeekTooltip();
     }
 
-    // Add touch events directly on the handle for better mobile dragging
+    // Add mouse/touch events directly on the handle for better dragging
     if (this.progressHandle) {
+        this.progressHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            this.startSeeking(e);
+        });
         this.progressHandle.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent default touch behavior
-            e.stopPropagation(); // Stop event from bubbling to progressContainer
+            e.preventDefault();
+            e.stopPropagation();
             this.startSeeking(e);
         }, { passive: false });
     }
 
-        // NOTE: Auto-hide events are handled in initAutoHide() after everything is ready
+    if (this.speedMenu) {
+        this.speedMenu.addEventListener('click', (e) => this.changeSpeed(e));
+    }
 
-        if (this.speedMenu) {
-            this.speedMenu.addEventListener('click', (e) => this.changeSpeed(e));
-        }
+    if (this.qualityMenu) {
+        this.qualityMenu.addEventListener('click', (e) => this.changeQuality(e));
+    }
 
-        if (this.qualityMenu) {
-            this.qualityMenu.addEventListener('click', (e) => this.changeQuality(e));
-        }
+    if (this.subtitlesMenu) {
+        this.subtitlesMenu.addEventListener('click', (e) => this.handleSubtitlesMenuClick(e));
+    }
 
-        if (this.subtitlesMenu) {
-            this.subtitlesMenu.addEventListener('click', (e) => this.handleSubtitlesMenuClick(e));
-        }
+    // Tracked global document listeners (removed in dispose)
+    this.addTrackedListener(document, 'fullscreenchange', () => this.updateFullscreenButton());
+    this.addTrackedListener(document, 'webkitfullscreenchange', () => this.updateFullscreenButton());
+    this.addTrackedListener(document, 'mozfullscreenchange', () => this.updateFullscreenButton());
 
-        document.addEventListener('fullscreenchange', () => this.updateFullscreenButton());
-        document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenButton());
-        document.addEventListener('mozfullscreenchange', () => this.updateFullscreenButton());
-
-        document.addEventListener('mousemove', (e) => this.continueSeeking(e));
-    document.addEventListener('mouseup', () => this.endSeeking());
-
-    // Touch events for seeking (mobile)
-    document.addEventListener('touchmove', (e) => {
+    this.addTrackedListener(document, 'mousemove', (e) => {
         if (this.isUserSeeking) {
-            e.preventDefault(); // Prevent scrolling while seeking
             this.continueSeeking(e);
         }
-    }, { passive: false });
+    });
+    this.addTrackedListener(document, 'mouseup', () => {
+        if (this.isUserSeeking) {
+            this.endSeeking();
+        }
+    });
 
-    document.addEventListener('touchend', () => this.endSeeking());
-    document.addEventListener('touchcancel', () => this.endSeeking());
-
-    }
+    this.addTrackedListener(document, 'touchend', () => {
+        if (this.isUserSeeking) {
+            this.endSeeking();
+        }
+    });
+    this.addTrackedListener(document, 'touchcancel', () => {
+        if (this.isUserSeeking) {
+            this.endSeeking();
+        }
+    });
+}
 
 // Events methods for main class
 // All original functionality preserved exactly

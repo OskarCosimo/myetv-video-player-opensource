@@ -1,4 +1,4 @@
-﻿// Watermark Module for MYETV Video Player
+// Watermark Module for MYETV Video Player
 // Displays a logo overlay on the video with customizable position and link
 // Created by https://www.myetv.tv https://oskarcosimo.com
 
@@ -29,7 +29,9 @@ initializeWatermark() {
 
     // Create watermark image
     const watermarkImg = document.createElement('img');
-    watermarkImg.src = this.options.watermarkUrl;
+    const safeWatermarkUrl = this.sanitizeUrl(this.options.watermarkUrl);
+    if (!safeWatermarkUrl) return;
+    watermarkImg.src = safeWatermarkUrl;
     watermarkImg.alt = 'Watermark';
 
     // Add title/tooltip if provided
@@ -48,12 +50,13 @@ initializeWatermark() {
     };
 
     // Add click handler if link URL is provided
-    if (this.options.watermarkLink) {
+    const safeWatermarkLink = this.sanitizeUrl(this.options.watermarkLink);
+    if (safeWatermarkLink) {
         watermark.style.cursor = 'pointer';
         watermark.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent video controls interference
-            window.open(this.options.watermarkLink, '_blank', 'noopener,noreferrer');
-            if (this.options.debug) console.log('🏷️ Watermark clicked, opening:', this.options.watermarkLink);
+            e.stopPropagation();
+            window.open(safeWatermarkLink, '_blank', 'noopener,noreferrer');
+            if (this.options.debug) console.log('Watermark clicked, opening:', safeWatermarkLink);
         });
     } else {
         watermark.style.cursor = 'default';

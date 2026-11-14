@@ -489,13 +489,13 @@ bindAdaptiveQualityEvents() {
         }
     });
 
-    // Close menu on outside click
+    // Close menu on outside click (tracked for cleanup)
     const closeMenuHandler = (e) => {
         if (!qualityBtn.contains(e.target) && !qualityMenu.contains(e.target)) {
             qualityMenu.classList.remove('active');
         }
     };
-    document.addEventListener('click', closeMenuHandler);
+    this.addTrackedListener(document, 'click', closeMenuHandler);
 
     // Handle quality selection
     qualityMenu.addEventListener('click', (e) => {

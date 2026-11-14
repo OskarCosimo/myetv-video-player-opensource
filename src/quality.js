@@ -168,56 +168,54 @@ updateQualityMenu() {
     if (!qualityMenu) return;
 
     if (this.isAdaptiveStream) {
-        if (this.options.debug) console.log('🔒 Adaptive streaming active - quality menu managed by streaming.js');
+        if (this.options.debug) console.log('Adaptive streaming active - quality menu managed by streaming module');
         return;
     }
 
-    let menuHTML = '';
+    qualityMenu.textContent = '';
 
-    // Check if adaptive streaming is active (HLS/DASH)
+    const createOption = (label, attrs, className) => {
+        const opt = document.createElement('div');
+        opt.className = className;
+        opt.textContent = label;
+        Object.entries(attrs).forEach(([k, v]) => opt.setAttribute(k, String(v)));
+        return opt;
+    };
+
     if (this.isAdaptiveStream && this.adaptiveQualities && this.adaptiveQualities.length > 0) {
-        // Show adaptive streaming qualities
         const currentIndex = this.getCurrentAdaptiveQuality();
         const autoSelected = currentIndex === -1 || currentIndex === null || this.selectedQuality === 'auto';
-        const autoClass = autoSelected ? 'selected' : '';
-
-        menuHTML += `<div class="quality-option ${autoClass}" data-adaptive-quality="auto">${this.t('auto')}</div>`;
+        qualityMenu.appendChild(
+            createOption(this.t('auto'), { 'data-adaptive-quality': 'auto' }, `quality-option ${autoSelected ? 'selected' : ''}`)
+        );
 
         this.adaptiveQualities.forEach(quality => {
             const isSelected = currentIndex === quality.index && !autoSelected;
-            const className = isSelected ? 'selected' : '';
-            const label = quality.label || `${quality.height}p` || 'Unknown';
-            menuHTML += `<div class="quality-option ${className}" data-adaptive-quality="${quality.index}">${label}</div>`;
+            const label = quality.label || (quality.height ? `${quality.height}p` : 'Unknown');
+            qualityMenu.appendChild(
+                createOption(label, { 'data-adaptive-quality': quality.index }, `quality-option ${isSelected ? 'selected' : ''}`)
+            );
         });
     } else {
-        // Show standard qualities for regular videos
         const autoSelected = this.selectedQuality === 'auto';
         const autoPlaying = this.selectedQuality === 'auto' && this.currentPlayingQuality;
-        let autoClass = '';
-        if (autoSelected && autoPlaying) {
-            autoClass = 'selected playing';
-        } else if (autoSelected) {
-            autoClass = 'selected';
-        }
+        let autoClass = 'quality-option';
+        if (autoSelected && autoPlaying) autoClass += ' selected playing';
+        else if (autoSelected) autoClass += ' selected';
 
-        menuHTML += `<div class="quality-option ${autoClass}" data-quality="auto">${this.t('auto')}</div>`;
+        qualityMenu.appendChild(createOption(this.t('auto'), { 'data-quality': 'auto' }, autoClass));
 
         this.qualities.forEach(quality => {
             const isSelected = this.selectedQuality === quality.quality;
             const isPlaying = this.currentPlayingQuality === quality.quality;
             let className = 'quality-option';
-            if (isSelected && isPlaying) {
-                className += ' selected playing';
-            } else if (isSelected) {
-                className += ' selected';
-            } else if (isPlaying) {
-                className += ' playing';
-            }
-            menuHTML += `<div class="${className}" data-quality="${quality.quality}">${quality.quality}</div>`;
+            if (isSelected && isPlaying) className += ' selected playing';
+            else if (isSelected) className += ' selected';
+            else if (isPlaying) className += ' playing';
+
+            qualityMenu.appendChild(createOption(quality.quality, { 'data-quality': quality.quality }, className));
         });
     }
-
-    qualityMenu.innerHTML = menuHTML;
 }
 
 getQualityStatus() {
@@ -796,44 +794,6 @@ getQualityLabel(height, width) {
     if (height >= 360) return '360p';
     if (height >= 240) return '240p';
     return `${height}p`;
-}
-
-updateAdaptiveQualityMenu() {
-    const qualityMenu = this.controls?.querySelector('.quality-menu');
-    if (!qualityMenu || !this.isAdaptiveStream) return;
-
-    let menuHTML = `<div class="quality-option ${this.isAutoQuality() ? 'active' : ''}" data-adaptive-quality="auto">Auto</div>`;
-
-    this.adaptiveQualities.forEach(quality => {
-        const isActive = this.getCurrentAdaptiveQuality() === quality.index;
-        menuHTML += `<div class="quality-option ${isActive ? 'active' : ''}" data-adaptive-quality="${quality.index}">${quality.label}</div>`;
-    });
-
-    qualityMenu.innerHTML = menuHTML;
-}
-
-updateAdaptiveQualityDisplay() {
-    if (!this.isAdaptiveStream) return;
-
-    const qualityBtn = this.controls?.querySelector('.quality-btn');
-    if (!qualityBtn) return;
-
-    // Determine if auto quality is active
-    const isAuto = this.selectedQuality === 'auto' || this.getCurrentAdaptiveQuality() === -1;
-    const currentQuality = isAuto ? this.tauto : this.getCurrentAdaptiveQualityLabel();
-
-    const btnText = qualityBtn.querySelector('.quality-btn-text');
-    if (btnText) {
-        const selectedEl = btnText.querySelector('.selected-quality');
-        const currentEl = btnText.querySelector('.current-quality');
-
-        if (selectedEl) {
-            selectedEl.textContent = isAuto ? this.tauto : currentQuality;
-        }
-        if (currentEl) {
-            currentEl.textContent = currentQuality;
-        }
-    }
 }
 
 setAdaptiveQuality(qualityIndex) {

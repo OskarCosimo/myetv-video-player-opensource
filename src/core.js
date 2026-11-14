@@ -218,6 +218,11 @@ constructor(videoElement, options = {}) {
         this.video.style.visibility = 'hidden';
     }
 
+    // Track global listeners and timers for proper cleanup in dispose()
+    this._globalListeners = [];
+    this.isDisposed = false;
+    this.audioWaveRafId = null;
+
     try {
         this.interceptAutoLoading();
         this.createPlayerStructure();
@@ -266,7 +271,8 @@ constructor(videoElement, options = {}) {
 
             // canvas
             const draw = () => {
-                requestAnimationFrame(draw);
+                if (this.isDisposed) return;
+                this.audioWaveRafId = requestAnimationFrame(draw);
                 this.analyser.getByteTimeDomainData(dataArray);
 
                 canvasCtx.fillStyle = '#222';
@@ -325,6 +331,108 @@ decodeHTMLEntities(text) {
     const textarea = document.createElement('textarea');
     textarea.innerHTML = text;
     return textarea.value;
+}
+
+/**
+ * Validate URL to block javascript: and unsafe data: schemes
+ * @param {string} url - URL to validate
+ * @returns {string} Safe URL or empty string
+ */
+sanitizeUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+
+    // Reject whitespace, quotes, or parentheses that could break CSS url(...)
+    if (/[\s"'()<>]/.test(trimmed)) {
+        return '';
+    }
+
+    // Allow relative paths (excluding protocol-relative '//')
+    if (/^\/(?!\/)/.test(trimmed) || /^\.\.?\//.test(trimmed)) {
+        return trimmed;
+    }
+
+    // Allow safe raster data URIs only (explicitly exclude SVG)
+    if (/^data:image\/(?:png|jpeg|jpg|gif|webp);base64,[a-z0-9+/=]+$/i.test(trimmed)) {
+        return trimmed;
+    }
+
+    try {
+        const parsed = new URL(trimmed, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            return trimmed;
+        }
+    } catch (e) {
+        return '';
+    }
+
+    return '';
+}
+
+/**
+ * Sanitize HTML using an allowlist of safe tags and attributes
+ * @param {string} html - Raw HTML string
+ * @returns {string} Sanitized HTML
+ */
+sanitizeHTML(html) {
+    if (!html || typeof html !== 'string') return '';
+
+    const allowedTags = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'UL', 'OL', 'LI', 'SPAN', 'DIV', 'A']);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const cleanNode = (node) => {
+        const children = Array.from(node.childNodes);
+        for (const child of children) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                continue;
+            }
+            if (child.nodeType !== Node.ELEMENT_NODE) {
+                child.remove();
+                continue;
+            }
+            if (!allowedTags.has(child.tagName)) {
+                const textNode = document.createTextNode(child.textContent || '');
+                child.replaceWith(textNode);
+                continue;
+            }
+
+            const safeHref = child.tagName === 'A'
+                ? this.sanitizeUrl(child.getAttribute('href') || '')
+                : '';
+
+            for (const attr of Array.from(child.attributes)) {
+                child.removeAttribute(attr.name);
+            }
+
+            if (child.tagName === 'A' && safeHref) {
+                child.setAttribute('href', safeHref);
+                child.setAttribute('target', '_blank');
+                child.setAttribute('rel', 'noopener noreferrer');
+            }
+
+            cleanNode(child);
+        }
+    };
+
+    cleanNode(doc.body);
+    return doc.body.innerHTML;
+}
+
+/**
+ * Register a global event listener and track it for cleanup in dispose()
+ * @param {EventTarget} target - window or document
+ * @param {string} type - Event name
+ * @param {Function} handler - Listener function
+ * @param {Object|boolean} options - Event options
+ */
+addTrackedListener(target, type, handler, options) {
+    if (!this._globalListeners) {
+        this._globalListeners = [];
+    }
+    target.addEventListener(type, handler, options);
+    this._globalListeners.push({ target, type, handler, options });
 }
 
 // check if the device is Fire TV
@@ -707,8 +815,8 @@ createInitialLoading() {
     initialLoader.innerHTML = `
         <div class="loading-spinner-wrap">
             <div class="loading-spinner"></div>
-            ${this.options.loadingLogo
-            ? `<img class="loading-spinner-logo" src="${this.options.loadingLogo}" alt="" />`
+            ${this.sanitizeUrl(this.options.loadingLogo)
+            ? `<img class="loading-spinner-logo" src="${this.sanitizeUrl(this.options.loadingLogo)}" alt="" />`
             : ''}
         </div>
         <div class="loading-text"></div>
@@ -724,8 +832,8 @@ createLoadingOverlay() {
     overlay.innerHTML = `
         <div class="loading-spinner-wrap">
             <div class="loading-spinner"></div>
-            ${this.options.loadingLogo
-            ? `<img class="loading-spinner-logo" src="${this.options.loadingLogo}" alt="" />`
+            ${this.sanitizeUrl(this.options.loadingLogo)
+            ? `<img class="loading-spinner-logo" src="${this.sanitizeUrl(this.options.loadingLogo)}" alt="" />`
             : ''}
         </div>
         <div class="loading-text"></div>
@@ -1033,7 +1141,7 @@ setupMenuToggles() {
         }
     });
 
-    document.addEventListener('click', (e) => {
+    this.addTrackedListener(document, 'click', (e) => {
         if (!this.controls) return;
         if (!this.controls.contains(e.target)) {
             this.closeAllMenus();
@@ -1095,7 +1203,7 @@ createTopBar() {
     // Settings button
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'control-btn settings-btn';
-    settingsBtn.setAttribute('data-tooltip', 'settingsmenu');
+    settingsBtn.setAttribute('data-tooltip', 'settings_menu');
 
     const icon = document.createElement('span');
     icon.className = 'icon';
@@ -1335,19 +1443,6 @@ getMobileVolumeSlider() {
     return this.options.mobileVolumeSlider;
 }
 
-initVolumeTooltip() {
-
-    this.createVolumeTooltip();
-
-    setTimeout(() => {
-        this.updateVolumeTooltip();
-    }, 200);
-
-    if (this.options.debug) {
-        console.log('Dynamic volume tooltip inizializzation');
-    }
-}
-
 setupSeekTooltip() {
     if (!this.options.showSeekTooltip || !this.progressContainer || !this.seekTooltip) return;
 
@@ -1521,8 +1616,19 @@ startSeeking(e) {
 
     this.isUserSeeking = true;
     this.progressContainer.classList.add('seeking');
+
+    // Attach non-passive touchmove only while actively seeking to avoid blocking mobile page scroll
+    if (!this._onDocumentTouchMove) {
+        this._onDocumentTouchMove = (touchEvent) => {
+            if (this.isUserSeeking) {
+                if (touchEvent.cancelable) touchEvent.preventDefault();
+                this.continueSeeking(touchEvent);
+            }
+        };
+        document.addEventListener('touchmove', this._onDocumentTouchMove, { passive: false });
+    }
+
     this.seek(e);
-    e.preventDefault();
 
     // Show controls during seeking
     if (this.options.autoHide && this.autoHideInitialized) {
@@ -1540,7 +1646,14 @@ continueSeeking(e) {
 
 endSeeking() {
     this.isUserSeeking = false;
-    this.progressContainer.classList.remove('seeking');
+    if (this.progressContainer) {
+        this.progressContainer.classList.remove('seeking');
+    }
+
+    if (this._onDocumentTouchMove) {
+        document.removeEventListener('touchmove', this._onDocumentTouchMove, { passive: false });
+        this._onDocumentTouchMove = null;
+    }
 }
 
 seek(e) {
@@ -1727,7 +1840,9 @@ createBrandLogo() {
     // Create brand logo image
     const logo = document.createElement('img');
     logo.className = 'brand-logo';
-    logo.src = this.options.brandLogoUrl;
+    const safeLogoUrl = this.sanitizeUrl(this.options.brandLogoUrl);
+    if (!safeLogoUrl) return;
+    logo.src = safeLogoUrl;
     logo.alt = 'Brand logo';
 
     // Add tooltip ONLY if link URL is present
@@ -1748,12 +1863,13 @@ createBrandLogo() {
     };
 
     // Add click functionality if link URL is provided
-    if (this.options.brandLogoLinkUrl) {
+    const safeBrandLink = this.sanitizeUrl(this.options.brandLogoLinkUrl);
+    if (safeBrandLink) {
         logo.style.cursor = 'pointer';
         logo.addEventListener('click', (e) => {
             e.stopPropagation();
-            window.open(this.options.brandLogoLinkUrl, '_blank', 'noopener,noreferrer');
-            if (this.options.debug) console.log('Brand logo clicked, opening:', this.options.brandLogoLinkUrl);
+            window.open(safeBrandLink, '_blank', 'noopener,noreferrer');
+            if (this.options.debug) console.log('Brand logo clicked, opening:', safeBrandLink);
         });
     } else {
         logo.style.cursor = 'default';
@@ -1932,7 +2048,9 @@ createPosterOverlay() {
     // Create poster overlay element
     const posterOverlay = document.createElement('div');
     posterOverlay.className = 'video-poster-overlay';
-    posterOverlay.style.backgroundImage = `url(${posterUrl})`;
+    const safePosterUrl = this.sanitizeUrl(posterUrl);
+    if (!safePosterUrl) return;
+    posterOverlay.style.backgroundImage = `url("${safePosterUrl}")`;
 
     // Insert poster overlay before controls
     if (this.controls) {
@@ -2016,10 +2134,12 @@ hidePoster() {
  * @param {String} posterUrl - URL of the poster image
  */
 setPoster(posterUrl) {
-    if (!posterUrl) {
-        if (this.options.debug) console.warn('🖼️ Invalid poster URL');
+    const safePosterUrl = this.sanitizeUrl(posterUrl);
+    if (!safePosterUrl) {
+        if (this.options.debug) console.warn('Invalid poster URL');
         return this;
     }
+    posterUrl = safePosterUrl;
 
     this.options.poster = posterUrl;
 
@@ -2030,7 +2150,7 @@ setPoster(posterUrl) {
 
     // Update or create poster overlay
     if (this.posterOverlay) {
-        this.posterOverlay.style.backgroundImage = `url(${posterUrl})`;
+        this.posterOverlay.style.backgroundImage = `url("${posterUrl}")`;
     } else {
         this.createPosterOverlay();
         this.bindPosterEvents();
@@ -2165,6 +2285,49 @@ getAvailableSeekHandleShapes() {
 }
 
 dispose() {
+    this.isDisposed = true;
+
+    // Remove all tracked global window/document listeners
+    if (this._globalListeners) {
+        this._globalListeners.forEach(({ target, type, handler, options }) => {
+            target.removeEventListener(type, handler, options);
+        });
+        this._globalListeners = [];
+    }
+
+    if (this.resizeHandler) {
+        window.removeEventListener('resize', this.resizeHandler);
+        this.resizeHandler = null;
+    }
+
+    if (this.watermarkResizeHandler) {
+        window.removeEventListener('resize', this.watermarkResizeHandler);
+        this.watermarkResizeHandler = null;
+    }
+
+    if (this.container) {
+        if (this._onContainerTouchStart) {
+            this.container.removeEventListener('touchstart', this._onContainerTouchStart);
+        }
+        if (this._onContainerTouchEnd) {
+            this.container.removeEventListener('touchend', this._onContainerTouchEnd);
+        }
+    }
+
+    if (this.audioWaveRafId) {
+        cancelAnimationFrame(this.audioWaveRafId);
+        this.audioWaveRafId = null;
+    }
+
+    if (this.audioCtx && typeof this.audioCtx.close === 'function') {
+        this.audioCtx.close().catch(() => { });
+        this.audioCtx = null;
+    }
+
+    if (typeof this.disableCustomSubtitles === 'function') {
+        this.disableCustomSubtitles();
+    }
+
     if (this.qualityMonitorInterval) {
         clearInterval(this.qualityMonitorInterval);
         this.qualityMonitorInterval = null;
@@ -2184,6 +2347,18 @@ dispose() {
 
     if (this.controls) {
         this.controls.remove();
+    }
+    if (this.topBar) {
+        this.topBar.remove();
+    }
+    if (this.moreinfoModal) {
+        this.moreinfoModal.remove();
+    }
+    if (this.watermarkElement) {
+        this.watermarkElement.remove();
+    }
+    if (this.audioWaveCanvas) {
+        this.audioWaveCanvas.remove();
     }
     if (this.loadingOverlay) {
         this.loadingOverlay.remove();
@@ -2212,7 +2387,6 @@ dispose() {
         this.posterOverlay.remove();
     }
     this.disposeAllPlugins();
-
 }
 
 /**

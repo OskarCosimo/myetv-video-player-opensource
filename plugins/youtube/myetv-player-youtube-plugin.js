@@ -1,3 +1,5 @@
+// myetv-player-youtube-plugin.js
+
 /**
  * MYETV Player - YouTube Plugin
  * File: myetv-player-youtube-plugin.js
@@ -84,6 +86,16 @@
             this.liveCheckInterval = null;
             this.isAtLiveEdge = true; // Track if viewer is at live edge
 
+            // Short auto-loop end detection state
+            this.lastPlaybackTime = 0;
+            this.wasNearEnd = false;
+            this.lastNearEndAt = 0;
+            this.nativeEndedFired = false;
+            this.shortEndTriggered = false;
+            this.suppressNextPauseEvent = false;
+            this.suppressPauseTimer = null;
+            this.lastSeekTimestamp = 0;
+
             this.api = player.getPluginAPI();
             if (this.api.player.options.debug) console.log('[YT Plugin] Constructor initialized', this.options);
         }
@@ -123,8 +135,8 @@
         }
 
         /**
-     * Fetch YouTube channel information using YouTube Data API v3
-     */
+         * Fetch YouTube channel information using YouTube Data API v3
+         */
         async fetchChannelInfo(videoId) {
             if (!this.options.apiKey) {
                 if (this.api.player.options.debug) {
@@ -285,45 +297,45 @@
             setTimeout(checkAndApply, 100);
         }
 
-/**
-* Get user preference for native controls from localStorage
-*/
-getUserNativeControlsPreference() {
-    if (!this.options.rememberNativeControlsPreference) {
-        return false;
-    }
+        /**
+         * Get user preference for native controls from localStorage
+         */
+        getUserNativeControlsPreference() {
+            if (!this.options.rememberNativeControlsPreference) {
+                return false;
+            }
 
-    try {
-        const stored = localStorage.getItem(this.storageKey);
-        return stored === 'true';
-    } catch (e) {
-        if (this.api.player.options.debug) {
-            console.warn('[YT Plugin] Could not read localStorage:', e);
+            try {
+                const stored = localStorage.getItem(this.storageKey);
+                return stored === 'true';
+            } catch (e) {
+                if (this.api.player.options.debug) {
+                    console.warn('[YT Plugin] Could not read localStorage:', e);
+                }
+                return false;
+            }
         }
-        return false;
-    }
-}
 
-/**
- * Save user preference for native controls to localStorage
- */
-saveUserNativeControlsPreference(showNative) {
-    if (!this.options.rememberNativeControlsPreference) {
-        return;
-    }
+        /**
+         * Save user preference for native controls to localStorage
+         */
+        saveUserNativeControlsPreference(showNative) {
+            if (!this.options.rememberNativeControlsPreference) {
+                return;
+            }
 
-    try {
-        localStorage.setItem(this.storageKey, showNative.toString());
+            try {
+                localStorage.setItem(this.storageKey, showNative.toString());
 
-        if (this.api.player.options.debug) {
-            console.log('[YT Plugin] Saved user preference:', showNative);
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Saved user preference:', showNative);
+                }
+            } catch (e) {
+                if (this.api.player.options.debug) {
+                    console.warn('[YT Plugin] Could not write to localStorage:', e);
+                }
+            }
         }
-    } catch (e) {
-        if (this.api.player.options.debug) {
-            console.warn('[YT Plugin] Could not write to localStorage:', e);
-        }
-    }
-}
 
         /**
          * Set auto caption language on player initialization
@@ -398,24 +410,23 @@ saveUserNativeControlsPreference(showNative) {
                 pipBtn.style.display = 'none';
             }
 
-                // Add max-height and scroll to settings menu on mobile
-                if (settingsMenu) {
-                    const playerHeight = this.api.container.offsetHeight;
-                    const settingsBtn = this.api.container.querySelector('.settings-btn');
-                    const settingsBtnRect = settingsBtn.getBoundingClientRect();
-                    const containerRect = this.api.container.getBoundingClientRect();
+            // Add max-height and scroll to settings menu on mobile
+            if (settingsMenu) {
+                const playerHeight = this.api.container.offsetHeight;
+                const settingsBtn = this.api.container.querySelector('.settings-btn');
+                const settingsBtnRect = settingsBtn.getBoundingClientRect();
+                const containerRect = this.api.container.getBoundingClientRect();
 
-                    // Calculate distance from top of container to settings button
-                    const distanceFromTop = settingsBtnRect.top - containerRect.top;
+                // Calculate distance from top of container to settings button
+                const distanceFromTop = settingsBtnRect.top - containerRect.top;
 
-                    const maxMenuHeight = Math.min(300, playerHeight * 0.5);
+                const maxMenuHeight = Math.min(300, playerHeight * 0.5);
+            }
 
-                }
-
-                // Hide subtitles button
-                if (subtitlesBtn) {
-                    subtitlesBtn.style.display = 'none';
-                }
+            // Hide subtitles button
+            if (subtitlesBtn) {
+                subtitlesBtn.style.display = 'none';
+            }
 
             // Remove ONLY the original player speed (not YouTube speed)
             if (settingsMenu) {
@@ -441,261 +452,260 @@ saveUserNativeControlsPreference(showNative) {
                 });
             }
 
-                // Add subtitles option to settings menu
-                if (settingsMenu) {
-                    let subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
+            // Add subtitles option to settings menu
+            if (settingsMenu) {
+                let subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
 
-                    if (!subtitlesWrapper) {
-                        // Get i18n text
-                        let subtitlesText = 'Subtitles';
-                        if (this.api.player && this.api.player.t) {
-                            subtitlesText = this.api.player.t('subtitles');
-                        } else if (this.player && this.player.t) {
-                            subtitlesText = this.player.t('subtitles');
-                        }
-
-                        // Create wrapper
-                        subtitlesWrapper = document.createElement('div');
-                        subtitlesWrapper.className = 'yt-subtitles-wrapper';
-                        subtitlesWrapper.style.cssText = 'position: relative; display: block;';
-
-                        // Create trigger
-                        const trigger = document.createElement('div');
-                        trigger.className = 'quality-option';
-                        trigger.textContent = subtitlesText;
-
-                        // Add arrow indicator
-                        const arrow = document.createElement('span');
-                        arrow.textContent = ' ▼';
-                        arrow.style.cssText = 'font-size: 8px; transition: transform 0.2s;';
-                        trigger.appendChild(arrow);
-
-                        // Container for expanded options
-                        const optionsContainer = document.createElement('div');
-                        optionsContainer.className = 'yt-subtitles-options';
-                        optionsContainer.style.cssText = `
-                    display: none;
-                    padding-left: 15px;
-                    margin-top: 4px;
-                `;
-
-                        // Function to rebuild options from main menu
-                        const rebuildOptions = () => {
-                            const mainSubtitlesMenu = this.api.container.querySelector('.subtitles-menu');
-                            if (!mainSubtitlesMenu) return;
-
-                            // Clone all options from main menu
-                            optionsContainer.innerHTML = '';
-                            const options = mainSubtitlesMenu.querySelectorAll('.subtitles-option');
-
-                            options.forEach(option => {
-                                const clonedOption = option.cloneNode(true);
-                                clonedOption.style.cssText = `
-                            padding: 6px 12px;
-                            cursor: pointer;
-                            color: white;
-                            white-space: normal;
-                            word-wrap: break-word;
-                            opacity: 0.8;
-                            transition: opacity 0.2s;
-                        `;
-
-                                // Highlight selected option
-                                if (option.classList.contains('selected')) {
-                                    clonedOption.style.opacity = '1';
-                                    clonedOption.style.fontWeight = 'bold';
-                                }
-
-                                // Hover effect
-                                clonedOption.addEventListener('mouseenter', () => {
-                                    clonedOption.style.opacity = '1';
-                                });
-                                clonedOption.addEventListener('mouseleave', () => {
-                                    if (!option.classList.contains('selected')) {
-                                        clonedOption.style.opacity = '0.8';
-                                    }
-                                });
-
-                                // Add click handler
-                                clonedOption.addEventListener('click', (e) => {
-                                    e.stopPropagation();
-
-                                    // Trigger click on original option
-                                    option.click();
-
-                                    // Rebuild to update selection
-                                    setTimeout(() => {
-                                        rebuildOptions();
-                                    }, 50);
-                                });
-
-                                optionsContainer.appendChild(clonedOption);
-                            });
-                        };
-
-                        // Toggle expanded/collapsed state
-                        let isExpanded = false;
-                        trigger.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            isExpanded = !isExpanded;
-
-                            if (isExpanded) {
-                                rebuildOptions();
-                                optionsContainer.style.display = 'block';
-                                arrow.style.transform = 'rotate(180deg)';
-
-                                setTimeout(() => this.updateMenuHeight(), 10);
-                            } else {
-                                optionsContainer.style.display = 'none';
-                                arrow.style.transform = 'rotate(0deg)';
-
-                                setTimeout(() => this.updateMenuHeight(), 10);
-                            }
-                        });
-
-                        // Assemble
-                        subtitlesWrapper.appendChild(trigger);
-                        subtitlesWrapper.appendChild(optionsContainer);
-                        settingsMenu.insertBefore(subtitlesWrapper, settingsMenu.firstChild);
+                if (!subtitlesWrapper) {
+                    // Get i18n text
+                    let subtitlesText = 'Subtitles';
+                    if (this.api.player && this.api.player.t) {
+                        subtitlesText = this.api.player.t('subtitles');
+                    } else if (this.player && this.player.t) {
+                        subtitlesText = this.player.t('subtitles');
                     }
 
-                    // Add speed option to settings menu
-                    let speedWrapper = settingsMenu.querySelector('.yt-speed-wrapper');
+                    // Create wrapper
+                    subtitlesWrapper = document.createElement('div');
+                    subtitlesWrapper.className = 'yt-subtitles-wrapper';
+                    subtitlesWrapper.style.cssText = 'position: relative; display: block;';
 
-                    if (!speedWrapper) {
-                        // Get i18n text - use 'playback_speed' key
-                        let speedText = 'Playback speed';
-                        if (this.api.player && this.api.player.t) {
-                            speedText = this.api.player.t('playback_speed');
-                        } else if (this.player && this.player.t) {
-                            speedText = this.player.t('playback_speed');
-                        }
+                    // Create trigger
+                    const trigger = document.createElement('div');
+                    trigger.className = 'quality-option';
+                    trigger.textContent = subtitlesText;
 
-                        // Create wrapper
-                        speedWrapper = document.createElement('div');
-                        speedWrapper.className = 'yt-speed-wrapper';
-                        speedWrapper.style.cssText = 'position: relative; display: block;';
+                    // Add arrow indicator
+                    const arrow = document.createElement('span');
+                    arrow.textContent = ' ▼';
+                    arrow.style.cssText = 'font-size: 8px; transition: transform 0.2s;';
+                    trigger.appendChild(arrow);
 
-                        // Create trigger
-                        const trigger = document.createElement('div');
-                        trigger.className = 'quality-option';
+                    // Container for expanded options
+                    const optionsContainer = document.createElement('div');
+                    optionsContainer.className = 'yt-subtitles-options';
+                    optionsContainer.style.cssText = `
+                display: none;
+                padding-left: 15px;
+                margin-top: 4px;
+            `;
 
-                        // Get current speed
-                        const getCurrentSpeed = () => {
-                            if (this.ytPlayer && this.ytPlayer.getPlaybackRate) {
-                                return this.ytPlayer.getPlaybackRate();
+                    // Function to rebuild options from main menu
+                    const rebuildOptions = () => {
+                        const mainSubtitlesMenu = this.api.container.querySelector('.subtitles-menu');
+                        if (!mainSubtitlesMenu) return;
+
+                        // Clone all options from main menu
+                        optionsContainer.innerHTML = '';
+                        const options = mainSubtitlesMenu.querySelectorAll('.subtitles-option');
+
+                        options.forEach(option => {
+                            const clonedOption = option.cloneNode(true);
+                            clonedOption.style.cssText = `
+                        padding: 6px 12px;
+                        cursor: pointer;
+                        color: white;
+                        white-space: normal;
+                        word-wrap: break-word;
+                        opacity: 0.8;
+                        transition: opacity 0.2s;
+                    `;
+
+                            // Highlight selected option
+                            if (option.classList.contains('selected')) {
+                                clonedOption.style.opacity = '1';
+                                clonedOption.style.fontWeight = 'bold';
                             }
-                            return 1;
-                        };
 
-                        trigger.textContent = `${speedText}: ${getCurrentSpeed()}x`;
-
-                        // Add arrow indicator
-                        const arrow = document.createElement('span');
-                        arrow.textContent = ' ▼';
-                        arrow.style.cssText = 'font-size: 8px; transition: transform 0.2s;';
-                        trigger.appendChild(arrow);
-
-                        // Container for expanded options
-                        const optionsContainer = document.createElement('div');
-                        optionsContainer.className = 'yt-speed-options';
-                        optionsContainer.style.cssText = `
-                    display: none;
-                    padding-left: 15px;
-                    margin-top: 4px;
-                `;
-
-                        // Available speeds
-                        const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-
-                        // Function to rebuild options
-                        const rebuildOptions = () => {
-                            optionsContainer.innerHTML = '';
-                            const currentSpeed = getCurrentSpeed();
-
-                            speeds.forEach(speed => {
-                                const option = document.createElement('div');
-                                option.style.cssText = `
-                            padding: 6px 12px;
-                            cursor: pointer;
-                            color: white;
-                            white-space: normal;
-                            word-wrap: break-word;
-                            opacity: 0.8;
-                            transition: opacity 0.2s;
-                        `;
-                                option.textContent = `${speed}x`;
-
-                                // Highlight selected option
-                                if (Math.abs(speed - currentSpeed) < 0.01) {
-                                    option.style.opacity = '1';
-                                    option.style.fontWeight = 'bold';
-                                }
-
-                                // Hover effect
-                                option.addEventListener('mouseenter', () => {
-                                    option.style.opacity = '1';
-                                });
-                                option.addEventListener('mouseleave', () => {
-                                    if (Math.abs(speed - getCurrentSpeed()) >= 0.01) {
-                                        option.style.opacity = '0.8';
-                                    }
-                                });
-
-                                // Add click handler
-                                option.addEventListener('click', (e) => {
-                                    e.stopPropagation();
-
-                                    if (this.ytPlayer && this.ytPlayer.setPlaybackRate) {
-                                        this.ytPlayer.setPlaybackRate(speed);
-                                    }
-
-                                    // Update trigger text
-                                    trigger.childNodes[0].textContent = `${speedText}: ${speed}x`;
-
-                                    // Rebuild to update selection
-                                    setTimeout(() => {
-                                        rebuildOptions();
-                                    }, 50);
-                                });
-
-                                optionsContainer.appendChild(option);
+                            // Hover effect
+                            clonedOption.addEventListener('mouseenter', () => {
+                                clonedOption.style.opacity = '1';
                             });
-                        };
+                            clonedOption.addEventListener('mouseleave', () => {
+                                if (!option.classList.contains('selected')) {
+                                    clonedOption.style.opacity = '0.8';
+                                }
+                            });
 
-                        // Toggle expanded/collapsed state
-                        let isExpanded = false;
-                        trigger.addEventListener('click', (e) => {
-                            e.stopPropagation();
+                            // Add click handler
+                            clonedOption.addEventListener('click', (e) => {
+                                e.stopPropagation();
 
-                            isExpanded = !isExpanded;
+                                // Trigger click on original option
+                                option.click();
 
-                            if (isExpanded) {
-                                rebuildOptions();
-                                optionsContainer.style.display = 'block';
-                                arrow.style.transform = 'rotate(180deg)';
-                                setTimeout(() => this.updateMenuHeight(), 10);
-                            } else {
-                                optionsContainer.style.display = 'none';
-                                arrow.style.transform = 'rotate(0deg)';
-                                setTimeout(() => this.updateMenuHeight(), 10);
-                            }
+                                // Rebuild to update selection
+                                setTimeout(() => {
+                                    rebuildOptions();
+                                }, 50);
+                            });
+
+                            optionsContainer.appendChild(clonedOption);
                         });
+                    };
 
-                        // Assemble
-                        speedWrapper.appendChild(trigger);
-                        speedWrapper.appendChild(optionsContainer);
+                    // Toggle expanded/collapsed state
+                    let isExpanded = false;
+                    trigger.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        isExpanded = !isExpanded;
 
-                        // Insert after subtitles wrapper
-                        const subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
-                        if (subtitlesWrapper) {
-                            subtitlesWrapper.insertAdjacentElement('afterend', speedWrapper);
+                        if (isExpanded) {
+                            rebuildOptions();
+                            optionsContainer.style.display = 'block';
+                            arrow.style.transform = 'rotate(180deg)';
+
+                            setTimeout(() => this.updateMenuHeight(), 10);
                         } else {
-                            settingsMenu.insertBefore(speedWrapper, settingsMenu.firstChild);
+                            optionsContainer.style.display = 'none';
+                            arrow.style.transform = 'rotate(0deg)';
+
+                            setTimeout(() => this.updateMenuHeight(), 10);
                         }
-                    }
+                    });
+
+                    // Assemble
+                    subtitlesWrapper.appendChild(trigger);
+                    subtitlesWrapper.appendChild(optionsContainer);
+                    settingsMenu.insertBefore(subtitlesWrapper, settingsMenu.firstChild);
                 }
 
+                // Add speed option to settings menu
+                let speedWrapper = settingsMenu.querySelector('.yt-speed-wrapper');
+
+                if (!speedWrapper) {
+                    // Get i18n text - use 'playback_speed' key
+                    let speedText = 'Playback speed';
+                    if (this.api.player && this.api.player.t) {
+                        speedText = this.api.player.t('playback_speed');
+                    } else if (this.player && this.player.t) {
+                        speedText = this.player.t('playback_speed');
+                    }
+
+                    // Create wrapper
+                    speedWrapper = document.createElement('div');
+                    speedWrapper.className = 'yt-speed-wrapper';
+                    speedWrapper.style.cssText = 'position: relative; display: block;';
+
+                    // Create trigger
+                    const trigger = document.createElement('div');
+                    trigger.className = 'quality-option';
+
+                    // Get current speed
+                    const getCurrentSpeed = () => {
+                        if (this.ytPlayer && this.ytPlayer.getPlaybackRate) {
+                            return this.ytPlayer.getPlaybackRate();
+                        }
+                        return 1;
+                    };
+
+                    trigger.textContent = `${speedText}: ${getCurrentSpeed()}x`;
+
+                    // Add arrow indicator
+                    const arrow = document.createElement('span');
+                    arrow.textContent = ' ▼';
+                    arrow.style.cssText = 'font-size: 8px; transition: transform 0.2s;';
+                    trigger.appendChild(arrow);
+
+                    // Container for expanded options
+                    const optionsContainer = document.createElement('div');
+                    optionsContainer.className = 'yt-speed-options';
+                    optionsContainer.style.cssText = `
+                display: none;
+                padding-left: 15px;
+                margin-top: 4px;
+            `;
+
+                    // Available speeds
+                    const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+                    // Function to rebuild options
+                    const rebuildOptions = () => {
+                        optionsContainer.innerHTML = '';
+                        const currentSpeed = getCurrentSpeed();
+
+                        speeds.forEach(speed => {
+                            const option = document.createElement('div');
+                            option.style.cssText = `
+                        padding: 6px 12px;
+                        cursor: pointer;
+                        color: white;
+                        white-space: normal;
+                        word-wrap: break-word;
+                        opacity: 0.8;
+                        transition: opacity 0.2s;
+                    `;
+                            option.textContent = `${speed}x`;
+
+                            // Highlight selected option
+                            if (Math.abs(speed - currentSpeed) < 0.01) {
+                                option.style.opacity = '1';
+                                option.style.fontWeight = 'bold';
+                            }
+
+                            // Hover effect
+                            option.addEventListener('mouseenter', () => {
+                                option.style.opacity = '1';
+                            });
+                            option.addEventListener('mouseleave', () => {
+                                if (Math.abs(speed - getCurrentSpeed()) >= 0.01) {
+                                    option.style.opacity = '0.8';
+                                }
+                            });
+
+                            // Add click handler
+                            option.addEventListener('click', (e) => {
+                                e.stopPropagation();
+
+                                if (this.ytPlayer && this.ytPlayer.setPlaybackRate) {
+                                    this.ytPlayer.setPlaybackRate(speed);
+                                }
+
+                                // Update trigger text
+                                trigger.childNodes[0].textContent = `${speedText}: ${speed}x`;
+
+                                // Rebuild to update selection
+                                setTimeout(() => {
+                                    rebuildOptions();
+                                }, 50);
+                            });
+
+                            optionsContainer.appendChild(option);
+                        });
+                    };
+
+                    // Toggle expanded/collapsed state
+                    let isExpanded = false;
+                    trigger.addEventListener('click', (e) => {
+                        e.stopPropagation();
+
+                        isExpanded = !isExpanded;
+
+                        if (isExpanded) {
+                            rebuildOptions();
+                            optionsContainer.style.display = 'block';
+                            arrow.style.transform = 'rotate(180deg)';
+                            setTimeout(() => this.updateMenuHeight(), 10);
+                        } else {
+                            optionsContainer.style.display = 'none';
+                            arrow.style.transform = 'rotate(0deg)';
+                            setTimeout(() => this.updateMenuHeight(), 10);
+                        }
+                    });
+
+                    // Assemble
+                    speedWrapper.appendChild(trigger);
+                    speedWrapper.appendChild(optionsContainer);
+
+                    // Insert after subtitles wrapper
+                    const subtitlesWrapper = settingsMenu.querySelector('.yt-subtitles-wrapper');
+                    if (subtitlesWrapper) {
+                        subtitlesWrapper.insertAdjacentElement('afterend', speedWrapper);
+                    } else {
+                        settingsMenu.insertBefore(speedWrapper, settingsMenu.firstChild);
+                    }
+                }
+            }
         }
 
         hidePipFromSettingsMenuOnly() {
@@ -840,6 +850,7 @@ saveUserNativeControlsPreference(showNative) {
                 /(?:youtube\.com\/watch\?v=)([^&\n?#]+)/,
                 /(?:youtu\.be\/)([^&\n?#]+)/,
                 /(?:youtube\.com\/embed\/)([^&\n?#]+)/,
+                /(?:youtube\.com\/shorts\/)([^&\n?#]+)/,
                 /^([a-zA-Z0-9_-]{11})$/
             ];
 
@@ -848,6 +859,131 @@ saveUserNativeControlsPreference(showNative) {
                 if (match && match[1]) return match[1];
             }
             return null;
+        }
+
+        /**
+         * Reset Short auto-loop end detection tracking state
+         */
+        resetEndDetectionState() {
+            this.lastPlaybackTime = 0;
+            this.wasNearEnd = false;
+            this.lastNearEndAt = 0;
+            this.nativeEndedFired = false;
+            this.shortEndTriggered = false;
+            this.suppressNextPauseEvent = false;
+            if (this.suppressPauseTimer) {
+                clearTimeout(this.suppressPauseTimer);
+                this.suppressPauseTimer = null;
+            }
+        }
+
+        /**
+         * Detect whether a YouTube Short wrapped back to 0 instead of firing YT.PlayerState.ENDED
+         * @param {number} currentTime - Current playback position in seconds
+         * @param {number} duration - Total video duration in seconds
+         */
+        checkShortAutoLoopEnd(currentTime, duration) {
+            if (!this.ytPlayer || this.isLiveStream) return;
+            if (this.api.player.options.loop) return;
+            if (this.nativeEndedFired || this.shortEndTriggered) return;
+            if (typeof currentTime !== 'number' || typeof duration !== 'number' || duration <= 0) return;
+
+            // Ignore transitions shortly after a manual or programmatic seek/restart
+            if (Date.now() - this.lastSeekTimestamp < 1000) {
+                this.wasNearEnd = false;
+                this.lastPlaybackTime = currentTime;
+                return;
+            }
+
+            const playbackRate = (typeof this.ytPlayer.getPlaybackRate === 'function' ? this.ytPlayer.getPlaybackRate() : 1) || 1;
+            const nearEndWindow = Math.min(Math.max(1.2, 0.75 * playbackRate), duration * 0.35);
+            const restartThreshold = Math.min(1.0, duration * 0.4);
+
+            // Mark when playback enters the end window of the video
+            if (currentTime >= duration - nearEndWindow) {
+                this.wasNearEnd = true;
+                this.lastNearEndAt = Date.now();
+            }
+
+            // Detect wrap-around from the end of the video back to the start
+            const recentlyNearEnd = this.wasNearEnd && (Date.now() - this.lastNearEndAt < 4000);
+            if (recentlyNearEnd && currentTime < restartThreshold && this.lastPlaybackTime >= duration - nearEndWindow) {
+                this.triggerSimulatedEnded(duration);
+                return;
+            }
+
+            // Clear near-end flag if playback is back inside the main body of the video
+            if (currentTime >= restartThreshold && currentTime < duration - nearEndWindow) {
+                this.wasNearEnd = false;
+            }
+
+            this.lastPlaybackTime = currentTime;
+        }
+
+        /**
+         * Simulate standard player 'ended' event when a YouTube Short auto-loops
+         * @param {number} duration - Total video duration in seconds
+         */
+        triggerSimulatedEnded(duration) {
+            if (this.shortEndTriggered || this.nativeEndedFired) return;
+
+            this.shortEndTriggered = true;
+            this.wasNearEnd = false;
+
+            if (this.api.player.options.debug) {
+                console.log('[YT Plugin] Short auto-loop detected - simulating normal ended event');
+            }
+
+            // Pause YouTube player to stop infinite native Short looping,
+            // while suppressing the resulting programmatic PAUSED state event
+            this.suppressNextPauseEvent = true;
+            if (this.suppressPauseTimer) {
+                clearTimeout(this.suppressPauseTimer);
+            }
+            this.suppressPauseTimer = setTimeout(() => {
+                this.suppressNextPauseEvent = false;
+                this.suppressPauseTimer = null;
+            }, 1500);
+
+            try {
+                if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+                    this.ytPlayer.pauseVideo();
+                }
+            } catch (error) {
+                if (this.api.player.options.debug) {
+                    console.warn('[YT Plugin] Error pausing Short on simulated end:', error);
+                }
+            }
+
+            // Update play/pause icons to match normal ENDED behavior
+            const playIcon = this.api.container.querySelector('.play-icon');
+            const pauseIcon = this.api.container.querySelector('.pause-icon');
+            if (playIcon && pauseIcon) {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
+
+            // Snap progress bar to 100% on completion
+            if (this.api.player.progressFilled) {
+                this.api.player.progressFilled.style.width = '100%';
+            }
+            if (this.api.player.progressHandle) {
+                this.api.player.progressHandle.style.left = '100%';
+            }
+
+            // Show custom controls if native YouTube UI is not active
+            if (!this.options.showYouTubeUI && !this.nativeControlsActive && this.api.player.showControlsNow) {
+                this.api.player.showControlsNow();
+            }
+
+            // Trigger main player 'ended' event identically to normal video completion
+            this.api.triggerEvent('ended', {
+                currentTime: duration,
+                duration: duration,
+                playlistInfo: typeof this.api.player.getPlaylistInfo === 'function'
+                    ? this.api.player.getPlaylistInfo()
+                    : undefined
+            });
         }
 
         loadVideo(videoId, options = {}) {
@@ -867,6 +1003,8 @@ saveUserNativeControlsPreference(showNative) {
             this.qualityCheckAttempts = 0;
             this.captionCheckAttempts = 0;
             this.subtitlesMenuCreated = false;
+            this.lastSeekTimestamp = 0;
+            this.resetEndDetectionState();
 
             this.api.video.style.pointerEvents = 'none';
 
@@ -952,7 +1090,6 @@ saveUserNativeControlsPreference(showNative) {
                     if (this.api.player.options.debug) console.log('[YT Plugin] Iframe forced to absolute positioning');
                 }
             }, 500);
-
 
             if (this.api.player.options.debug) console.log('[YT Plugin] YouTube player created');
             this.api.triggerEvent('youtubeplugin:videoloaded', { videoId });
@@ -1209,7 +1346,7 @@ saveUserNativeControlsPreference(showNative) {
 
                 // Listener temp
                 document.addEventListener('mousemove', handleGlobalMove, { once: true, passive: true });
-            }, 100); // Check ogni 100ms
+            }, 100); // Check every 100ms
         }
 
         stopMousePositionTracking() {
@@ -1218,7 +1355,6 @@ saveUserNativeControlsPreference(showNative) {
                 this.mouseCheckInterval = null;
             }
         }
-
 
         // enable or disable clicks over youtube player
         enableYouTubeClicks() {
@@ -1345,6 +1481,7 @@ saveUserNativeControlsPreference(showNative) {
                     this.api.controls.style.visibility = 'hidden';
                     this.api.controls.style.pointerEvents = 'none';
                 }
+
                 // Hide YouTube controls with CSS if showYouTubeUI is false
                 if (!this.options.showYouTubeUI) {
                     const iframe = this.ytPlayerContainer.querySelector('iframe');
@@ -1357,20 +1494,22 @@ saveUserNativeControlsPreference(showNative) {
                     }
                 }
 
-                // Hide overlay title
-                const overlayTitle = this.api.container.querySelector('.title-overlay');
-                if (overlayTitle) {
-                    overlayTitle.style.display = 'none';
-                    overlayTitle.style.opacity = '0';
-                    overlayTitle.style.visibility = 'hidden';
+                // Hide overlay title (Updated to the actual class: .player-top-bar)
+                const topBar = this.api.container.querySelector('.player-top-bar');
+                if (topBar) {
+                    topBar.style.display = 'none';
+                    topBar.style.opacity = '0';
+                    topBar.style.visibility = 'hidden';
+                    topBar.style.pointerEvents = 'none';
                 }
 
-                // Hide watermark
-                const watermark = this.api.container.querySelector('.watermark');
+                // Hide watermark (Updated to the actual class: .video-watermark)
+                const watermark = this.api.container.querySelector('.video-watermark');
                 if (watermark) {
                     watermark.style.display = 'none';
                     watermark.style.opacity = '0';
                     watermark.style.visibility = 'hidden';
+                    watermark.style.pointerEvents = 'none';
                 }
 
                 // Force hide via CSS
@@ -1391,13 +1530,11 @@ saveUserNativeControlsPreference(showNative) {
             // Set adaptive quality based on connection
             setTimeout(() => this.setAdaptiveQuality(), 1000);
 
-
             // Listen for window resize
             if (!this.resizeListenerAdded) {
                 window.addEventListener('resize', () => this.handleResponsiveLayout());
                 this.resizeListenerAdded = true;
             }
-
 
             // Load qualities with multiple attempts
             setTimeout(() => this.loadAvailableQualities(), 500);
@@ -1470,101 +1607,21 @@ saveUserNativeControlsPreference(showNative) {
 
             if (this.api.player.options.debug) console.log('YT Plugin: Setup completed');
             this.api.triggerEvent('youtubeplugin:playerready', {});
-
-        }
-
-        showYouTubeControls() {
-            console.log('[YT Plugin] 🔴 Showing YouTube controls');
-
-            // Find iframe
-            let iframe = this.api.container.querySelector('iframe');
-            if (!iframe) iframe = document.querySelector('iframe');
-
-            // Find video wrapper (contains all overlays and controls)
-            const videoWrapper = this.api.container.querySelector('.video-wrapper');
-            const controlbar = this.api.container.querySelector('.controls');
-
-            console.log('[YT Plugin] iframe:', iframe);
-            console.log('[YT Plugin] videoWrapper:', videoWrapper);
-            console.log('[YT Plugin] controlbar:', controlbar);
-
-            if (iframe) {
-                console.log('[YT Plugin]  Showing YouTube controls');
-
-                // Enable clicks on YouTube iframe
-                iframe.style.pointerEvents = 'auto';
-                iframe.style.zIndex = '9999'; // Bring to front
-
-                // Hide entire video wrapper (this hides ALL overlays and controls)
-                if (videoWrapper) {
-                    // Save original position
-                    this.originalWrapperChildren = Array.from(videoWrapper.children).filter(child => child !== iframe);
-
-                    // Hide all children except iframe
-                    this.originalWrapperChildren.forEach(child => {
-                        child.style.display = 'none';
-                    });
-
-                    console.log('[YT Plugin] Video wrapper children hidden');
-                }
-
-                // OR hide controlbar directly
-                if (controlbar) {
-                    controlbar.style.display = 'none';
-                }
-
-                // Auto-restore after 10 seconds
-                this.youtubeControlsTimeout = setTimeout(() => {
-                    console.log('[YT Plugin] ⏰ Restoring custom controls');
-                    this.hideYouTubeControls();
-                }, 10000);
-            } else {
-                console.log('[YT Plugin] ❌ iframe not found');
-            }
-        }
-
-        hideYouTubeControls() {
-            console.log('[YT Plugin] 🔙 Hiding YouTube controls');
-
-            const iframe = this.api.container.querySelector('iframe');
-            const controlbar = this.api.container.querySelector('.controls');
-
-            if (iframe) {
-                // Disable clicks on YouTube controls
-                if (!this.options.showYouTubeUI) {
-                    iframe.style.pointerEvents = 'none';
-                }
-                iframe.style.zIndex = ''; // Reset z-index
-            }
-
-            // Restore video wrapper children
-            if (this.originalWrapperChildren) {
-                this.originalWrapperChildren.forEach(child => {
-                    child.style.display = '';
-                });
-                this.originalWrapperChildren = null;
-            }
-
-            // Restore controlbar
-            if (controlbar) {
-                controlbar.style.display = '';
-            }
-
-            console.log('[YT Plugin]  Custom controls restored');
         }
 
         forceHideCustomControls() {
+            // Remove old style if it exists to refresh with new classes
             const existingStyle = document.getElementById('yt-force-hide-controls');
             if (existingStyle) {
-                return;
+                existingStyle.remove();
             }
 
             const style = document.createElement('style');
             style.id = 'yt-force-hide-controls';
             style.textContent = `
         .video-wrapper.youtube-native-ui .controls,
-        .video-wrapper.youtube-native-ui .title-overlay,
-        .video-wrapper.youtube-native-ui .watermark {
+        .video-wrapper.youtube-native-ui .player-top-bar,
+        .video-wrapper.youtube-native-ui .video-watermark {
             display: none !important;
             opacity: 0 !important;
             visibility: hidden !important;
@@ -1576,7 +1633,7 @@ saveUserNativeControlsPreference(showNative) {
             this.api.container.classList.add('youtube-native-ui');
 
             if (this.api.player.options.debug) {
-                console.log('[YT Plugin] CSS injected - custom elements hidden (simple method)');
+                console.log('[YT Plugin] CSS injected - custom elements hidden (updated classes)');
             }
         }
 
@@ -2046,7 +2103,7 @@ saveUserNativeControlsPreference(showNative) {
                 badge.textContent = 'REPLAY';
                 badge.style.background = '#555555';
                 badge.style.cursor = 'default';
-                badge.title = 'Registrazione del live stream';
+                badge.title = 'Live stream recording';
 
                 // Remove click handler since there's no live to seek to
                 const newBadge = badge.cloneNode(true);
@@ -2188,9 +2245,9 @@ saveUserNativeControlsPreference(showNative) {
         }
 
         /**
-     * Inject CSS styles for controlbar and title overlay gradients
-     * Uses YouTube-specific selectors to avoid conflicts with other plugins
-        */
+         * Inject CSS styles for controlbar and title overlay gradients
+         * Uses YouTube-specific selectors to avoid conflicts with other plugins
+         */
         injectControlbarGradientStyles() {
             // Check if styles are already injected
             if (document.getElementById('yt-controlbar-gradient-styles')) {
@@ -2524,24 +2581,24 @@ saveUserNativeControlsPreference(showNative) {
             }
         }
 
-createYouTubeControlsButton() {
-    // Check if button is enabled
-    if (!this.options.showNativeControlsButton) {
-        if (this.api.player.options.debug) {
-            console.log('[YT Plugin] Native controls button disabled by option');
-        }
-        return;
-    }
+        createYouTubeControlsButton() {
+            // Check if button is enabled
+            if (!this.options.showNativeControlsButton) {
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] Native controls button disabled by option');
+                }
+                return;
+            }
 
-    // Check if button already exists
-    if (this.api.container.querySelector('.youtube-controls-btn')) {
-        return;
-    }
+            // Check if button already exists
+            if (this.api.container.querySelector('.youtube-controls-btn')) {
+                return;
+            }
 
-    const controlsRight = this.api.container.querySelector('.controls-right');
-    if (!controlsRight) return;
+            const controlsRight = this.api.container.querySelector('.controls-right');
+            if (!controlsRight) return;
 
-    const buttonHTML = `
+            const buttonHTML = `
     <button class="control-btn youtube-controls-btn" title="Show YouTube Controls">
         <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
             <path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418 c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768 C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.861-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M10,15.464V8.536L16,12L10,15.464z"/>
@@ -2549,37 +2606,36 @@ createYouTubeControlsButton() {
     </button>
 `;
 
-    // Insert before quality control
-    const qualityControl = controlsRight.querySelector('.quality-control');
-    if (qualityControl) {
-        qualityControl.insertAdjacentHTML('beforebegin', buttonHTML);
-    } else {
-        const fullscreenBtn = controlsRight.querySelector('.fullscreen-btn');
-        if (fullscreenBtn) {
-            fullscreenBtn.insertAdjacentHTML('beforebegin', buttonHTML);
-        } else {
-            controlsRight.insertAdjacentHTML('beforeend', buttonHTML);
-        }
-    }
-
-    // Add click listener
-    const btn = this.api.container.querySelector('.youtube-controls-btn');
-    if (btn) {
-        btn.addEventListener('click', () => {
-            if (this.api.player.options.debug) {
-                console.log('[YT Plugin] YouTube controls button clicked');
+            // Insert before quality control
+            const qualityControl = controlsRight.querySelector('.quality-control');
+            if (qualityControl) {
+                qualityControl.insertAdjacentHTML('beforebegin', buttonHTML);
+            } else {
+                const fullscreenBtn = controlsRight.querySelector('.fullscreen-btn');
+                if (fullscreenBtn) {
+                    fullscreenBtn.insertAdjacentHTML('beforebegin', buttonHTML);
+                } else {
+                    controlsRight.insertAdjacentHTML('beforeend', buttonHTML);
+                }
             }
-            //  CHANGED: Call the new method instead
-            this.showYouTubeNativeControls();
-        });
 
-        // Add custom styling to make it red like YouTube
-        btn.style.color = '#ff0000';
+            // Add click listener
+            const btn = this.api.container.querySelector('.youtube-controls-btn');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (this.api.player.options.debug) {
+                        console.log('[YT Plugin] YouTube controls button clicked');
+                    }
+                    this.showYouTubeNativeControls();
+                });
 
-        if (this.api.player.options.debug) {
-            console.log('[YT Plugin] YouTube controls button created');
-        }
-    }
+                // Add custom styling to make it red like YouTube
+                btn.style.color = '#ff0000';
+
+                if (this.api.player.options.debug) {
+                    console.log('[YT Plugin] YouTube controls button created');
+                }
+            }
         }
 
         /**
@@ -3109,13 +3165,12 @@ createYouTubeControlsButton() {
             if (this.api.player.options.debug) console.log('[YT Plugin] Subtitles control created');
             this.buildSubtitlesMenu();
             this.bindSubtitlesButton();
-            //this.checkInitialCaptionState();
             this.startCaptionStateMonitoring();
         }
 
         /**
- * Build the subtitles menu
- */
+         * Build the subtitles menu
+         */
         buildSubtitlesMenu() {
             const subtitlesMenu = this.api.container.querySelector('.subtitles-menu');
             if (!subtitlesMenu) return;
@@ -3153,7 +3208,7 @@ createYouTubeControlsButton() {
                 });
             }
 
-            // SEMPRE aggiungi l'opzione Auto-generated (sia con che senza tracklist)
+            // Always add Auto-generated option (with or without tracklist)
             const autoOption = document.createElement('div');
             autoOption.className = 'subtitles-option';
             autoOption.textContent = 'Auto-generated';
@@ -3403,61 +3458,8 @@ createYouTubeControlsButton() {
         }
 
         /**
-         * Enable automatic captions
+         * Check initial caption state
          */
-        enableAutoCaptions() {
-            if (!this.ytPlayer) return false;
-
-            try {
-                this.ytPlayer.setOption('captions', 'reload', true);
-                this.ytPlayer.loadModule('captions');
-
-                this.captionsEnabled = true;
-                this.currentCaption = null;
-                this.currentTranslation = null;
-
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Auto captions enabled');
-                }
-
-                return true;
-            } catch (error) {
-                if (this.api.player.options.debug) {
-                    console.error('[YT Plugin] Error enabling auto captions:', error);
-                }
-                return false;
-            }
-        }
-
-        /**
-         * Disable captions
-         */
-        disableCaptions() {
-            if (!this.ytPlayer) return false;
-
-            try {
-                this.ytPlayer.unloadModule('captions');
-
-                this.captionsEnabled = false;
-                this.currentCaption = null;
-                this.currentTranslation = null;
-
-                if (this.api.player.options.debug) {
-                    console.log('[YT Plugin] Captions disabled');
-                }
-
-                return true;
-            } catch (error) {
-                if (this.api.player.options.debug) {
-                    console.error('[YT Plugin] Error disabling captions:', error);
-                }
-                return false;
-            }
-        }
-
-        /**
-        * Check initial caption state
-        */
         checkInitialCaptionState() {
             setTimeout(() => {
                 try {
@@ -3466,7 +3468,7 @@ createYouTubeControlsButton() {
                     if (currentTrack && currentTrack.languageCode) {
                         this.captionsEnabled = true;
 
-                        // erify if translation is active
+                        // verify if translation is active
                         if (currentTrack.translationLanguage) {
                             this.currentTranslation = currentTrack.translationLanguage.languageCode;
 
@@ -3497,7 +3499,7 @@ createYouTubeControlsButton() {
                                 this.currentCaption = currentTrack.languageCode;
                                 this.updateMenuSelection(`caption-${captionIndex}`);
                             } else {
-                                // Se non trovato nella lista, è auto-generated
+                                // Not found in list, treat as auto-generated
                                 this.updateMenuSelection('auto');
                             }
                         }
@@ -3516,9 +3518,9 @@ createYouTubeControlsButton() {
             }, 2000);
         }
 
-/**
- * Monitor caption state
- */
+        /**
+         * Monitor caption state
+         */
         startCaptionStateMonitoring() {
             if (this.captionStateCheckInterval) {
                 clearInterval(this.captionStateCheckInterval);
@@ -3677,30 +3679,30 @@ createYouTubeControlsButton() {
         }
 
         /**
-    * Hide controls specifically for YouTube player
-    * Bypasses the video.paused check in hideControlsNow()
-        */
+         * Hide controls specifically for YouTube player
+         * Bypasses the video.paused check in hideControlsNow()
+         */
         hideControlsForYouTube() {
             if (this.api.player.options.debug) {
-            console.log('🔴 hideControlsForYouTube() called');
-        }
+                console.log('🔴 hideControlsForYouTube() called');
+            }
             // Check mouse over controls (same as player)
             const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
             if (this.api.player.mouseOverControls && !isTouchDevice) {
                 if (this.api.player.options.debug) {
-                console.log('   ❌ Not hiding - mouse still over controls');
-            }
+                    console.log('   ❌ Not hiding - mouse still over controls');
+                }
                 return;
             }
 
             // control the youtube status directly to allow hiding controls even when the video is paused (e.g. members-only paused state)
             if (this.ytPlayer) {
                 const ytState = this.ytPlayer.getPlayerState();
-                // Se YouTube è in pausa, non nascondere
+                // If YouTube is paused, do not hide controls
                 if (ytState === 2) { // YT.PlayerState.PAUSED
                     if (this.api.player.options.debug) {
-                    console.log('   ❌ Not hiding - YouTube player is paused');
-                }
+                        console.log('   ❌ Not hiding - YouTube player is paused');
+                    }
                     return;
                 }
             }
@@ -3708,8 +3710,8 @@ createYouTubeControlsButton() {
             // hide controls
             if (this.api.controls) {
                 if (this.api.player.options.debug) {
-                console.log('    Hiding controls...');
-            }
+                    console.log('    Hiding controls...');
+                }
                 this.api.controls.classList.remove('show');
 
                 // Remove has-controls class from container
@@ -3748,8 +3750,8 @@ createYouTubeControlsButton() {
         }
 
         /**
- * Reset YouTube auto-hide timer (chiamato da mouse move)
- */
+         * Reset YouTube auto-hide timer (called on mouse move)
+         */
         resetYouTubeAutoHideTimer() {
             // delete timer if set
             if (this.youtubeAutoHideTimer) {
@@ -3773,7 +3775,7 @@ createYouTubeControlsButton() {
             if (this.ytPlayer) {
                 const ytState = this.ytPlayer.getPlayerState();
                 // do not start timer if YouTube is paused or unstarted (e.g. members-only paused state)
-                if (ytState === 2 || ytState === -1) { // PAUSED o UNSTARTED
+                if (ytState === 2 || ytState === -1) { // PAUSED or UNSTARTED
                     if (this.api.player.options.debug) {
                         console.log('🔄 Not starting timer - YouTube paused/unstarted');
                     }
@@ -3809,6 +3811,29 @@ createYouTubeControlsButton() {
             if (this.api.player.options.debug)
                 console.log('YT Plugin State:', states[event.data], event.data);
 
+            // Suppress programmatic PAUSED event triggered while stopping a Short's native loop
+            if (event.data === YT.PlayerState.PAUSED && this.suppressNextPauseEvent) {
+                this.suppressNextPauseEvent = false;
+                if (this.suppressPauseTimer) {
+                    clearTimeout(this.suppressPauseTimer);
+                    this.suppressPauseTimer = null;
+                }
+                return;
+            }
+
+            // Immediately check for Short wrap-around when entering BUFFERING or PLAYING
+            if ((event.data === YT.PlayerState.BUFFERING || event.data === YT.PlayerState.PLAYING) &&
+                this.ytPlayer &&
+                typeof this.ytPlayer.getCurrentTime === 'function' &&
+                typeof this.ytPlayer.getDuration === 'function') {
+                // Allow replay detection if the user manually restarts playback after simulated end
+                if (event.data === YT.PlayerState.PLAYING && this.shortEndTriggered && !this.suppressNextPauseEvent) {
+                    this.shortEndTriggered = false;
+                    this.nativeEndedFired = false;
+                }
+                this.checkShortAutoLoopEnd(this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
+            }
+
             // Handle auto-hide based on YouTube state
             if (event.data === YT.PlayerState.PAUSED) {
                 // Don't show controls if native controls are active
@@ -3836,22 +3861,22 @@ createYouTubeControlsButton() {
                     console.log('YT Plugin: Video paused - controls locked visible');
             }
 
-        if (event.data === YT.PlayerState.PLAYING) {
-            if (this.api.player.options.debug) {
-                console.log('🟢 PLAYING STATE HANDLER:');
-        }
+            if (event.data === YT.PlayerState.PLAYING) {
+                if (this.api.player.options.debug) {
+                    console.log('🟢 PLAYING STATE HANDLER:');
+                }
                 if (this.api.container) {
                     this.api.container.classList.remove('video-paused');
                 }
 
-            if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
-                if (this.api.player.options.debug) {
-                    console.log('   - Auto-hide system is enabled and initialized');
-            }
-                if (this.api.player.showControlsNow) {
+                if (this.api.player.options.autoHide && this.api.player.autoHideInitialized) {
                     if (this.api.player.options.debug) {
-                    console.log('   - Calling showControlsNow()');
-                }
+                        console.log('   - Auto-hide system is enabled and initialized');
+                    }
+                    if (this.api.player.showControlsNow) {
+                        if (this.api.player.options.debug) {
+                            console.log('   - Calling showControlsNow()');
+                        }
                         this.api.player.showControlsNow();
                     }
 
@@ -3866,23 +3891,23 @@ createYouTubeControlsButton() {
                         this.youtubeAutoHideTimer = null;
                     }
 
-                // use a separate timer variable for YouTube auto-hide to avoid conflicts with the main player timer (which may be used for other purposes)
-                if (this.api.player.options.debug) {
-                console.log('   - Starting YouTube plugin auto-hide timer (separate variable)');
-            }
-                this.youtubeAutoHideTimer = setTimeout(() => {
+                    // use a separate timer variable for YouTube auto-hide to avoid conflicts with the main player timer
                     if (this.api.player.options.debug) {
-                    console.log('   ⏰ YouTube plugin timer expired!');
-                }
+                        console.log('   - Starting YouTube plugin auto-hide timer (separate variable)');
+                    }
+                    this.youtubeAutoHideTimer = setTimeout(() => {
+                        if (this.api.player.options.debug) {
+                            console.log('   ⏰ YouTube plugin timer expired!');
+                        }
                         this.hideControlsForYouTube();
                     }, this.api.player.options.autoHideDelay || 3000);
-                if (this.api.player.options.debug) {
-                console.log('    YouTube timer started:', this.youtubeAutoHideTimer);
-            }
+                    if (this.api.player.options.debug) {
+                        console.log('    YouTube timer started:', this.youtubeAutoHideTimer);
+                    }
                 }
-            if (this.api.player.options.debug) {
-            console.log('🟢 PLAYING handler completed');
-        }
+                if (this.api.player.options.debug) {
+                    console.log('🟢 PLAYING handler completed');
+                }
             }
 
             // Handle when video fails to autoplay (stays in UNSTARTED)
@@ -4002,6 +4027,11 @@ createYouTubeControlsButton() {
                     break;
 
                 case YT.PlayerState.ENDED:
+                    if (this.shortEndTriggered) {
+                        break;
+                    }
+                    this.nativeEndedFired = true;
+                    this.wasNearEnd = false;
                     this.api.triggerEvent('ended', {});
 
                     // Show play icon for replay
@@ -4087,6 +4117,8 @@ createYouTubeControlsButton() {
             // Override seek method
             const originalSetCurrentTime = this.player.setCurrentTime;
             this.player.seek = (time) => {
+                this.lastSeekTimestamp = Date.now();
+                this.wasNearEnd = false;
                 if (this.ytPlayer && this.ytPlayer.seekTo) {
                     this.ytPlayer.seekTo(time, true);
                 } else if (originalSetCurrentTime) {
@@ -4096,6 +4128,8 @@ createYouTubeControlsButton() {
 
             const originalSeek = this.player.seek;
             this.player.seek = (time) => {
+                this.lastSeekTimestamp = Date.now();
+                this.wasNearEnd = false;
                 if (this.ytPlayer && this.ytPlayer.seekTo) {
                     this.ytPlayer.seekTo(time, true);
                 } else if (originalSeek) {
@@ -4105,6 +4139,8 @@ createYouTubeControlsButton() {
 
             // Ensure setCurrentTime also works
             this.player.setCurrentTime = (time) => {
+                this.lastSeekTimestamp = Date.now();
+                this.wasNearEnd = false;
                 if (this.ytPlayer && this.ytPlayer.seekTo) {
                     this.ytPlayer.seekTo(time, true);
                 } else if (originalSetCurrentTime) {
@@ -4227,6 +4263,8 @@ createYouTubeControlsButton() {
                     const duration = this.ytPlayer.getDuration();
                     const targetTime = percentage * duration;
 
+                    this.lastSeekTimestamp = Date.now();
+                    this.wasNearEnd = false;
                     this.ytPlayer.seekTo(targetTime, true);
 
                     const progress = percentage * 100;
@@ -4271,7 +4309,7 @@ createYouTubeControlsButton() {
                     isSeeking = false;
                 });
 
-                // TOUCH EVENTS - AGGIUNTI QUI!
+                // TOUCH EVENTS
                 newProgressContainer.addEventListener('touchstart', (e) => {
                     e.preventDefault(); // scroll prevention during drag
                     isSeeking = true;
@@ -4326,6 +4364,14 @@ createYouTubeControlsButton() {
                     const currentTime = this.ytPlayer.getCurrentTime();
                     const duration = this.ytPlayer.getDuration();
 
+                    // Detect YouTube Shorts auto-loop when ENDED state is not emitted
+                    const playerState = typeof this.ytPlayer.getPlayerState === 'function'
+                        ? this.ytPlayer.getPlayerState()
+                        : null;
+                    if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING) {
+                        this.checkShortAutoLoopEnd(currentTime, duration);
+                    }
+
                     if (this.api.player.progressFilled && duration) {
                         let progress;
 
@@ -4363,7 +4409,7 @@ createYouTubeControlsButton() {
                 }
             }, 250);
 
-            // **Cursor sync interval - only if the option is true**
+            // Cursor sync interval - only if the option is true
             if (!this.options.showYouTubeUI && this.api.player.options.hideCursor) {
                 if (this.cursorSyncInterval) {
                     clearInterval(this.cursorSyncInterval);
@@ -4391,7 +4437,7 @@ createYouTubeControlsButton() {
                 if (this.cursorSyncInterval) {
                     clearInterval(this.cursorSyncInterval);
                     this.cursorSyncInterval = null;
-                    this.showCursor(); // Assicurati che il cursore sia visibile
+                    this.showCursor(); // Ensure cursor is visible
                 }
             }
         }
@@ -4450,7 +4496,6 @@ createYouTubeControlsButton() {
                 this.api.container.style.setProperty('--player-volume-fill', `${initialVolume}%`);
             }
 
-            // Handle volume changes with proper unmute logic
             // VOLUME SLIDER DRAG SUPPORT
             let isDraggingVolume = false;
 
@@ -4605,7 +4650,6 @@ createYouTubeControlsButton() {
                 }
             }, { passive: true });
 
-
             // Update tooltip position on mousemove
             newVolumeSlider.addEventListener('mousemove', (e) => {
                 const rect = newVolumeSlider.getBoundingClientRect();
@@ -4677,9 +4721,9 @@ createYouTubeControlsButton() {
         }
 
         /**
-     * Fetch video chapters from description using YouTube Data API v3
-     * Uses localStorage for persistent caching
-        */
+         * Fetch video chapters from description using YouTube Data API v3
+         * Uses localStorage for persistent caching
+         */
         async fetchVideoChapters(videoId) {
 
             // Check if chapters display is enabled
@@ -4791,9 +4835,9 @@ createYouTubeControlsButton() {
         }
 
         /**
- * Parse chapters from video description
- * Validates YouTube chapter requirements: ≥3 chapters, starts at 0:00
- */
+         * Parse chapters from video description
+         * Validates YouTube chapter requirements: ≥3 chapters, starts at 0:00
+         */
         parseChaptersFromDescription(description) {
             if (!description) return null;
 
@@ -4859,8 +4903,8 @@ createYouTubeControlsButton() {
         }
 
         /**
-        * Display chapter markers on progress bar with YouTube-style segments
-        */
+         * Display chapter markers on progress bar with YouTube-style segments
+         */
         displayChaptersOnProgressBar(chapters) {
 
             // Check if chapters display is enabled
@@ -5089,8 +5133,8 @@ createYouTubeControlsButton() {
         }
 
         /**
-        * Initialize chapter display in top bar subtitle (instead of title overlay)
-        */
+         * Initialize chapter display in top bar subtitle (instead of title overlay)
+         */
         initChapterDisplayInOverlay() {
             if (!this.chapters || this.chapters.length === 0) return;
 
@@ -5148,8 +5192,8 @@ createYouTubeControlsButton() {
         }
 
         /**
-        * Update chapter name in top bar subtitle based on current time
-        */
+         * Update chapter name in top bar subtitle based on current time
+         */
         updateChapterNameDisplay(currentTime) {
             // Use topBar instead of title-overlay
             const chapterElement = this.api.container.querySelector('.player-top-bar .video-subtitle.chapter-name');
@@ -5371,6 +5415,8 @@ createYouTubeControlsButton() {
         dispose() {
             if (this.api.player.options.debug) console.log('[YT Plugin] Disposing');
 
+            this.resetEndDetectionState();
+
             // Stop cursor sync interval
             if (this.cursorSyncInterval) {
                 clearInterval(this.cursorSyncInterval);
@@ -5419,11 +5465,6 @@ createYouTubeControlsButton() {
                 this.bufferMonitorInterval = null;
             }
 
-            if (this.qualityMonitorInterval) {
-                clearInterval(this.qualityMonitorInterval);
-                this.qualityMonitorInterval = null;
-            }
-
             this.removeMouseMoveOverlay();
 
             this.api.container.classList.remove('youtube-active');
@@ -5445,23 +5486,6 @@ createYouTubeControlsButton() {
             }
 
             // Restore normal UI when destroying
-            if (this.isLiveStream) {
-                this.showTimeDisplay();
-                this.restoreProgressBarNormal();
-
-                const liveBadge = this.api.container.querySelector('.live-badge');
-                if (liveBadge) {
-                    liveBadge.remove();
-                }
-            }
-
-            // Clear live stream intervals
-            if (this.liveCheckInterval) {
-                clearInterval(this.liveCheckInterval);
-                this.liveCheckInterval = null;
-            }
-
-            // Restore normal UI
             if (this.isLiveStream) {
                 this.showTimeDisplay();
                 this.restoreProgressBarNormal();

@@ -873,6 +873,11 @@ constructor(videoElement, options = {}) {
         this.video.style.visibility = 'hidden';
     }
 
+    // Track global listeners and timers for proper cleanup in dispose()
+    this._globalListeners = [];
+    this.isDisposed = false;
+    this.audioWaveRafId = null;
+
     try {
         this.interceptAutoLoading();
         this.createPlayerStructure();
@@ -921,7 +926,8 @@ constructor(videoElement, options = {}) {
 
             // canvas
             const draw = () => {
-                requestAnimationFrame(draw);
+                if (this.isDisposed) return;
+                this.audioWaveRafId = requestAnimationFrame(draw);
                 this.analyser.getByteTimeDomainData(dataArray);
 
                 canvasCtx.fillStyle = '#222';
@@ -980,6 +986,108 @@ decodeHTMLEntities(text) {
     const textarea = document.createElement('textarea');
     textarea.innerHTML = text;
     return textarea.value;
+}
+
+/**
+ * Validate URL to block javascript: and unsafe data: schemes
+ * @param {string} url - URL to validate
+ * @returns {string} Safe URL or empty string
+ */
+sanitizeUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+
+    // Reject whitespace, quotes, or parentheses that could break CSS url(...)
+    if (/[\s"'()<>]/.test(trimmed)) {
+        return '';
+    }
+
+    // Allow relative paths (excluding protocol-relative '//')
+    if (/^\/(?!\/)/.test(trimmed) || /^\.\.?\//.test(trimmed)) {
+        return trimmed;
+    }
+
+    // Allow safe raster data URIs only (explicitly exclude SVG)
+    if (/^data:image\/(?:png|jpeg|jpg|gif|webp);base64,[a-z0-9+/=]+$/i.test(trimmed)) {
+        return trimmed;
+    }
+
+    try {
+        const parsed = new URL(trimmed, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            return trimmed;
+        }
+    } catch (e) {
+        return '';
+    }
+
+    return '';
+}
+
+/**
+ * Sanitize HTML using an allowlist of safe tags and attributes
+ * @param {string} html - Raw HTML string
+ * @returns {string} Sanitized HTML
+ */
+sanitizeHTML(html) {
+    if (!html || typeof html !== 'string') return '';
+
+    const allowedTags = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'UL', 'OL', 'LI', 'SPAN', 'DIV', 'A']);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const cleanNode = (node) => {
+        const children = Array.from(node.childNodes);
+        for (const child of children) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                continue;
+            }
+            if (child.nodeType !== Node.ELEMENT_NODE) {
+                child.remove();
+                continue;
+            }
+            if (!allowedTags.has(child.tagName)) {
+                const textNode = document.createTextNode(child.textContent || '');
+                child.replaceWith(textNode);
+                continue;
+            }
+
+            const safeHref = child.tagName === 'A'
+                ? this.sanitizeUrl(child.getAttribute('href') || '')
+                : '';
+
+            for (const attr of Array.from(child.attributes)) {
+                child.removeAttribute(attr.name);
+            }
+
+            if (child.tagName === 'A' && safeHref) {
+                child.setAttribute('href', safeHref);
+                child.setAttribute('target', '_blank');
+                child.setAttribute('rel', 'noopener noreferrer');
+            }
+
+            cleanNode(child);
+        }
+    };
+
+    cleanNode(doc.body);
+    return doc.body.innerHTML;
+}
+
+/**
+ * Register a global event listener and track it for cleanup in dispose()
+ * @param {EventTarget} target - window or document
+ * @param {string} type - Event name
+ * @param {Function} handler - Listener function
+ * @param {Object|boolean} options - Event options
+ */
+addTrackedListener(target, type, handler, options) {
+    if (!this._globalListeners) {
+        this._globalListeners = [];
+    }
+    target.addEventListener(type, handler, options);
+    this._globalListeners.push({ target, type, handler, options });
 }
 
 // check if the device is Fire TV
@@ -1362,8 +1470,8 @@ createInitialLoading() {
     initialLoader.innerHTML = `
         <div class="loading-spinner-wrap">
             <div class="loading-spinner"></div>
-            ${this.options.loadingLogo
-            ? `<img class="loading-spinner-logo" src="${this.options.loadingLogo}" alt="" />`
+            ${this.sanitizeUrl(this.options.loadingLogo)
+            ? `<img class="loading-spinner-logo" src="${this.sanitizeUrl(this.options.loadingLogo)}" alt="" />`
             : ''}
         </div>
         <div class="loading-text"></div>
@@ -1379,8 +1487,8 @@ createLoadingOverlay() {
     overlay.innerHTML = `
         <div class="loading-spinner-wrap">
             <div class="loading-spinner"></div>
-            ${this.options.loadingLogo
-            ? `<img class="loading-spinner-logo" src="${this.options.loadingLogo}" alt="" />`
+            ${this.sanitizeUrl(this.options.loadingLogo)
+            ? `<img class="loading-spinner-logo" src="${this.sanitizeUrl(this.options.loadingLogo)}" alt="" />`
             : ''}
         </div>
         <div class="loading-text"></div>
@@ -1688,7 +1796,7 @@ setupMenuToggles() {
         }
     });
 
-    document.addEventListener('click', (e) => {
+    this.addTrackedListener(document, 'click', (e) => {
         if (!this.controls) return;
         if (!this.controls.contains(e.target)) {
             this.closeAllMenus();
@@ -1750,7 +1858,7 @@ createTopBar() {
     // Settings button
     const settingsBtn = document.createElement('button');
     settingsBtn.className = 'control-btn settings-btn';
-    settingsBtn.setAttribute('data-tooltip', 'settingsmenu');
+    settingsBtn.setAttribute('data-tooltip', 'settings_menu');
 
     const icon = document.createElement('span');
     icon.className = 'icon';
@@ -1990,19 +2098,6 @@ getMobileVolumeSlider() {
     return this.options.mobileVolumeSlider;
 }
 
-initVolumeTooltip() {
-
-    this.createVolumeTooltip();
-
-    setTimeout(() => {
-        this.updateVolumeTooltip();
-    }, 200);
-
-    if (this.options.debug) {
-        console.log('Dynamic volume tooltip inizializzation');
-    }
-}
-
 setupSeekTooltip() {
     if (!this.options.showSeekTooltip || !this.progressContainer || !this.seekTooltip) return;
 
@@ -2176,8 +2271,19 @@ startSeeking(e) {
 
     this.isUserSeeking = true;
     this.progressContainer.classList.add('seeking');
+
+    // Attach non-passive touchmove only while actively seeking to avoid blocking mobile page scroll
+    if (!this._onDocumentTouchMove) {
+        this._onDocumentTouchMove = (touchEvent) => {
+            if (this.isUserSeeking) {
+                if (touchEvent.cancelable) touchEvent.preventDefault();
+                this.continueSeeking(touchEvent);
+            }
+        };
+        document.addEventListener('touchmove', this._onDocumentTouchMove, { passive: false });
+    }
+
     this.seek(e);
-    e.preventDefault();
 
     // Show controls during seeking
     if (this.options.autoHide && this.autoHideInitialized) {
@@ -2195,7 +2301,14 @@ continueSeeking(e) {
 
 endSeeking() {
     this.isUserSeeking = false;
-    this.progressContainer.classList.remove('seeking');
+    if (this.progressContainer) {
+        this.progressContainer.classList.remove('seeking');
+    }
+
+    if (this._onDocumentTouchMove) {
+        document.removeEventListener('touchmove', this._onDocumentTouchMove, { passive: false });
+        this._onDocumentTouchMove = null;
+    }
 }
 
 seek(e) {
@@ -2382,7 +2495,9 @@ createBrandLogo() {
     // Create brand logo image
     const logo = document.createElement('img');
     logo.className = 'brand-logo';
-    logo.src = this.options.brandLogoUrl;
+    const safeLogoUrl = this.sanitizeUrl(this.options.brandLogoUrl);
+    if (!safeLogoUrl) return;
+    logo.src = safeLogoUrl;
     logo.alt = 'Brand logo';
 
     // Add tooltip ONLY if link URL is present
@@ -2403,12 +2518,13 @@ createBrandLogo() {
     };
 
     // Add click functionality if link URL is provided
-    if (this.options.brandLogoLinkUrl) {
+    const safeBrandLink = this.sanitizeUrl(this.options.brandLogoLinkUrl);
+    if (safeBrandLink) {
         logo.style.cursor = 'pointer';
         logo.addEventListener('click', (e) => {
             e.stopPropagation();
-            window.open(this.options.brandLogoLinkUrl, '_blank', 'noopener,noreferrer');
-            if (this.options.debug) console.log('Brand logo clicked, opening:', this.options.brandLogoLinkUrl);
+            window.open(safeBrandLink, '_blank', 'noopener,noreferrer');
+            if (this.options.debug) console.log('Brand logo clicked, opening:', safeBrandLink);
         });
     } else {
         logo.style.cursor = 'default';
@@ -2587,7 +2703,9 @@ createPosterOverlay() {
     // Create poster overlay element
     const posterOverlay = document.createElement('div');
     posterOverlay.className = 'video-poster-overlay';
-    posterOverlay.style.backgroundImage = `url(${posterUrl})`;
+    const safePosterUrl = this.sanitizeUrl(posterUrl);
+    if (!safePosterUrl) return;
+    posterOverlay.style.backgroundImage = `url("${safePosterUrl}")`;
 
     // Insert poster overlay before controls
     if (this.controls) {
@@ -2671,10 +2789,12 @@ hidePoster() {
  * @param {String} posterUrl - URL of the poster image
  */
 setPoster(posterUrl) {
-    if (!posterUrl) {
-        if (this.options.debug) console.warn('🖼️ Invalid poster URL');
+    const safePosterUrl = this.sanitizeUrl(posterUrl);
+    if (!safePosterUrl) {
+        if (this.options.debug) console.warn('Invalid poster URL');
         return this;
     }
+    posterUrl = safePosterUrl;
 
     this.options.poster = posterUrl;
 
@@ -2685,7 +2805,7 @@ setPoster(posterUrl) {
 
     // Update or create poster overlay
     if (this.posterOverlay) {
-        this.posterOverlay.style.backgroundImage = `url(${posterUrl})`;
+        this.posterOverlay.style.backgroundImage = `url("${posterUrl}")`;
     } else {
         this.createPosterOverlay();
         this.bindPosterEvents();
@@ -2820,6 +2940,49 @@ getAvailableSeekHandleShapes() {
 }
 
 dispose() {
+    this.isDisposed = true;
+
+    // Remove all tracked global window/document listeners
+    if (this._globalListeners) {
+        this._globalListeners.forEach(({ target, type, handler, options }) => {
+            target.removeEventListener(type, handler, options);
+        });
+        this._globalListeners = [];
+    }
+
+    if (this.resizeHandler) {
+        window.removeEventListener('resize', this.resizeHandler);
+        this.resizeHandler = null;
+    }
+
+    if (this.watermarkResizeHandler) {
+        window.removeEventListener('resize', this.watermarkResizeHandler);
+        this.watermarkResizeHandler = null;
+    }
+
+    if (this.container) {
+        if (this._onContainerTouchStart) {
+            this.container.removeEventListener('touchstart', this._onContainerTouchStart);
+        }
+        if (this._onContainerTouchEnd) {
+            this.container.removeEventListener('touchend', this._onContainerTouchEnd);
+        }
+    }
+
+    if (this.audioWaveRafId) {
+        cancelAnimationFrame(this.audioWaveRafId);
+        this.audioWaveRafId = null;
+    }
+
+    if (this.audioCtx && typeof this.audioCtx.close === 'function') {
+        this.audioCtx.close().catch(() => { });
+        this.audioCtx = null;
+    }
+
+    if (typeof this.disableCustomSubtitles === 'function') {
+        this.disableCustomSubtitles();
+    }
+
     if (this.qualityMonitorInterval) {
         clearInterval(this.qualityMonitorInterval);
         this.qualityMonitorInterval = null;
@@ -2839,6 +3002,18 @@ dispose() {
 
     if (this.controls) {
         this.controls.remove();
+    }
+    if (this.topBar) {
+        this.topBar.remove();
+    }
+    if (this.moreinfoModal) {
+        this.moreinfoModal.remove();
+    }
+    if (this.watermarkElement) {
+        this.watermarkElement.remove();
+    }
+    if (this.audioWaveCanvas) {
+        this.audioWaveCanvas.remove();
     }
     if (this.loadingOverlay) {
         this.loadingOverlay.remove();
@@ -2867,7 +3042,6 @@ dispose() {
         this.posterOverlay.remove();
     }
     this.disposeAllPlugins();
-
 }
 
 /**
@@ -2974,95 +3148,92 @@ addEventListener(eventType, callback) {
         }
     }
 
-    setupVolumeTooltipEvents() {
-        const volumeSlider = this.controls?.querySelector('.volume-slider');
-        if (!volumeSlider) return;
+setupVolumeTooltipEvents() {
+    const volumeSlider = this.controls?.querySelector('.volume-slider');
+    if (!volumeSlider) return;
 
-        let isMouseOverVolume = false;
-        let isDragging = false;
+    let isMouseOverVolume = false;
+    let isDragging = false;
 
-        volumeSlider.addEventListener('mouseenter', () => {
-            isMouseOverVolume = true;
-            // IMPORTANT: Set position FIRST, then show tooltip
-            this.updateVolumeTooltipPosition(this.video.volume);
-            this.updateVolumeTooltip();
-            if (this.volumeTooltip) {
-                this.volumeTooltip.classList.add('visible');
-            }
-        });
+    volumeSlider.addEventListener('mouseenter', () => {
+        isMouseOverVolume = true;
+        // Set position first, then show tooltip
+        this.updateVolumeTooltipPosition(this.video.volume);
+        this.updateVolumeTooltip();
+        if (this.volumeTooltip) {
+            this.volumeTooltip.classList.add('visible');
+        }
+    });
 
-        volumeSlider.addEventListener('mouseleave', () => {
-            isMouseOverVolume = false;
-            if (!isDragging) {
-                setTimeout(() => {
-                    if (!isMouseOverVolume && !isDragging && this.volumeTooltip) {
-                        this.volumeTooltip.classList.remove('visible');
-                    }
-                }, 150);
-            }
-        });
-
-        volumeSlider.addEventListener('mousemove', (e) => {
-            if (isMouseOverVolume && this.volumeTooltip && !isDragging) {
-                const rect = volumeSlider.getBoundingClientRect();
-                const offsetX = e.clientX - rect.left;
-                const sliderWidth = rect.width;
-
-                const thumbSize = 14;
-                const availableWidth = sliderWidth - thumbSize;
-                let volumeAtPosition = (offsetX - thumbSize / 2) / availableWidth;
-                volumeAtPosition = Math.max(0, Math.min(1, volumeAtPosition));
-
-                const hoverVolume = Math.round(volumeAtPosition * 100);
-
-                // Set position first, then update text to avoid flicker
-                this.updateVolumeTooltipPosition(volumeAtPosition);
-                this.volumeTooltip.textContent = hoverVolume + '%';
-            }
-        });
-
-        // During dragging - set position immediately
-        volumeSlider.addEventListener('mousedown', () => {
-            isDragging = true;
-            if (this.volumeTooltip) {
-                // Ensure position is set before showing
-                this.updateVolumeTooltipPosition(this.video.volume);
-                this.volumeTooltip.classList.add('visible');
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                setTimeout(() => {
-                    if (!isMouseOverVolume && this.volumeTooltip) {
-                        this.volumeTooltip.classList.remove('visible');
-                    }
-                }, 500);
-            }
-        });
-
-        volumeSlider.addEventListener('input', (e) => {
-            const volumeValue = parseFloat(e.target.value);
-            const volume = Math.round(volumeValue * 100);
-            if (this.volumeTooltip) {
-                // Update position first, then text
-                this.updateVolumeTooltipPosition(volumeValue);
-                this.volumeTooltip.textContent = volume + '%';
-            }
-            isDragging = true;
-        });
-
-        volumeSlider.addEventListener('change', () => {
-            // Ensure final position is correct
-            this.updateVolumeTooltip();
+    volumeSlider.addEventListener('mouseleave', () => {
+        isMouseOverVolume = false;
+        if (!isDragging) {
             setTimeout(() => {
-                isDragging = false;
-            }, 100);
-        });
-    }
+                if (!isMouseOverVolume && !isDragging && this.volumeTooltip) {
+                    this.volumeTooltip.classList.remove('visible');
+                }
+            }, 150);
+        }
+    });
 
-    bindEvents() {
+    volumeSlider.addEventListener('mousemove', (e) => {
+        if (isMouseOverVolume && this.volumeTooltip && !isDragging) {
+            const rect = volumeSlider.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const sliderWidth = rect.width;
+
+            const thumbSize = 14;
+            const availableWidth = sliderWidth - thumbSize;
+            let volumeAtPosition = (offsetX - thumbSize / 2) / availableWidth;
+            volumeAtPosition = Math.max(0, Math.min(1, volumeAtPosition));
+
+            const hoverVolume = Math.round(volumeAtPosition * 100);
+
+            // Set position first, then update text to avoid flicker
+            this.updateVolumeTooltipPosition(volumeAtPosition);
+            this.volumeTooltip.textContent = hoverVolume + '%';
+        }
+    });
+
+    // During dragging - set position immediately
+    volumeSlider.addEventListener('mousedown', () => {
+        isDragging = true;
+        if (this.volumeTooltip) {
+            this.updateVolumeTooltipPosition(this.video.volume);
+            this.volumeTooltip.classList.add('visible');
+        }
+    });
+
+    this.addTrackedListener(document, 'mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            setTimeout(() => {
+                if (!isMouseOverVolume && this.volumeTooltip) {
+                    this.volumeTooltip.classList.remove('visible');
+                }
+            }, 500);
+        }
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+        const volumeValue = parseFloat(e.target.value);
+        const volume = Math.round(volumeValue * 100);
+        if (this.volumeTooltip) {
+            this.updateVolumeTooltipPosition(volumeValue);
+            this.volumeTooltip.textContent = volume + '%';
+        }
+        isDragging = true;
+    });
+
+    volumeSlider.addEventListener('change', () => {
+        this.updateVolumeTooltip();
+        setTimeout(() => {
+            isDragging = false;
+        }, 100);
+    });
+}
+
+bindEvents() {
     if (this.video) {
 
         // Play from start button
@@ -3088,21 +3259,17 @@ addEventListener(eventType, callback) {
             if (this.options.autoHide && this.autoHideInitialized) {
                 if (this.options.debug) console.log('Video playing - reset auto-hide timer');
 
-                // show controls immediately when play starts (in case they were hidden)
                 this.showControlsNow();
 
-                // delete timer
                 if (this.autoHideTimer) {
                     clearTimeout(this.autoHideTimer);
                     this.autoHideTimer = null;
                     if (this.options.debug) console.log('Cleared existing timer before reset');
                 }
 
-                // start new timer
                 this.resetAutoHideTimer();
             }
 
-            // Trigger playing event - video is now actually playing
             this.triggerEvent('playing', {
                 currentTime: this.getCurrentTime(),
                 duration: this.getDuration()
@@ -3115,7 +3282,6 @@ addEventListener(eventType, callback) {
                 if (this.options.debug) console.log('Video paused - show controls and cancel timer');
                 this.showControlsNow();
 
-                // Cancel timer so controls stay visible while paused
                 if (this.autoHideTimer) {
                     clearTimeout(this.autoHideTimer);
                     this.autoHideTimer = null;
@@ -3126,7 +3292,7 @@ addEventListener(eventType, callback) {
         this.video.addEventListener('waiting', () => {
             if (!this.isChangingQuality) {
                 this.showLoading();
-                // Trigger waiting event - video is buffering
+                this.updateTimeDisplay();
                 this.triggerEvent('waiting', {
                     currentTime: this.getCurrentTime()
                 });
@@ -3134,7 +3300,6 @@ addEventListener(eventType, callback) {
         });
 
         this.video.addEventListener('seeking', () => {
-            // Trigger seeking event - seek operation started
             this.triggerEvent('seeking', {
                 currentTime: this.getCurrentTime(),
                 targetTime: this.video.currentTime
@@ -3142,7 +3307,6 @@ addEventListener(eventType, callback) {
         });
 
         this.video.addEventListener('seeked', () => {
-            // Trigger seeked event - seek operation completed
             this.triggerEvent('seeked', {
                 currentTime: this.getCurrentTime()
             });
@@ -3154,27 +3318,20 @@ addEventListener(eventType, callback) {
                 this.showLoading();
             }
 
-            // Update time display to show "Loading..." during initial buffering
             this.updateTimeDisplay();
-
-            // Trigger loadstart event - browser started loading media
             this.triggerEvent('loadstart');
         });
 
         this.video.addEventListener('loadedmetadata', () => {
             this.updateDuration();
-
-            // Update time display when metadata is loaded
             this.updateTimeDisplay();
 
-            // Trigger loadedmetadata event - video metadata loaded
             this.triggerEvent('loadedmetadata', {
                 duration: this.getDuration(),
                 videoWidth: this.video.videoWidth,
                 videoHeight: this.video.videoHeight
             });
 
-            // Initialize subtitles after metadata is loaded
             setTimeout(() => {
                 this.initializeSubtitles();
             }, 100);
@@ -3185,10 +3342,7 @@ addEventListener(eventType, callback) {
                 this.hideLoading();
             }
 
-            // Update time display when data is loaded
             this.updateTimeDisplay();
-
-            // Trigger loadeddata event - current frame data loaded
             this.triggerEvent('loadeddata', {
                 currentTime: this.getCurrentTime()
             });
@@ -3199,34 +3353,15 @@ addEventListener(eventType, callback) {
                 this.hideLoading();
             }
 
-            // Update time display when video can play
             this.updateTimeDisplay();
-
-            // Trigger canplay event - video can start playing
             this.triggerEvent('canplay', {
                 currentTime: this.getCurrentTime(),
                 duration: this.getDuration()
             });
         });
 
-        // Also add to waiting event
-        this.video.addEventListener('waiting', () => {
-            if (!this.isChangingQuality) {
-                this.showLoading();
-
-                // Update time display during buffering
-                this.updateTimeDisplay();
-
-                // Trigger waiting event - video is buffering
-                this.triggerEvent('waiting', {
-                    currentTime: this.getCurrentTime()
-                });
-            }
-        });
-
         this.video.addEventListener('progress', () => {
             this.updateBuffer();
-            // Trigger progress event - browser is downloading media
             this.triggerEvent('progress', {
                 buffered: this.getBufferedTime(),
                 duration: this.getDuration()
@@ -3235,7 +3370,6 @@ addEventListener(eventType, callback) {
 
         this.video.addEventListener('durationchange', () => {
             this.updateDuration();
-            // Trigger durationchange event - video duration changed
             this.triggerEvent('durationchange', {
                 duration: this.getDuration()
             });
@@ -3244,7 +3378,6 @@ addEventListener(eventType, callback) {
         // Error events
         this.video.addEventListener('error', (e) => {
             this.onVideoError(e);
-            // Trigger error event - media loading/playback error occurred
             this.triggerEvent('error', {
                 code: this.video.error?.code,
                 message: this.video.error?.message,
@@ -3253,98 +3386,87 @@ addEventListener(eventType, callback) {
         });
 
         this.video.addEventListener('stalled', () => {
-            // Trigger stalled event - browser is trying to fetch data but it's not available
             this.triggerEvent('stalled', {
                 currentTime: this.getCurrentTime()
             });
         });
 
+        this.video.addEventListener('timeupdate', () => this.updateProgress());
+        this.video.addEventListener('ended', () => this.onVideoEnded());
 
-            this.video.addEventListener('timeupdate', () => this.updateProgress());
+        // Complete video click logic with doubleTapPause support (DESKTOP)
+        this.video.addEventListener('click', () => {
+            if (!this.options.pauseClick) return;
 
-            this.video.addEventListener('ended', () => this.onVideoEnded());
+            if (this.options.doubleTapPause) {
+                const controlsVisible = this.controls && this.controls.classList.contains('show');
 
-            // Complete video click logic with doubleTapPause support (DESKTOP)
-            this.video.addEventListener('click', () => {
-                if (!this.options.pauseClick) return;
-
-                if (this.options.doubleTapPause) {
-                    // DOUBLE TAP MODE: primo click mostra controlli, secondo pausa
-                    const controlsVisible = this.controls && this.controls.classList.contains('show');
-
-                    if (controlsVisible) {
-                        // Controlbar VISIBILE - pausa video
-                        this.togglePlayPause();
-                    } else {
-                        // Controlbar NASCOSTA - solo mostra controlli
-                        this.showControlsNow();
-                        this.resetAutoHideTimer();
-                    }
-                } else {
-                    // NORMAL MODE: sempre pausa (comportamento originale)
+                if (controlsVisible) {
                     this.togglePlayPause();
-                }
-            });
-            this.video.addEventListener('volumechange', () => this.updateVolumeSliderVisual());
-
-            // Complete touch logic with doubleTapPause support (MOBILE)
-            this.video.addEventListener('touchend', (e) => {
-                // Prevent click event from firing after touchend
-                e.preventDefault();
-
-                if (!this.options.pauseClick) return;
-
-                if (this.options.doubleTapPause) {
-                    // DOUBLE TAP MODE: primo tap mostra controlli, secondo pausa (SAME as desktop)
-                    const controlsVisible = this.controls && this.controls.classList.contains('show');
-
-                    if (controlsVisible) {
-                        // Controlbar VISIBILE - pausa video
-                        this.togglePlayPause();
-                    } else {
-                        // Controlbar NASCOSTA - solo mostra controlli
-                        this.showControlsNow();
-                        this.resetAutoHideTimer();
-                    }
                 } else {
-                    // NORMAL MODE: sempre pausa (comportamento originale, SAME as desktop)
-                    this.togglePlayPause();
+                    this.showControlsNow();
+                    this.resetAutoHideTimer();
                 }
+            } else {
+                this.togglePlayPause();
+            }
+        });
+
+        this.video.addEventListener('volumechange', () => this.updateVolumeSliderVisual());
+
+        // Complete touch logic with doubleTapPause support (MOBILE)
+        this.video.addEventListener('touchend', (e) => {
+            e.preventDefault();
+
+            if (!this.options.pauseClick) return;
+
+            if (this.options.doubleTapPause) {
+                const controlsVisible = this.controls && this.controls.classList.contains('show');
+
+                if (controlsVisible) {
+                    this.togglePlayPause();
+                } else {
+                    this.showControlsNow();
+                    this.resetAutoHideTimer();
+                }
+            } else {
+                this.togglePlayPause();
+            }
+        });
+
+        // Picture-in-Picture Events
+        this.video.addEventListener('enterpictureinpicture', () => {
+            this.onEnterPiP();
+            this.triggerEvent('pipchange', {
+                active: true,
+                mode: 'enter'
             });
+        });
 
-            // Picture-in-Picture Events
-            this.video.addEventListener('enterpictureinpicture', () => {
-                this.onEnterPiP();
-                this.triggerEvent('pipchange', {
-                    active: true,
-                    mode: 'enter'
-                });
+        this.video.addEventListener('leavepictureinpicture', () => {
+            this.onLeavePiP();
+            this.triggerEvent('pipchange', {
+                active: false,
+                mode: 'exit'
             });
+        });
+    }
 
-            this.video.addEventListener('leavepictureinpicture', () => {
-                this.onLeavePiP();
-                this.triggerEvent('pipchange', {
-                    active: false,
-                    mode: 'exit'
-                });
-            });
-        }
+    if (this.playPauseBtn) {
+        this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+    }
 
-        if (this.playPauseBtn) {
-            this.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
-        }
+    if (this.muteBtn) {
+        this.muteBtn.addEventListener('click', () => this.toggleMute());
+    }
 
-        if (this.muteBtn) {
-            this.muteBtn.addEventListener('click', () => this.toggleMute());
-        }
+    if (this.fullscreenBtn) {
+        this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+    }
 
-        if (this.fullscreenBtn) {
-            this.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-        }
-
-        if (this.pipBtn) {
-            this.pipBtn.addEventListener('click', () => this.togglePictureInPicture());
-        }
+    if (this.pipBtn) {
+        this.pipBtn.addEventListener('click', () => this.togglePictureInPicture());
+    }
 
     if (this.volumeSlider) {
         let isDraggingVolume = false;
@@ -3357,15 +3479,15 @@ addEventListener(eventType, callback) {
         });
 
         // MOUSE DRAG - Start
-        this.volumeSlider.addEventListener('mousedown', (e) => {
+        this.volumeSlider.addEventListener('mousedown', () => {
             isDraggingVolume = true;
             if (this.volumeTooltip) {
                 this.volumeTooltip.classList.add('visible');
             }
         });
 
-        // MOUSE DRAG - Move
-        document.addEventListener('mousemove', (e) => {
+        // MOUSE DRAG - Move (tracked for cleanup)
+        this.addTrackedListener(document, 'mousemove', (e) => {
             if (isDraggingVolume && this.volumeSlider) {
                 const rect = this.volumeSlider.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
@@ -3381,8 +3503,8 @@ addEventListener(eventType, callback) {
             }
         });
 
-        // MOUSE DRAG - End
-        document.addEventListener('mouseup', () => {
+        // MOUSE DRAG - End (tracked for cleanup)
+        this.addTrackedListener(document, 'mouseup', () => {
             if (isDraggingVolume) {
                 isDraggingVolume = false;
                 if (this.volumeTooltip) {
@@ -3394,7 +3516,7 @@ addEventListener(eventType, callback) {
         });
 
         // TOUCH DRAG - Start
-        this.volumeSlider.addEventListener('touchstart', (e) => {
+        this.volumeSlider.addEventListener('touchstart', () => {
             isDraggingVolume = true;
             if (this.volumeTooltip) {
                 this.volumeTooltip.classList.add('visible');
@@ -3436,10 +3558,6 @@ addEventListener(eventType, callback) {
         // Mouse events (desktop)
         this.progressContainer.addEventListener('click', (e) => this.seek(e));
         this.progressContainer.addEventListener('mousedown', (e) => this.startSeeking(e));
-        if (this.progressHandle) {
-            this.progressHandle.addEventListener('mousedown', this.startSeeking.bind(this));
-            this.progressHandle.addEventListener('touchstart', this.startSeeking.bind(this), { passive: false });
-        }
 
         // Touch events (mobile)
         this.progressContainer.addEventListener('touchstart', (e) => {
@@ -3450,48 +3568,58 @@ addEventListener(eventType, callback) {
         this.setupSeekTooltip();
     }
 
-    // Add touch events directly on the handle for better mobile dragging
+    // Add mouse/touch events directly on the handle for better dragging
     if (this.progressHandle) {
+        this.progressHandle.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            this.startSeeking(e);
+        });
         this.progressHandle.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent default touch behavior
-            e.stopPropagation(); // Stop event from bubbling to progressContainer
+            e.preventDefault();
+            e.stopPropagation();
             this.startSeeking(e);
         }, { passive: false });
     }
 
-        // NOTE: Auto-hide events are handled in initAutoHide() after everything is ready
+    if (this.speedMenu) {
+        this.speedMenu.addEventListener('click', (e) => this.changeSpeed(e));
+    }
 
-        if (this.speedMenu) {
-            this.speedMenu.addEventListener('click', (e) => this.changeSpeed(e));
-        }
+    if (this.qualityMenu) {
+        this.qualityMenu.addEventListener('click', (e) => this.changeQuality(e));
+    }
 
-        if (this.qualityMenu) {
-            this.qualityMenu.addEventListener('click', (e) => this.changeQuality(e));
-        }
+    if (this.subtitlesMenu) {
+        this.subtitlesMenu.addEventListener('click', (e) => this.handleSubtitlesMenuClick(e));
+    }
 
-        if (this.subtitlesMenu) {
-            this.subtitlesMenu.addEventListener('click', (e) => this.handleSubtitlesMenuClick(e));
-        }
+    // Tracked global document listeners (removed in dispose)
+    this.addTrackedListener(document, 'fullscreenchange', () => this.updateFullscreenButton());
+    this.addTrackedListener(document, 'webkitfullscreenchange', () => this.updateFullscreenButton());
+    this.addTrackedListener(document, 'mozfullscreenchange', () => this.updateFullscreenButton());
 
-        document.addEventListener('fullscreenchange', () => this.updateFullscreenButton());
-        document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenButton());
-        document.addEventListener('mozfullscreenchange', () => this.updateFullscreenButton());
-
-        document.addEventListener('mousemove', (e) => this.continueSeeking(e));
-    document.addEventListener('mouseup', () => this.endSeeking());
-
-    // Touch events for seeking (mobile)
-    document.addEventListener('touchmove', (e) => {
+    this.addTrackedListener(document, 'mousemove', (e) => {
         if (this.isUserSeeking) {
-            e.preventDefault(); // Prevent scrolling while seeking
             this.continueSeeking(e);
         }
-    }, { passive: false });
+    });
+    this.addTrackedListener(document, 'mouseup', () => {
+        if (this.isUserSeeking) {
+            this.endSeeking();
+        }
+    });
 
-    document.addEventListener('touchend', () => this.endSeeking());
-    document.addEventListener('touchcancel', () => this.endSeeking());
-
-    }
+    this.addTrackedListener(document, 'touchend', () => {
+        if (this.isUserSeeking) {
+            this.endSeeking();
+        }
+    });
+    this.addTrackedListener(document, 'touchcancel', () => {
+        if (this.isUserSeeking) {
+            this.endSeeking();
+        }
+    });
+}
 
 /* Controls Module for MYETV Video Player 
  * Conservative modularization - original code preserved exactly
@@ -3551,21 +3679,22 @@ initAutoHide() {
     });
 
     this.controls.addEventListener('mouseleave', (e) => {
-        if (this.autoHideDebug) {
-            if (this.options.debug) console.log('Mouse EXITS controls - restart timer');
-
-            // Touch events for mobile devices
-            this.container.addEventListener('touchstart', () => {
-                this.showControlsNow();
-                this.resetAutoHideTimer();
-            });
-
-            this.container.addEventListener('touchend', () => {
-                this.resetAutoHideTimer();
-            });
+        if (this.autoHideDebug && this.options.debug) {
+            console.log('Mouse exits controls - restart timer');
         }
         this.onMouseLeaveControls(e);
     });
+
+    // Register touch handlers once on container for mobile auto-hide
+    this._onContainerTouchStart = () => {
+        this.showControlsNow();
+        this.resetAutoHideTimer();
+    };
+    this._onContainerTouchEnd = () => {
+        this.resetAutoHideTimer();
+    };
+    this.container.addEventListener('touchstart', this._onContainerTouchStart, { passive: true });
+    this.container.addEventListener('touchend', this._onContainerTouchEnd, { passive: true });
 
     if (this.options.debug) console.log('Event listener mouseenter/mouseleave added to controls');
 
@@ -3848,43 +3977,6 @@ updateSubtitlesUI() {
     }
 }
 
-populateSubtitlesMenu() {
-    const subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
-    if (!subtitlesMenu) return;
-
-    let menuHTML = `<div class="subtitles-option ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitlesoff') || 'Off'}</div>`;
-
-    this.textTracks.forEach((trackData, index) => {
-        const isActive = this.currentSubtitleTrack === trackData.track;
-        menuHTML += `<div class="subtitles-option ${isActive ? 'active' : ''}" data-track="${index}">${trackData.label}</div>`;
-    });
-
-    subtitlesMenu.innerHTML = menuHTML;
-}
-
-toggleSubtitles() {
-    if (this.textTracks.length === 0) return;
-
-    if (this.subtitlesEnabled) {
-        this.disableSubtitles();
-    } else {
-        this.enableSubtitleTrack(0);
-    }
-}
-
-updateSubtitlesButton() {
-    const subtitlesBtn = this.controls?.querySelector('.subtitles-btn');
-    if (!subtitlesBtn) return;
-
-    if (this.subtitlesEnabled) {
-        subtitlesBtn.classList.add('active');
-        subtitlesBtn.title = this.t('subtitlesdisable') || 'Disable subtitles';
-    } else {
-        subtitlesBtn.classList.remove('active');
-        subtitlesBtn.title = this.t('subtitlesenable') || 'Enable subtitles';
-    }
-}
-
 handleSubtitlesMenuClick(e) {
     if (!e.target.classList.contains('subtitles-option')) return;
 
@@ -3956,10 +4048,10 @@ createControls() {
 </div>
 
                 <div class="controls-right">
-<button class="control-btn playlist-prev-btn" data-tooltip="prevvideo" style="display: none;">
+<button class="control-btn playlist-prev-btn" data-tooltip="prev_video" style="display: none;">
     <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.5 12V4l7 4zm8-8v8l-7-4z"/></svg></span>
 </button>
-<button class="control-btn playlist-next-btn" data-tooltip="nextvideo" style="display: none;">
+<button class="control-btn playlist-next-btn" data-tooltip="next_video" style="display: none;">
     <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M12.5 4v8l-7-4zm-8 0v8l7-4z"/></svg></span>
 </button>
 
@@ -4143,7 +4235,7 @@ createMoreInfoModal() {
     // Create modal body with scrollable description
     const modalBody = document.createElement('div');
     modalBody.className = 'moreinfo-modal-body';
-    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+    modalBody.innerHTML = this.sanitizeHTML(this.decodeHTMLEntities(this.options.moreinfoDescription || ''));
 
     // Assemble modal
     modalContent.appendChild(modalHeader);
@@ -4216,7 +4308,7 @@ openMoreInfoModal() {
 
     // Set content for more info
     modalTitle.textContent = this.decodeHTMLEntities(this.options.moreinfoTitle || '');
-    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+    modalBody.innerHTML = this.sanitizeHTML(this.decodeHTMLEntities(this.options.moreinfoDescription || ''));
     modalBody.className = 'moreinfo-modal-body'; // Reset class (remove settings-modal-body)
 
     // Show modal
@@ -4499,10 +4591,10 @@ addSettingsMenuScrollbar() {
     const settingsMenu = this.controls?.querySelector('.settings-menu');
     if (!settingsMenu) return;
 
-    const settingsBtn = document.querySelector('.settings-btn');
+    const settingsBtn = this.container?.querySelector('.settings-btn');
     if (!settingsBtn) return;
 
-    // helper to update menu height
+    // Helper to update menu height
     const updateMenuHeight = () => {
         if (settingsMenu.classList.contains('active')) {
             const containerRect = settingsMenu.parentElement.parentElement.getBoundingClientRect();
@@ -4515,11 +4607,11 @@ addSettingsMenuScrollbar() {
         }
     };
 
-    // run initially
+    // Run initially
     updateMenuHeight();
 
-    // recalculate on window resize
-    window.addEventListener('resize', updateMenuHeight);
+    // Recalculate on window resize (tracked for cleanup)
+    this.addTrackedListener(window, 'resize', updateMenuHeight);
 
     // Add scrollbar styling
     if (!document.getElementById('player-settings-scrollbar-style')) {
@@ -4565,7 +4657,7 @@ bindSettingsMenuEvents() {
     });
 
     // Close menu when clicking outside (for when menu is back in original position)
-    document.addEventListener('click', (e) => {
+    this.addTrackedListener(document, 'click', (e) => {
         if (!settingsBtn?.contains(e.target) && !settingsMenu?.contains(e.target)) {
             settingsMenu?.classList.remove('active');
         }
@@ -4623,6 +4715,7 @@ bindSettingsMenuEvents() {
             if (action === 'speed_expand') {
                 const speed = parseFloat(e.target.getAttribute('data-speed'));
                 if (speed && speed > 0 && this.video && !this.isChangingQuality) {
+                    const previousSpeed = this.video.playbackRate;
                     this.video.playbackRate = speed;
 
                     // Update active states
@@ -4637,7 +4730,7 @@ bindSettingsMenuEvents() {
                     }
 
                     // Trigger event
-                    this.triggerEvent('speedchange', { speed, previousSpeed: this.video.playbackRate });
+                    this.triggerEvent('speedchange', { speed, previousSpeed });
 
                     if (this.options.debug) {
                         console.log('[Settings] Speed changed to', speed);
@@ -4709,7 +4802,7 @@ toggleTitleOverlay(show = null) {
 
 /* KEYBOARD CONTROLS */
 setupKeyboardControls() {
-    document.addEventListener('keydown', (e) => {
+    this.addTrackedListener(document, 'keydown', (e) => {
         // Ignore if user is typing in an input field
         if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
@@ -5299,56 +5392,54 @@ updateQualityMenu() {
     if (!qualityMenu) return;
 
     if (this.isAdaptiveStream) {
-        if (this.options.debug) console.log('🔒 Adaptive streaming active - quality menu managed by streaming.js');
+        if (this.options.debug) console.log('Adaptive streaming active - quality menu managed by streaming module');
         return;
     }
 
-    let menuHTML = '';
+    qualityMenu.textContent = '';
 
-    // Check if adaptive streaming is active (HLS/DASH)
+    const createOption = (label, attrs, className) => {
+        const opt = document.createElement('div');
+        opt.className = className;
+        opt.textContent = label;
+        Object.entries(attrs).forEach(([k, v]) => opt.setAttribute(k, String(v)));
+        return opt;
+    };
+
     if (this.isAdaptiveStream && this.adaptiveQualities && this.adaptiveQualities.length > 0) {
-        // Show adaptive streaming qualities
         const currentIndex = this.getCurrentAdaptiveQuality();
         const autoSelected = currentIndex === -1 || currentIndex === null || this.selectedQuality === 'auto';
-        const autoClass = autoSelected ? 'selected' : '';
-
-        menuHTML += `<div class="quality-option ${autoClass}" data-adaptive-quality="auto">${this.t('auto')}</div>`;
+        qualityMenu.appendChild(
+            createOption(this.t('auto'), { 'data-adaptive-quality': 'auto' }, `quality-option ${autoSelected ? 'selected' : ''}`)
+        );
 
         this.adaptiveQualities.forEach(quality => {
             const isSelected = currentIndex === quality.index && !autoSelected;
-            const className = isSelected ? 'selected' : '';
-            const label = quality.label || `${quality.height}p` || 'Unknown';
-            menuHTML += `<div class="quality-option ${className}" data-adaptive-quality="${quality.index}">${label}</div>`;
+            const label = quality.label || (quality.height ? `${quality.height}p` : 'Unknown');
+            qualityMenu.appendChild(
+                createOption(label, { 'data-adaptive-quality': quality.index }, `quality-option ${isSelected ? 'selected' : ''}`)
+            );
         });
     } else {
-        // Show standard qualities for regular videos
         const autoSelected = this.selectedQuality === 'auto';
         const autoPlaying = this.selectedQuality === 'auto' && this.currentPlayingQuality;
-        let autoClass = '';
-        if (autoSelected && autoPlaying) {
-            autoClass = 'selected playing';
-        } else if (autoSelected) {
-            autoClass = 'selected';
-        }
+        let autoClass = 'quality-option';
+        if (autoSelected && autoPlaying) autoClass += ' selected playing';
+        else if (autoSelected) autoClass += ' selected';
 
-        menuHTML += `<div class="quality-option ${autoClass}" data-quality="auto">${this.t('auto')}</div>`;
+        qualityMenu.appendChild(createOption(this.t('auto'), { 'data-quality': 'auto' }, autoClass));
 
         this.qualities.forEach(quality => {
             const isSelected = this.selectedQuality === quality.quality;
             const isPlaying = this.currentPlayingQuality === quality.quality;
             let className = 'quality-option';
-            if (isSelected && isPlaying) {
-                className += ' selected playing';
-            } else if (isSelected) {
-                className += ' selected';
-            } else if (isPlaying) {
-                className += ' playing';
-            }
-            menuHTML += `<div class="${className}" data-quality="${quality.quality}">${quality.quality}</div>`;
+            if (isSelected && isPlaying) className += ' selected playing';
+            else if (isSelected) className += ' selected';
+            else if (isPlaying) className += ' playing';
+
+            qualityMenu.appendChild(createOption(quality.quality, { 'data-quality': quality.quality }, className));
         });
     }
-
-    qualityMenu.innerHTML = menuHTML;
 }
 
 getQualityStatus() {
@@ -5929,44 +6020,6 @@ getQualityLabel(height, width) {
     return `${height}p`;
 }
 
-updateAdaptiveQualityMenu() {
-    const qualityMenu = this.controls?.querySelector('.quality-menu');
-    if (!qualityMenu || !this.isAdaptiveStream) return;
-
-    let menuHTML = `<div class="quality-option ${this.isAutoQuality() ? 'active' : ''}" data-adaptive-quality="auto">Auto</div>`;
-
-    this.adaptiveQualities.forEach(quality => {
-        const isActive = this.getCurrentAdaptiveQuality() === quality.index;
-        menuHTML += `<div class="quality-option ${isActive ? 'active' : ''}" data-adaptive-quality="${quality.index}">${quality.label}</div>`;
-    });
-
-    qualityMenu.innerHTML = menuHTML;
-}
-
-updateAdaptiveQualityDisplay() {
-    if (!this.isAdaptiveStream) return;
-
-    const qualityBtn = this.controls?.querySelector('.quality-btn');
-    if (!qualityBtn) return;
-
-    // Determine if auto quality is active
-    const isAuto = this.selectedQuality === 'auto' || this.getCurrentAdaptiveQuality() === -1;
-    const currentQuality = isAuto ? this.tauto : this.getCurrentAdaptiveQualityLabel();
-
-    const btnText = qualityBtn.querySelector('.quality-btn-text');
-    if (btnText) {
-        const selectedEl = btnText.querySelector('.selected-quality');
-        const currentEl = btnText.querySelector('.current-quality');
-
-        if (selectedEl) {
-            selectedEl.textContent = isAuto ? this.tauto : currentQuality;
-        }
-        if (currentEl) {
-            currentEl.textContent = currentQuality;
-        }
-    }
-}
-
 setAdaptiveQuality(qualityIndex) {
     if (!this.isAdaptiveStream) return;
 
@@ -6171,33 +6224,6 @@ createCustomSubtitleOverlay() {
     }
 
     if (this.options.debug) console.log('✅ Custom subtitle overlay created with responsive settings');
-}
-
-// Universal time parser for both SRT (00:00:00,000) and VTT (00:00.000)
-parseTimeToSecondsUniversal(timeString) {
-    if (!timeString) return 0;
-
-    // Normalize comma to dot for consistency
-    let normalized = timeString.replace(',', '.');
-    let parts = normalized.split('.');
-
-    let timeParts = parts[0].split(':');
-    let ms = parts[1] ? parseInt(parts[1], 10) / 1000 : 0;
-
-    let hours = 0, minutes = 0, seconds = 0;
-
-    if (timeParts.length === 3) {
-        // SRT Format: HH:MM:SS
-        hours = parseInt(timeParts[0], 10);
-        minutes = parseInt(timeParts[1], 10);
-        seconds = parseInt(timeParts[2], 10);
-    } else if (timeParts.length === 2) {
-        // VTT Short Format: MM:SS
-        minutes = parseInt(timeParts[0], 10);
-        seconds = parseInt(timeParts[1], 10);
-    }
-
-    return (hours * 3600) + (minutes * 60) + seconds + ms;
 }
 
 customTimeToSeconds(timeString) {
@@ -6607,7 +6633,6 @@ disableSubtitles() {
     this.updateSubtitlesButton();
     this.populateSubtitlesMenu();
 
-    // 👉 L'AGGIUNTA FONDAMENTALE: Sincronizza il menu Settings!
     if (typeof this.updateSettingsMenuUI === 'function') {
         this.updateSettingsMenuUI();
     }
@@ -6680,18 +6705,25 @@ updateSubtitlesButton() {
 }
 
 populateSubtitlesMenu() {
-    var subtitlesMenu = this.controls && this.controls.querySelector('.subtitles-menu');
+    const subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
     if (!subtitlesMenu) return;
 
-    var menuHTML = '<div class="subtitles-option ' + (!this.subtitlesEnabled ? 'active' : '') + '" data-track="off">Off</div>';
+    subtitlesMenu.textContent = '';
 
-    for (var i = 0; i < this.textTracks.length; i++) {
-        var trackData = this.textTracks[i];
-        var isActive = this.currentSubtitleTrack === trackData.track;
-        menuHTML += '<div class="subtitles-option ' + (isActive ? 'active' : '') + '" data-track="' + i + '">' + trackData.label + '</div>';
-    }
+    const offOption = document.createElement('div');
+    offOption.className = `subtitles-option ${!this.subtitlesEnabled ? 'active' : ''}`;
+    offOption.setAttribute('data-track', 'off');
+    offOption.textContent = this.t('subtitlesoff') || 'Off';
+    subtitlesMenu.appendChild(offOption);
 
-    subtitlesMenu.innerHTML = menuHTML;
+    this.textTracks.forEach((trackData, index) => {
+        const isActive = this.currentSubtitleTrack === trackData.track;
+        const option = document.createElement('div');
+        option.className = `subtitles-option ${isActive ? 'active' : ''}`;
+        option.setAttribute('data-track', String(index));
+        option.textContent = trackData.label;
+        subtitlesMenu.appendChild(option);
+    });
 }
 
 updateSubtitlesUI() {
@@ -7183,51 +7215,47 @@ bindChapterEvents() {
         }
 
         if (currentChapter) {
-            // Build tooltip HTML
-            let tooltipHTML = '<div style="display: flex; flex-direction: column; gap: 6px;">';
+            chapterTooltip.textContent = '';
 
-            // Add image if available
-            if (currentChapter.image) {
-                tooltipHTML += `
-                    <div style="
-                        width: 100%;
-                        height: 120px;
-                        background-image: url('${currentChapter.image}');
-                        background-size: cover;
-                        background-position: center;
-                        border-radius: 3px;
-                    "></div>
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display: flex; flex-direction: column; gap: 6px;';
+
+            const safeChapterImg = this.sanitizeUrl(currentChapter.image);
+            if (safeChapterImg) {
+                const imgDiv = document.createElement('div');
+                imgDiv.style.cssText = `
+                    width: 100%;
+                    height: 120px;
+                    background-size: cover;
+                    background-position: center;
+                    border-radius: 3px;
                 `;
+                imgDiv.style.backgroundImage = `url("${safeChapterImg}")`;
+                wrapper.appendChild(imgDiv);
             }
 
-            // Add title
-            tooltipHTML += `
-                <div style="
-                    font-size: 13px;
-                    font-weight: 600;
-                    max-width: 280px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                ">
-                    ${currentChapter.title}
-                </div>
+            const titleDiv = document.createElement('div');
+            titleDiv.style.cssText = `
+                font-size: 13px;
+                font-weight: 600;
+                max-width: 280px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             `;
+            titleDiv.textContent = currentChapter.title;
+            wrapper.appendChild(titleDiv);
 
-            // Add time
-            tooltipHTML += `
-                <div style="
-                    font-size: 12px;
-                    font-weight: 400;
-                    color: rgba(255, 255, 255, 0.8);
-                ">
-                    ${this.formatTime(currentChapter.time)}
-                </div>
+            const timeDiv = document.createElement('div');
+            timeDiv.style.cssText = `
+                font-size: 12px;
+                font-weight: 400;
+                color: rgba(255, 255, 255, 0.8);
             `;
+            timeDiv.textContent = this.formatTime(currentChapter.time);
+            wrapper.appendChild(timeDiv);
 
-            tooltipHTML += '</div>';
-
-            chapterTooltip.innerHTML = tooltipHTML;
+            chapterTooltip.appendChild(wrapper);
             chapterTooltip.style.visibility = 'visible';
             chapterTooltip.style.opacity = '1';
 
@@ -7350,9 +7378,10 @@ showChapterTooltip(chapterIndex, e) {
     const timeEl = this.chapterTooltip.querySelector('.chapter-tooltip-time');
 
     // Set image
-    if (chapter.image) {
+    const safeChapterImg = this.sanitizeUrl(chapter.image);
+    if (safeChapterImg) {
         imageEl.style.display = 'block';
-        imageEl.style.backgroundImage = `url(${chapter.image})`;
+        imageEl.style.backgroundImage = `url("${safeChapterImg}")`;
     } else {
         imageEl.style.display = 'none';
     }
@@ -7853,7 +7882,9 @@ initializeWatermark() {
 
     // Create watermark image
     const watermarkImg = document.createElement('img');
-    watermarkImg.src = this.options.watermarkUrl;
+    const safeWatermarkUrl = this.sanitizeUrl(this.options.watermarkUrl);
+    if (!safeWatermarkUrl) return;
+    watermarkImg.src = safeWatermarkUrl;
     watermarkImg.alt = 'Watermark';
 
     // Add title/tooltip if provided
@@ -7872,12 +7903,13 @@ initializeWatermark() {
     };
 
     // Add click handler if link URL is provided
-    if (this.options.watermarkLink) {
+    const safeWatermarkLink = this.sanitizeUrl(this.options.watermarkLink);
+    if (safeWatermarkLink) {
         watermark.style.cursor = 'pointer';
         watermark.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent video controls interference
-            window.open(this.options.watermarkLink, '_blank', 'noopener,noreferrer');
-            if (this.options.debug) console.log('🏷️ Watermark clicked, opening:', this.options.watermarkLink);
+            e.stopPropagation();
+            window.open(safeWatermarkLink, '_blank', 'noopener,noreferrer');
+            if (this.options.debug) console.log('Watermark clicked, opening:', safeWatermarkLink);
         });
     } else {
         watermark.style.cursor = 'default';
@@ -8556,13 +8588,13 @@ bindAdaptiveQualityEvents() {
         }
     });
 
-    // Close menu on outside click
+    // Close menu on outside click (tracked for cleanup)
     const closeMenuHandler = (e) => {
         if (!qualityBtn.contains(e.target) && !qualityMenu.contains(e.target)) {
             qualityMenu.classList.remove('active');
         }
     };
-    document.addEventListener('click', closeMenuHandler);
+    this.addTrackedListener(document, 'click', closeMenuHandler);
 
     // Handle quality selection
     qualityMenu.addEventListener('click', (e) => {

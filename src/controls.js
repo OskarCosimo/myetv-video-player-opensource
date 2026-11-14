@@ -57,21 +57,22 @@ initAutoHide() {
     });
 
     this.controls.addEventListener('mouseleave', (e) => {
-        if (this.autoHideDebug) {
-            if (this.options.debug) console.log('Mouse EXITS controls - restart timer');
-
-            // Touch events for mobile devices
-            this.container.addEventListener('touchstart', () => {
-                this.showControlsNow();
-                this.resetAutoHideTimer();
-            });
-
-            this.container.addEventListener('touchend', () => {
-                this.resetAutoHideTimer();
-            });
+        if (this.autoHideDebug && this.options.debug) {
+            console.log('Mouse exits controls - restart timer');
         }
         this.onMouseLeaveControls(e);
     });
+
+    // Register touch handlers once on container for mobile auto-hide
+    this._onContainerTouchStart = () => {
+        this.showControlsNow();
+        this.resetAutoHideTimer();
+    };
+    this._onContainerTouchEnd = () => {
+        this.resetAutoHideTimer();
+    };
+    this.container.addEventListener('touchstart', this._onContainerTouchStart, { passive: true });
+    this.container.addEventListener('touchend', this._onContainerTouchEnd, { passive: true });
 
     if (this.options.debug) console.log('Event listener mouseenter/mouseleave added to controls');
 
@@ -354,43 +355,6 @@ updateSubtitlesUI() {
     }
 }
 
-populateSubtitlesMenu() {
-    const subtitlesMenu = this.controls?.querySelector('.subtitles-menu');
-    if (!subtitlesMenu) return;
-
-    let menuHTML = `<div class="subtitles-option ${!this.subtitlesEnabled ? 'active' : ''}" data-track="off">${this.t('subtitlesoff') || 'Off'}</div>`;
-
-    this.textTracks.forEach((trackData, index) => {
-        const isActive = this.currentSubtitleTrack === trackData.track;
-        menuHTML += `<div class="subtitles-option ${isActive ? 'active' : ''}" data-track="${index}">${trackData.label}</div>`;
-    });
-
-    subtitlesMenu.innerHTML = menuHTML;
-}
-
-toggleSubtitles() {
-    if (this.textTracks.length === 0) return;
-
-    if (this.subtitlesEnabled) {
-        this.disableSubtitles();
-    } else {
-        this.enableSubtitleTrack(0);
-    }
-}
-
-updateSubtitlesButton() {
-    const subtitlesBtn = this.controls?.querySelector('.subtitles-btn');
-    if (!subtitlesBtn) return;
-
-    if (this.subtitlesEnabled) {
-        subtitlesBtn.classList.add('active');
-        subtitlesBtn.title = this.t('subtitlesdisable') || 'Disable subtitles';
-    } else {
-        subtitlesBtn.classList.remove('active');
-        subtitlesBtn.title = this.t('subtitlesenable') || 'Enable subtitles';
-    }
-}
-
 handleSubtitlesMenuClick(e) {
     if (!e.target.classList.contains('subtitles-option')) return;
 
@@ -462,10 +426,10 @@ createControls() {
 </div>
 
                 <div class="controls-right">
-<button class="control-btn playlist-prev-btn" data-tooltip="prevvideo" style="display: none;">
+<button class="control-btn playlist-prev-btn" data-tooltip="prev_video" style="display: none;">
     <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.5 12V4l7 4zm8-8v8l-7-4z"/></svg></span>
 </button>
-<button class="control-btn playlist-next-btn" data-tooltip="nextvideo" style="display: none;">
+<button class="control-btn playlist-next-btn" data-tooltip="next_video" style="display: none;">
     <span class="icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M12.5 4v8l-7-4zm-8 0v8l7-4z"/></svg></span>
 </button>
 
@@ -649,7 +613,7 @@ createMoreInfoModal() {
     // Create modal body with scrollable description
     const modalBody = document.createElement('div');
     modalBody.className = 'moreinfo-modal-body';
-    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+    modalBody.innerHTML = this.sanitizeHTML(this.decodeHTMLEntities(this.options.moreinfoDescription || ''));
 
     // Assemble modal
     modalContent.appendChild(modalHeader);
@@ -722,7 +686,7 @@ openMoreInfoModal() {
 
     // Set content for more info
     modalTitle.textContent = this.decodeHTMLEntities(this.options.moreinfoTitle || '');
-    modalBody.innerHTML = this.decodeHTMLEntities(this.options.moreinfoDescription || '');
+    modalBody.innerHTML = this.sanitizeHTML(this.decodeHTMLEntities(this.options.moreinfoDescription || ''));
     modalBody.className = 'moreinfo-modal-body'; // Reset class (remove settings-modal-body)
 
     // Show modal
@@ -1005,10 +969,10 @@ addSettingsMenuScrollbar() {
     const settingsMenu = this.controls?.querySelector('.settings-menu');
     if (!settingsMenu) return;
 
-    const settingsBtn = document.querySelector('.settings-btn');
+    const settingsBtn = this.container?.querySelector('.settings-btn');
     if (!settingsBtn) return;
 
-    // helper to update menu height
+    // Helper to update menu height
     const updateMenuHeight = () => {
         if (settingsMenu.classList.contains('active')) {
             const containerRect = settingsMenu.parentElement.parentElement.getBoundingClientRect();
@@ -1021,11 +985,11 @@ addSettingsMenuScrollbar() {
         }
     };
 
-    // run initially
+    // Run initially
     updateMenuHeight();
 
-    // recalculate on window resize
-    window.addEventListener('resize', updateMenuHeight);
+    // Recalculate on window resize (tracked for cleanup)
+    this.addTrackedListener(window, 'resize', updateMenuHeight);
 
     // Add scrollbar styling
     if (!document.getElementById('player-settings-scrollbar-style')) {
@@ -1071,7 +1035,7 @@ bindSettingsMenuEvents() {
     });
 
     // Close menu when clicking outside (for when menu is back in original position)
-    document.addEventListener('click', (e) => {
+    this.addTrackedListener(document, 'click', (e) => {
         if (!settingsBtn?.contains(e.target) && !settingsMenu?.contains(e.target)) {
             settingsMenu?.classList.remove('active');
         }
@@ -1129,6 +1093,7 @@ bindSettingsMenuEvents() {
             if (action === 'speed_expand') {
                 const speed = parseFloat(e.target.getAttribute('data-speed'));
                 if (speed && speed > 0 && this.video && !this.isChangingQuality) {
+                    const previousSpeed = this.video.playbackRate;
                     this.video.playbackRate = speed;
 
                     // Update active states
@@ -1143,7 +1108,7 @@ bindSettingsMenuEvents() {
                     }
 
                     // Trigger event
-                    this.triggerEvent('speedchange', { speed, previousSpeed: this.video.playbackRate });
+                    this.triggerEvent('speedchange', { speed, previousSpeed });
 
                     if (this.options.debug) {
                         console.log('[Settings] Speed changed to', speed);
@@ -1215,7 +1180,7 @@ toggleTitleOverlay(show = null) {
 
 /* KEYBOARD CONTROLS */
 setupKeyboardControls() {
-    document.addEventListener('keydown', (e) => {
+    this.addTrackedListener(document, 'keydown', (e) => {
         // Ignore if user is typing in an input field
         if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 

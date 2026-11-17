@@ -1,6 +1,6 @@
-﻿/**
+/**
  * MYETV Player - Facebook Plugin
- * File: myetv-player-facebook-plugin.js  
+ * File: myetv-player-facebook-plugin.js
  * Integrates Facebook videos with full API control
  * Created by https://www.myetv.tv https://oskarcosimo.com
  */
@@ -39,20 +39,35 @@
 
             this.fbPlayer = null;
             this.fbContainer = null;
+            this.fbVideoElementId = null;
             this.isFBSDKLoaded = false;
+            this.sdkLoadFailed = false;
             this.isPlayerReady = false;
+            this.isDisposed = false;
             this.mouseMoveOverlay = null;
             this.timeUpdateInterval = null;
+            this.sdkCheckTimeout = null;
+            this.loadVideoRetryTimeout = null;
+            this.autoplayTimeout = null;
+            this.waitForPlayerTimeout = null;
+            this.fullscreenResizeTimeout = null;
+            this.facebookControlsTimeout = null;
+            this.styleTimeouts = [];
             this.isPlaying = false;
             this.userHasInteracted = false; // Track if user has clicked directly on FB player
             this.waitingForUserClick = false; // Track if we're waiting for user to click FB player
             this.autoplayAttempted = false; // Track if we tried autoplay
             this.volumeSliderListener = null; // Track volume slider listener
             this.progressTooltipListener = null; // Track progress tooltip listener
+            this.tooltipMouseEnterListener = null;
+            this.tooltipMouseLeaveListener = null;
+            this.progressTooltipElement = null;
+            this.controlsButtonElement = null;
+            this.fbSubscriptions = [];
+            this.fbReadySubscription = null;
             this.currentDuration = 0; // Store current video duration for tooltips
             this.styleObserver = null;
             this.isFullscreen = false;
-
 
             // Get plugin API
             this.api = player.getPluginAPI ? player.getPluginAPI() : {
@@ -136,9 +151,13 @@
             const dataVideoUrl = this.api.video.getAttribute('data-video-url');
             const dataVideoType = this.api.video.getAttribute('data-video-type');
             if (dataVideoUrl && dataVideoType === 'facebook') {
-                this.options.videoUrl = dataVideoUrl;
+                if (this.isFacebookUrl(dataVideoUrl)) {
+                    this.options.videoUrl = dataVideoUrl.trim();
+                } else if (/^[a-zA-Z0-9_-]+$/.test(dataVideoUrl.trim())) {
+                    this.options.videoId = dataVideoUrl.trim();
+                }
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Video URL from data-video-url:', this.options.videoUrl);
+                    console.log('FB Plugin: Video source from data-video-url:', this.options.videoUrl || this.options.videoId);
                 }
                 return;
             }
@@ -161,8 +180,8 @@
             for (const source of sources) {
                 const sourceSrc = source.getAttribute('src');
                 const sourceType = source.getAttribute('type');
-                if ((sourceType === 'video/facebook' || this.isFacebookUrl(sourceSrc)) && sourceSrc) {
-                    this.options.videoUrl = sourceSrc;
+                if ((sourceType === 'video/facebook' || this.isFacebookUrl(sourceSrc)) && sourceSrc && this.isFacebookUrl(sourceSrc)) {
+                    this.options.videoUrl = sourceSrc.trim();
                     if (this.api.player.options.debug) {
                         console.log('FB Plugin: Video URL from source:', this.options.videoUrl);
                     }
@@ -172,24 +191,37 @@
         }
 
         /**
-         * Wait for SDK then load
+         * Wait for SDK then load with bounded retries
          */
         waitForSDKThenLoad() {
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Waiting for Facebook SDK...');
             }
 
+            let attempts = 0;
+            const maxAttempts = 100; // 10 seconds maximum wait
+
             const checkAndLoad = () => {
+                if (this.isDisposed || this.sdkLoadFailed) {
+                    return;
+                }
+
                 if (window.FB && window.FB.init && this.isFBSDKLoaded) {
                     if (this.api.player.options.debug) {
                         console.log('FB Plugin: SDK confirmed ready, loading video');
                     }
                     this.loadVideo(this.options.videoUrl || this.options.videoId);
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    if (this.api.player.options.debug) {
+                        console.log(`FB Plugin: SDK not ready, retrying in 100ms (${attempts}/${maxAttempts})...`);
+                    }
+                    this.sdkCheckTimeout = setTimeout(checkAndLoad, 100);
                 } else {
                     if (this.api.player.options.debug) {
-                        console.log('FB Plugin: SDK not ready, retrying in 100ms...');
+                        console.error('FB Plugin: Timeout waiting for Facebook SDK');
                     }
-                    setTimeout(checkAndLoad, 100);
+                    this.api.triggerEvent('facebookplugin:error', { reason: 'sdk_timeout' });
                 }
             };
             checkAndLoad();
@@ -209,11 +241,13 @@
         }
 
         /**
-         * Extract Facebook video URL
+         * Extract and validate Facebook video URL
          */
         extractFacebookVideoUrl(url) {
-            if (!url) return null;
-            url = url.trim();
+            if (!url || typeof url !== 'string') return null;
+            const trimmed = url.trim();
+
+            if (!this.isFacebookUrl(trimmed)) return null;
 
             const patterns = [
                 /facebook\.com\/.*\/videos\/(\d+)/,
@@ -225,24 +259,59 @@
             ];
 
             for (const pattern of patterns) {
-                const match = url.match(pattern);
+                const match = trimmed.match(pattern);
                 if (match && match[1]) {
-                    return url;
+                    return trimmed;
                 }
             }
             return null;
         }
 
         /**
-         * Check if URL is a Facebook video URL
+         * Strictly validate that URL belongs to Facebook (prevents javascript: or host spoofing)
          */
         isFacebookUrl(url) {
-            if (!url) return false;
-            // Check for standard videos, watch links, and reel links
-            return /facebook\.com\/(.*\/)?videos?\//.test(url) ||
-                /fb\.watch\//.test(url) ||
-                /facebook\.com\/reel\//.test(url) ||
-                /facebook\.com\/.*\/reels\//.test(url);
+            if (!url || typeof url !== 'string') return false;
+
+            try {
+                const parsed = new URL(url.trim());
+                if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+                    return false;
+                }
+
+                const host = parsed.hostname.toLowerCase();
+                const isFbHost = /(^|\.)facebook\.com$/.test(host) || /(^|\.)fb\.watch$/.test(host);
+                if (!isFbHost) {
+                    return false;
+                }
+
+                return /\/(.*\/)?videos?\//.test(parsed.pathname) ||
+                    /(^|\.)fb\.watch$/.test(host) ||
+                    /\/watch\/?$/.test(parsed.pathname) ||
+                    /\/video\.php$/.test(parsed.pathname) ||
+                    /\/reel\//.test(parsed.pathname) ||
+                    /\/.*\/reels\//.test(parsed.pathname);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        /**
+         * Resolve a safe Facebook video URL from either a full URL or a numeric/alphanumeric video ID
+         */
+        resolveSafeVideoUrl(videoInput) {
+            if (!videoInput || typeof videoInput !== 'string') return null;
+            const trimmed = videoInput.trim();
+
+            if (this.isFacebookUrl(trimmed)) {
+                return trimmed;
+            }
+
+            if (/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+                return `https://www.facebook.com/video.php?v=${encodeURIComponent(trimmed)}`;
+            }
+
+            return null;
         }
 
         /**
@@ -251,13 +320,20 @@
         loadFacebookSDK() {
             if (window.FB && window.FB.init) {
                 this.isFBSDKLoaded = true;
+                this.subscribeXfbmlReady();
                 if (this.api.player.options.debug) {
                     console.log('FB Plugin: Facebook SDK already loaded');
                 }
                 return;
             }
 
+            const existingAsyncInit = window.fbAsyncInit;
             window.fbAsyncInit = () => {
+                if (typeof existingAsyncInit === 'function') {
+                    existingAsyncInit();
+                }
+                if (this.isDisposed) return;
+
                 this.initializeFBSDK();
                 this.isFBSDKLoaded = true;
                 if (this.api.player.options.debug) {
@@ -266,18 +342,52 @@
                 this.api.triggerEvent('facebookplugin:ready', {});
             };
 
-            const script = document.createElement('script');
-            script.src = 'https://connect.facebook.net/en_US/sdk.js';
-            script.async = true;
-            script.defer = true;
+            if (!document.querySelector('script[src*="connect.facebook.net/"][src*="sdk.js"]')) {
+                const script = document.createElement('script');
+                script.src = 'https://connect.facebook.net/en_US/sdk.js';
+                script.async = true;
+                script.defer = true;
 
-            if (!document.getElementById('fb-root')) {
-                const fbRoot = document.createElement('div');
-                fbRoot.id = 'fb-root';
-                document.body.insertBefore(fbRoot, document.body.firstChild);
+                script.onerror = () => {
+                    this.sdkLoadFailed = true;
+                    if (this.api.player.options.debug) {
+                        console.error('FB Plugin: Failed to load Facebook SDK (blocked or network error)');
+                    }
+                    this.api.triggerEvent('facebookplugin:error', { reason: 'sdk_load_failed' });
+                };
+
+                if (!document.getElementById('fb-root')) {
+                    const fbRoot = document.createElement('div');
+                    fbRoot.id = 'fb-root';
+                    document.body.insertBefore(fbRoot, document.body.firstChild);
+                }
+
+                document.head.appendChild(script);
             }
+        }
 
-            document.head.appendChild(script);
+        /**
+         * Subscribe to XFBML player ready event scoped to this plugin instance
+         */
+        subscribeXfbmlReady() {
+            if (!window.FB || !window.FB.Event || this.fbReadySubscription) return;
+
+            this.fbReadySubscription = FB.Event.subscribe('xfbml.ready', (msg) => {
+                if (this.isDisposed || msg.type !== 'video') return;
+
+                // Ensure event belongs to this container instance when multiple players exist
+                if (this.fbVideoElementId && msg.id && msg.id !== this.fbVideoElementId) {
+                    return;
+                }
+
+                this.fbPlayer = msg.instance;
+                this.isPlayerReady = true;
+                this.onPlayerReady();
+                if (this.api.player.options.debug) {
+                    console.log('FB Plugin: Facebook player ready');
+                }
+                this.api.triggerEvent('facebookplugin:playerready', {});
+            });
         }
 
         /**
@@ -294,25 +404,15 @@
             }
 
             FB.init(config);
-
-            // Listen for video player ready
-            FB.Event.subscribe('xfbml.ready', (msg) => {
-                if (msg.type === 'video') {
-                    this.fbPlayer = msg.instance;
-                    this.isPlayerReady = true;
-                    this.onPlayerReady();
-                    if (this.api.player.options.debug) {
-                        console.log('FB Plugin: Facebook player ready');
-                    }
-                    this.api.triggerEvent('facebookplugin:playerready', {});
-                }
-            });
+            this.subscribeXfbmlReady();
         }
 
-       /**
-       * Load Facebook video
-       */
+        /**
+         * Load Facebook video
+         */
         loadVideo(videoInput, options = {}) {
+            if (this.isDisposed) return;
+
             if (!videoInput) {
                 if (this.api.player.options.debug) {
                     console.error('FB Plugin: No video URL or ID provided');
@@ -321,21 +421,30 @@
             }
 
             if (!this.isFBSDKLoaded) {
+                if (this.sdkLoadFailed) return;
                 if (this.api.player.options.debug) {
                     console.log('FB Plugin: Waiting for SDK...');
                 }
-                setTimeout(() => this.loadVideo(videoInput, options), 100);
+                this.loadVideoRetryTimeout = setTimeout(() => this.loadVideo(videoInput, options), 100);
+                return;
+            }
+
+            const safeUrl = this.resolveSafeVideoUrl(String(videoInput));
+            if (!safeUrl) {
+                if (this.api.player.options.debug) {
+                    console.error('FB Plugin: Rejected invalid or unsafe Facebook video URL/ID');
+                }
                 return;
             }
 
             if (this.api.player.options.debug) {
-                console.log('FB Plugin: Loading video:', videoInput);
+                console.log('FB Plugin: Loading video:', safeUrl);
             }
 
-            // Determine video URL
-            this.options.videoUrl = this.isFacebookUrl(videoInput) ?
-                videoInput :
-                `https://www.facebook.com/video.php?v=${videoInput}`;
+            this.options.videoUrl = safeUrl;
+
+            // Reset any prior FB subscriptions before loading a new video
+            this.releaseFBSubscriptions();
 
             // Hide native video
             this.api.video.style.pointerEvents = 'none';
@@ -359,13 +468,12 @@
                     this.api.controls.style.pointerEvents = 'auto';
                 }
 
-                // Ensure title overlay is above Facebook player
-                const titleOverlay = this.api.container.querySelector('.title-overlay');
-                if (titleOverlay) {
-                    titleOverlay.style.zIndex = '15';
-                    titleOverlay.style.pointerEvents = 'none'; // Allow clicks to pass through
+                // Ensure top bar / title overlay is above Facebook player
+                const topBar = this.getTopBarElement();
+                if (topBar) {
+                    topBar.style.zIndex = '20';
                     if (this.api.player.options.debug) {
-                        console.log('FB Plugin: Title overlay z-index set to 15');
+                        console.log('FB Plugin: Top bar z-index set to 20');
                     }
                 }
 
@@ -379,16 +487,18 @@
             this.createMouseMoveOverlay();
 
             // Clear container
-            this.fbContainer.innerHTML = '';
+            this.fbContainer.textContent = '';
 
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Using dimensions: 100%');
             }
 
-            // Create Facebook video element
+            // Create Facebook video element with unique ID for multi-player scoping
+            this.fbVideoElementId = 'fb-video-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
             const fbVideo = document.createElement('div');
+            fbVideo.id = this.fbVideoElementId;
             fbVideo.className = 'fb-video';
-            fbVideo.style.cssText = `position:absolute;top:0;left:0;width:100%!important;height:100%!important;`;
+            fbVideo.style.cssText = 'position:absolute;top:0;left:0;width:100%!important;height:100%!important;';
 
             fbVideo.setAttribute('data-href', this.options.videoUrl);
             fbVideo.setAttribute('data-width', 'auto');
@@ -409,13 +519,20 @@
             if (window.FB && window.FB.XFBML) {
                 FB.XFBML.parse(this.fbContainer);
 
-                // Force styling using the new dynamic function
-                const forceStyles = () => this.forceVideoStyles();
+                // Force styling using the dynamic resize function
+                const forceStyles = () => {
+                    if (!this.isDisposed) {
+                        this.forceVideoStyles();
+                    }
+                };
 
-                // Initial attempts while XFBML renders
-                setTimeout(forceStyles, 500);
-                setTimeout(forceStyles, 1000);
-                setTimeout(forceStyles, 2000);
+                // Clear any pending style timeouts from previous loads
+                this.styleTimeouts.forEach(id => clearTimeout(id));
+                this.styleTimeouts = [
+                    setTimeout(forceStyles, 500),
+                    setTimeout(forceStyles, 1000),
+                    setTimeout(forceStyles, 2000)
+                ];
 
                 // Disconnect existing observer if any
                 if (this.styleObserver) {
@@ -423,20 +540,24 @@
                 }
 
                 // Create a robust MutationObserver
-                this.styleObserver = new MutationObserver((mutations) => {
-                    // Temporarily disconnect to prevent infinite loops when we apply our own styles
+                this.styleObserver = new MutationObserver(() => {
+                    if (this.isDisposed || !this.fbContainer) return;
+
+                    // Temporarily disconnect to prevent infinite loops when applying our own styles
                     this.styleObserver.disconnect();
 
                     // Force our styles
                     forceStyles();
 
                     // Reconnect observer
-                    this.styleObserver.observe(this.fbContainer, {
-                        childList: true,
-                        subtree: true,
-                        attributes: true,
-                        attributeFilter: ['style', 'width', 'height', 'class', 'data-width', 'data-height']
-                    });
+                    if (!this.isDisposed && this.fbContainer) {
+                        this.styleObserver.observe(this.fbContainer, {
+                            childList: true,
+                            subtree: true,
+                            attributes: true,
+                            attributeFilter: ['style', 'width', 'height', 'class', 'data-width', 'data-height']
+                        });
+                    }
                 });
 
                 // Observe the entire parent container and all its dynamic children (subtree)
@@ -455,9 +576,26 @@
         }
 
         /**
+         * Get top bar element (supports current .player-top-bar and legacy .title-overlay)
+         */
+        getTopBarElement() {
+            return this.api.container.querySelector('.player-top-bar') ||
+                this.api.container.querySelector('.title-overlay');
+        }
+
+        /**
+         * Normalize sync or Promise return values from Facebook SDK methods
+         */
+        toPromise(value) {
+            return Promise.resolve(value);
+        }
+
+        /**
          * Player ready handler
          */
         onPlayerReady() {
+            if (this.isDisposed || !this.fbContainer) return;
+
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Player ready event fired');
             }
@@ -475,15 +613,14 @@
             this.hidePosterOverlay();
             this.removeAllPlayerOverlays();
 
-            // Ensure title overlay is visible and above Facebook player
-            const titleOverlay = this.api.container.querySelector('.title-overlay');
-            if (titleOverlay) {
-                titleOverlay.style.zIndex = '15';
-                titleOverlay.style.pointerEvents = 'none'; // Allow clicks to pass through
-                titleOverlay.style.display = ''; // Remove any display:none
-                titleOverlay.style.visibility = ''; // Remove any visibility:hidden
+            // Ensure top bar is visible and above Facebook player
+            const topBar = this.getTopBarElement();
+            if (topBar) {
+                topBar.style.zIndex = '20';
+                topBar.style.display = '';
+                topBar.style.visibility = '';
                 if (this.api.player.options.debug) {
-                    console.log('FB Plugin: Title overlay visibility restored');
+                    console.log('FB Plugin: Top bar visibility restored');
                 }
             }
 
@@ -493,8 +630,14 @@
             // Setup event listeners
             this.setupEventListeners();
 
-            // inject controlbar gradient styles
+            // Inject controlbar gradient styles and activate facebook-active class
             this.injectControlbarGradientStyles();
+
+            // Setup progress tooltip once (if custom controls are active)
+            if (this.options.replaceNativePlayer) {
+                this.createProgressTooltip();
+                this.updateProgressTooltip();
+            }
 
             // Start time update
             this.startTimeUpdate();
@@ -508,16 +651,19 @@
             // Setup fullscreen listener
             this.setupFullscreenListener();
 
-            // Get initial volume once
+            // Get initial volume once (supports both sync and Promise SDK methods)
             if (this.fbPlayer && this.fbPlayer.getVolume) {
-                this.fbPlayer.getVolume().then(vol => {
+                this.toPromise(this.fbPlayer.getVolume()).then(vol => {
+                    if (this.isDisposed || typeof vol !== 'number') return;
                     const percent = Math.round(vol * 100);
                     this.updateVolumeUI(percent);
 
                     // Also check initial mute state
-                    if (this.fbPlayer.isMuted) {
-                        this.fbPlayer.isMuted().then(isMuted => {
-                            this.updateMuteUI(isMuted);
+                    if (this.fbPlayer && this.fbPlayer.isMuted) {
+                        this.toPromise(this.fbPlayer.isMuted()).then(isMuted => {
+                            if (!this.isDisposed) {
+                                this.updateMuteUI(!!isMuted);
+                            }
                         }).catch(() => { });
                     }
                 }).catch(error => {
@@ -536,8 +682,10 @@
                     console.log('FB Plugin: Attempting autoplay via API (may be blocked by browser)');
                 }
 
-                setTimeout(() => {
-                    this.tryAutoplay();
+                this.autoplayTimeout = setTimeout(() => {
+                    if (!this.isDisposed) {
+                        this.tryAutoplay();
+                    }
                 }, 500);
             }
 
@@ -549,7 +697,7 @@
          * If browser blocks it, user must click directly on Facebook player
          */
         tryAutoplay() {
-            if (!this.fbPlayer) return;
+            if (!this.fbPlayer || this.isDisposed) return;
 
             try {
                 // Try to play
@@ -609,10 +757,14 @@
         }
 
         /**
- * Setup fullscreen event listener
- */
+         * Setup fullscreen event listener
+         */
         setupFullscreenListener() {
+            if (this.fullscreenChangeHandler) return;
+
             const fullscreenChangeHandler = () => {
+                if (this.isDisposed) return;
+
                 const isNowFullscreen = !!(
                     document.fullscreenElement ||
                     document.webkitFullscreenElement ||
@@ -626,9 +778,11 @@
                     console.log('FB Plugin: Fullscreen changed:', isNowFullscreen);
                 }
 
-                // Forza stili dopo cambio fullscreen
-                setTimeout(() => {
-                    this.forceVideoStyles();
+                // Force style recalculation after fullscreen transition
+                this.fullscreenResizeTimeout = setTimeout(() => {
+                    if (!this.isDisposed) {
+                        this.forceVideoStyles();
+                    }
                 }, 100);
             };
 
@@ -637,7 +791,7 @@
             document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
             document.addEventListener('MSFullscreenChange', fullscreenChangeHandler);
 
-            // Salva per cleanup
+            // Save reference for cleanup
             this.fullscreenChangeHandler = fullscreenChangeHandler;
         }
 
@@ -703,26 +857,18 @@
 
         /**
          * Create mouse move overlay
-         * CRITICAL: Must be completely transparent and NOT block clicks to FB player
+         * Keeps pointer-events: none so clicks pass directly to the Facebook player
          */
         createMouseMoveOverlay() {
             if (this.mouseMoveOverlay) return;
 
             this.mouseMoveOverlay = document.createElement('div');
             this.mouseMoveOverlay.className = 'fb-mousemove-overlay';
-            // CRITICAL: pointer-events:none to let clicks pass through to Facebook player
+            // pointer-events: none lets clicks pass through to Facebook player
             this.mouseMoveOverlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;background:transparent;pointer-events:none;';
 
             this.api.container.insertBefore(this.mouseMoveOverlay, this.api.controls);
 
-            // ONLY capture mousemove for controls auto-hide, DON'T block clicks
-            this.mouseMoveOverlay.addEventListener('mousemove', (e) => {
-                if (this.api.player.onMouseMove) {
-                    this.api.player.onMouseMove(e);
-                }
-            });
-
-            // Don't handle clicks on this overlay - let them pass through to FB player
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Mouse move overlay created with pointer-events:none');
             }
@@ -748,13 +894,35 @@
         }
 
         /**
+         * Release all active Facebook player event subscriptions
+         */
+        releaseFBSubscriptions() {
+            if (this.fbSubscriptions.length > 0) {
+                this.fbSubscriptions.forEach(sub => {
+                    try {
+                        if (sub && typeof sub.release === 'function') {
+                            sub.release();
+                        }
+                    } catch (e) {
+                        // Ignore release errors
+                    }
+                });
+                this.fbSubscriptions = [];
+            }
+        }
+
+        /**
          * Setup event listeners with proper main player state sync
          */
         setupEventListeners() {
             if (!this.fbPlayer) return;
 
+            this.releaseFBSubscriptions();
+
             // Started playing - marks successful user interaction
-            this.fbPlayer.subscribe('startedPlaying', () => {
+            this.fbSubscriptions.push(this.fbPlayer.subscribe('startedPlaying', () => {
+                if (this.isDisposed) return;
+
                 if (this.api.player.options.debug) {
                     console.log('🎬 FB Plugin: Video started playing');
                 }
@@ -763,12 +931,12 @@
                 this.userHasInteracted = true; // Video playing = user clicked FB player
                 this.waitingForUserClick = false;
 
-                // Rimuovi classe paused
+                // Remove paused class
                 if (this.player.container) {
                     this.player.container.classList.remove('video-paused');
                 }
 
-                // Riattiva l'auto-hide quando riprende la riproduzione
+                // Reactivate auto-hide when playback resumes
                 if (this.player.options.autoHide && this.player.autoHideInitialized) {
                     if (this.player.resetAutoHideTimer) {
                         this.player.resetAutoHideTimer();
@@ -792,42 +960,49 @@
                 this.api.triggerEvent('play', {});
                 this.api.triggerEvent('playing', {});
                 this.hideLoadingOverlay();
-            });
+            }));
 
             // Paused
-            this.fbPlayer.subscribe('paused', () => {
+            this.fbSubscriptions.push(this.fbPlayer.subscribe('paused', () => {
+                if (this.isDisposed) return;
+
                 if (this.api.player.options.debug) {
                     console.log('🎬 FB Plugin: Video paused');
                 }
 
                 this.isPlaying = false;
 
-                // Aggiungi classe per identificare lo stato di pausa
+                // Add class to identify paused state
                 if (this.player.container) {
                     this.player.container.classList.add('video-paused');
                 }
 
-                // Mantieni la controlbar visibile SOLO se autoHide è abilitato
+                // Keep controlbar visible ONLY if autoHide is enabled
                 if (this.player.options.autoHide && this.player.autoHideInitialized) {
-                    // Mostra controlli
+                    // Show controls
                     if (this.player.controls) {
                         this.player.controls.classList.add('show');
                     }
 
-                    // Mostra anche il title overlay se è abilitato e non è persistent
+                    // Show container controls/top-bar state when paused
+                    if (this.player.container) {
+                        this.player.container.classList.add('has-controls');
+                    }
+
+                    // Show legacy title overlay if enabled and non-persistent
                     if (this.player.options.showTitleOverlay &&
                         !this.player.options.persistentTitle &&
                         this.player.titleOverlay) {
                         this.player.titleOverlay.classList.add('show');
                     }
 
-                    // Cancella il timer di auto-hide
+                    // Clear auto-hide timer
                     if (this.player.autoHideTimer) {
                         clearTimeout(this.player.autoHideTimer);
                         this.player.autoHideTimer = null;
                     }
 
-                    // Cancella anche il timer del title overlay
+                    // Clear title overlay timer
                     if (this.player.titleTimeout) {
                         clearTimeout(this.player.titleTimeout);
                         this.player.titleTimeout = null;
@@ -849,10 +1024,12 @@
                     duration: this.getDuration()
                 });
                 this.api.triggerEvent('pause', {});
-            });
+            }));
 
             // Finished playing
-            this.fbPlayer.subscribe('finishedPlaying', () => {
+            this.fbSubscriptions.push(this.fbPlayer.subscribe('finishedPlaying', () => {
+                if (this.isDisposed) return;
+
                 if (this.api.player.options.debug) {
                     console.log('🎬 FB Plugin: Video finished');
                 }
@@ -869,32 +1046,38 @@
                     currentTime: this.getCurrentTime(),
                     duration: this.getDuration()
                 });
-            });
+            }));
 
             // Started buffering
-            this.fbPlayer.subscribe('startedBuffering', () => {
+            this.fbSubscriptions.push(this.fbPlayer.subscribe('startedBuffering', () => {
+                if (this.isDisposed) return;
+
                 if (this.api.player.options.debug) {
                     console.log('🎬 FB Plugin: Video buffering started');
                 }
                 this.api.triggerEvent('waiting', {});
                 this.showLoadingOverlay();
-            });
+            }));
 
             // Finished buffering
-            this.fbPlayer.subscribe('finishedBuffering', () => {
+            this.fbSubscriptions.push(this.fbPlayer.subscribe('finishedBuffering', () => {
+                if (this.isDisposed) return;
+
                 if (this.api.player.options.debug) {
                     console.log('🎬 FB Plugin: Video buffering finished');
                 }
                 this.api.triggerEvent('canplay', {});
                 this.hideLoadingOverlay();
-            });
+            }));
 
             // Error
-            this.fbPlayer.subscribe('error', (error) => {
+            this.fbSubscriptions.push(this.fbPlayer.subscribe('error', (error) => {
+                if (this.isDisposed) return;
+
                 console.error('🎬 FB Plugin: Facebook player error:', error);
                 this.api.triggerEvent('error', error);
                 this.api.triggerEvent('facebookplugin:error', error);
-            });
+            }));
 
             if (this.api.player.options.debug) {
                 console.log('🎬 FB Plugin: Event listeners setup completed');
@@ -907,12 +1090,15 @@
             }
 
             this.timeUpdateInterval = setInterval(() => {
+                if (this.isDisposed) return;
+
                 if (this.fbPlayer && this.fbPlayer.getCurrentPosition !== undefined && this.fbPlayer.getDuration !== undefined) {
                     try {
                         const currentTime = this.fbPlayer.getCurrentPosition();
                         const duration = this.fbPlayer.getDuration();
 
                         if (duration && duration > 0) {
+                            this.currentDuration = duration;
                             const progress = (currentTime / duration) * 100;
 
                             // Update progress bar
@@ -932,12 +1118,6 @@
                             if (durationEl) {
                                 durationEl.textContent = this.formatTime(duration);
                             }
-
-                            // Create tooltip if it doesn't exist
-                            this.createProgressTooltip();
-
-                            // Update progress bar tooltip with current duration
-                            this.updateProgressTooltip(duration);
                         }
 
                     } catch (error) {
@@ -948,10 +1128,14 @@
         }
 
         /**
-    * Inject CSS styles for controlbar and title overlay gradients
-    * Uses Facebook-specific selectors to avoid conflicts with other plugins
-        */
+         * Inject CSS styles for controlbar and top bar gradients
+         * Uses Facebook-specific selectors to avoid conflicts with other plugins
+         */
         injectControlbarGradientStyles() {
+            if (this.api.container) {
+                this.api.container.classList.add('facebook-active');
+            }
+
             // Check if styles are already injected
             if (document.getElementById('facebook-controlbar-gradient-styles')) {
                 return;
@@ -972,33 +1156,32 @@
         .video-wrapper.facebook-active .controls {
             background: linear-gradient(
                 to top,
-                rgba(0, 0, 0, ${controlBarOpacity}) 0%,           /* Maximum opacity at bottom */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,   /* 89% of max opacity */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,   /* 74% */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,   /* 53% */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,   /* 32% */
-                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%   /* 21% at top */
+                rgba(0, 0, 0, ${controlBarOpacity}) 0%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${controlBarOpacity * 0.21}) 100%
             ) !important;
             backdrop-filter: blur(3px);
             min-height: 60px;
             padding-bottom: 10px;
         }
         
-        /* Title overlay gradient - dark opaque at top, semi-transparent at bottom */
+        /* Top bar / title overlay gradient - dark opaque at top, semi-transparent at bottom */
         /* ONLY applied when Facebook plugin is active */
+        .video-wrapper.facebook-active .player-top-bar:not(.no-title-background),
         .video-wrapper.facebook-active .title-overlay {
             background: linear-gradient(
                 to bottom,
-                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,           /* Maximum opacity at top */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,   /* 89% of max opacity */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,   /* 74% */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,   /* 53% */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,   /* 32% */
-                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%   /* 21% at bottom */
+                rgba(0, 0, 0, ${titleOverlayOpacity}) 0%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.89}) 20%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.74}) 40%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.53}) 60%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.32}) 80%,
+                rgba(0, 0, 0, ${titleOverlayOpacity * 0.21}) 100%
             ) !important;
             backdrop-filter: blur(3px);
-            min-height: 80px;
-            padding-top: 20px;
         }
         
         /* Keep controlbar visible when video is paused */
@@ -1007,7 +1190,8 @@
             visibility: visible !important;
         }
         
-        /* Keep title overlay visible when video is paused */
+        /* Keep top bar / title overlay visible when video is paused */
+        .video-wrapper.facebook-active.video-paused .player-top-bar,
         .video-wrapper.facebook-active.video-paused .title-overlay.show {
             opacity: 1 !important;
             visibility: visible !important;
@@ -1019,13 +1203,13 @@
 
             // Debug logging
             if (this.options.debug) {
-                console.log('🎬 Facebook Plugin: Controlbar and title overlay gradient styles injected');
+                console.log('🎬 Facebook Plugin: Controlbar and top bar gradient styles injected');
                 console.log(`🎬 Facebook Plugin: ControlBar opacity: ${controlBarOpacity}, TitleOverlay opacity: ${titleOverlayOpacity}`);
             }
         }
 
         /**
-         * Update progress bar tooltip with correct time
+         * Update progress bar tooltip with correct time (bound once)
          */
         updateProgressTooltip() {
             const progContainer = this.api.container.querySelector('.progress-container');
@@ -1036,16 +1220,15 @@
                 progContainer.removeEventListener('mousemove', this.progressTooltipListener);
             }
 
-            // Create new listener that gets duration in real-time
+            // Create new listener that reads duration in real-time
             this.progressTooltipListener = (e) => {
-                const tooltip = this.api.container.querySelector('.progress-tooltip');
+                const tooltip = this.progressTooltipElement || this.api.container.querySelector('.progress-tooltip');
                 if (!tooltip) return;
 
-                // Get duration from Facebook player every time (like control bar does)
-                let duration = 0;
+                let duration = this.currentDuration || 0;
                 if (this.fbPlayer && this.fbPlayer.getDuration) {
                     try {
-                        duration = this.fbPlayer.getDuration();
+                        duration = this.fbPlayer.getDuration() || duration;
                     } catch (error) {
                         return;
                     }
@@ -1066,15 +1249,18 @@
         }
 
         /**
-    * Create progress tooltip element if it doesn't exist
-        */
+         * Create progress tooltip element if it doesn't exist
+         */
         createProgressTooltip() {
             const progContainer = this.api.container.querySelector('.progress-container');
             if (!progContainer) return;
 
             // Check if tooltip already exists
             let tooltip = progContainer.querySelector('.progress-tooltip');
-            if (tooltip) return; // Already exists
+            if (tooltip) {
+                this.progressTooltipElement = tooltip;
+                return;
+            }
 
             // Create tooltip element
             tooltip = document.createElement('div');
@@ -1096,14 +1282,17 @@
     `;
 
             progContainer.appendChild(tooltip);
+            this.progressTooltipElement = tooltip;
 
-            // Show/hide tooltip on hover
-            progContainer.addEventListener('mouseenter', () => {
+            // Show/hide tooltip on hover (tracked for cleanup)
+            this.tooltipMouseEnterListener = () => {
                 tooltip.style.display = 'block';
-            });
-            progContainer.addEventListener('mouseleave', () => {
+            };
+            this.tooltipMouseLeaveListener = () => {
                 tooltip.style.display = 'none';
-            });
+            };
+            progContainer.addEventListener('mouseenter', this.tooltipMouseEnterListener);
+            progContainer.addEventListener('mouseleave', this.tooltipMouseLeaveListener);
         }
 
         /**
@@ -1139,7 +1328,7 @@
                 }
                 return; // Don't sync controls, use Facebook's native controls
             } else {
-                // Show MYETV control bar, hide Facebook native controls (not possible, they'll coexist)
+                // Show MYETV control bar
                 if (this.api.controls) {
                     this.api.controls.style.display = '';
                     if (this.api.player.options.debug) {
@@ -1170,8 +1359,9 @@
             this.setupVolumeSlider();
 
             // Override play method
-            // Let it try, but if it fails browser will just not play
             this.player.play = () => {
+                if (this.isDisposed) return;
+
                 if (this.fbPlayer) {
                     if (this.api.player.options.debug) {
                         console.log('📘 FB Plugin: Calling fbPlayer.play()');
@@ -1183,17 +1373,16 @@
                         if (this.api.player.options.debug) {
                             console.log('📘 FB Plugin: Play via API failed (expected in browser without user gesture)');
                         }
-                        // Mark that we're waiting for user to click FB player
                         this.waitingForUserClick = true;
                     }
                 } else {
-                    // fbPlayer not ready yet - wait with retry
                     if (this.api.player.options.debug) {
                         console.log('📘 FB Plugin: fbPlayer not ready, waiting...');
                     }
 
                     let attempts = 0;
                     const waitForPlayer = () => {
+                        if (this.isDisposed) return;
                         attempts++;
                         if (this.fbPlayer) {
                             if (this.api.player.options.debug) {
@@ -1205,10 +1394,10 @@
                                 this.waitingForUserClick = true;
                             }
                         } else if (attempts < 50) {
-                            setTimeout(waitForPlayer, 100);
+                            this.waitForPlayerTimeout = setTimeout(waitForPlayer, 100);
                         } else {
                             console.error('📘 FB Plugin: Timeout waiting for fbPlayer');
-                            if (this.originalMethods.play) {
+                            if (this.originalMethods && this.originalMethods.play) {
                                 this.originalMethods.play();
                             }
                         }
@@ -1222,7 +1411,7 @@
                 if (this.fbPlayer) {
                     try {
                         this.fbPlayer.pause();
-                        this.userHasInteracted = true; // Pause is a user interaction
+                        this.userHasInteracted = true;
                     } catch (error) {
                         if (this.api.player.options.debug) {
                             console.error('FB Plugin: Pause error:', error);
@@ -1236,7 +1425,7 @@
             // Override togglePlayPause method
             this.player.togglePlayPause = () => {
                 if (this.fbPlayer) {
-                    this.userHasInteracted = true; // Toggle is a user interaction
+                    this.userHasInteracted = true;
                     this.togglePlayPause();
                 } else if (this.originalMethods.togglePlayPause) {
                     this.originalMethods.togglePlayPause();
@@ -1252,12 +1441,10 @@
                     return;
                 }
 
-                // Mark user interaction
                 this.userHasInteracted = true;
 
                 // Check if it's an event from progress bar (mouse or touch)
                 if (eventOrTime && typeof eventOrTime === 'object') {
-                    // It's a click/drag/touch event
                     const progContainer = this.api.container.querySelector('.progress-container');
                     if (progContainer) {
                         try {
@@ -1306,7 +1493,6 @@
                         }
                     }
                 } else if (typeof eventOrTime === 'number') {
-                    // Direct time value
                     if (eventOrTime >= 0) {
                         try {
                             this.fbPlayer.seek(eventOrTime);
@@ -1325,16 +1511,16 @@
             // Override volume methods
             this.player.setVolume = (volume) => {
                 if (this.fbPlayer && this.fbPlayer.setVolume) {
-                    this.userHasInteracted = true; // Volume change is user interaction
+                    this.userHasInteracted = true;
 
                     const fbVolume = volume / 100;
                     try {
                         this.fbPlayer.setVolume(fbVolume);
 
-                        // Auto-unmute when user changes volume
-                        if (volume > 0) {
-                            this.fbPlayer.isMuted().then(isMuted => {
-                                if (isMuted) {
+                        // Auto-unmute when user changes volume (supports sync or Promise SDK)
+                        if (volume > 0 && this.fbPlayer.isMuted) {
+                            this.toPromise(this.fbPlayer.isMuted()).then(isMuted => {
+                                if (isMuted && this.fbPlayer) {
                                     this.fbPlayer.unmute();
                                     this.updateMuteUI(false);
                                 }
@@ -1392,8 +1578,8 @@
                 if (this.fbPlayer && this.fbPlayer.isMuted) {
                     this.userHasInteracted = true;
 
-                    try {
-                        const isMuted = this.fbPlayer.isMuted();
+                    this.toPromise(this.fbPlayer.isMuted()).then(isMuted => {
+                        if (!this.fbPlayer || this.isDisposed) return;
                         if (isMuted) {
                             this.fbPlayer.unmute();
                             this.updateMuteUI(false);
@@ -1405,16 +1591,15 @@
                         if (this.api.player.options.debug) {
                             console.log('FB Plugin: Mute toggled to', !isMuted);
                         }
-                    } catch (error) {
+                    }).catch(error => {
                         if (this.api.player.options.debug) {
                             console.error('FB Plugin: Error toggling mute', error);
                         }
-                    }
+                    });
                 } else if (this.originalMethods.toggleMute) {
                     this.originalMethods.toggleMute();
                 }
             };
-
         }
 
         // Create button to show Facebook native controls
@@ -1459,6 +1644,7 @@
             // Add click listener
             const btn = this.player.container.querySelector('.facebook-controls-btn');
             if (btn) {
+                this.controlsButtonElement = btn;
                 btn.addEventListener('click', () => {
                     if (this.options.debug) {
                         console.log('🎬 FB Plugin: Native controls button clicked');
@@ -1481,25 +1667,31 @@
                 console.log('🎬 FB Plugin: Showing Facebook native controls');
             }
 
-            const iframe = this.player.container.querySelector('iframe');
+            const iframe = this.fbContainer ? this.fbContainer.querySelector('iframe') : this.player.container.querySelector('iframe');
             const controlbar = this.player.container.querySelector('.controls');
-            const titleOverlay = this.player.container.querySelector('.title-overlay');
+            const topBar = this.getTopBarElement();
 
             if (iframe) {
                 // Bring iframe to front
                 iframe.style.pointerEvents = 'auto';
                 iframe.style.zIndex = '9999';
 
-                // Hide controlbar and title
+                // Hide controlbar and top bar
                 if (controlbar) controlbar.style.display = 'none';
-                if (titleOverlay) titleOverlay.style.display = 'none';
+                if (topBar) topBar.style.display = 'none';
+
+                if (this.facebookControlsTimeout) {
+                    clearTimeout(this.facebookControlsTimeout);
+                }
 
                 // Auto-restore after 10 seconds
                 this.facebookControlsTimeout = setTimeout(() => {
-                    if (this.options.debug) {
-                        console.log('🎬 FB Plugin: Restoring custom controls after 10 seconds');
+                    if (!this.isDisposed) {
+                        if (this.options.debug) {
+                            console.log('🎬 FB Plugin: Restoring custom controls after 10 seconds');
+                        }
+                        this.hideFacebookControls();
                     }
-                    this.hideFacebookControls();
                 }, 10000);
             }
         }
@@ -1516,21 +1708,21 @@
                 this.facebookControlsTimeout = null;
             }
 
-            const iframe = this.player.container.querySelector('iframe');
+            const iframe = this.fbContainer ? this.fbContainer.querySelector('iframe') : this.player.container.querySelector('iframe');
             const controlbar = this.player.container.querySelector('.controls');
-            const titleOverlay = this.player.container.querySelector('.title-overlay');
+            const topBar = this.getTopBarElement();
 
             if (iframe) {
-                // Disable clicks on Facebook controls
-                iframe.style.pointerEvents = 'none';
+                // Disable clicks on Facebook controls when MYETV controls are active
+                iframe.style.pointerEvents = this.options.replaceNativePlayer ? 'none' : 'auto';
                 iframe.style.zIndex = '1';
 
-                // Restore controlbar and title
-                if (controlbar) {
+                // Restore controlbar and top bar
+                if (controlbar && this.options.replaceNativePlayer) {
                     controlbar.style.display = '';
                     controlbar.style.zIndex = '10';
                 }
-                if (titleOverlay) titleOverlay.style.display = '';
+                if (topBar) topBar.style.display = '';
 
                 if (this.options.debug) {
                     console.log('🎬 FB Plugin: Custom controls restored');
@@ -1574,7 +1766,7 @@
                         // Set volume on Facebook player (0-1 range)
                         this.fbPlayer.setVolume(volume / 100);
 
-                        // CRITICAL FIX: Update UI immediately
+                        // Update UI immediately
                         const fill = this.api.container.querySelector('.volume-filled');
                         if (fill) {
                             fill.style.width = volume + '%';
@@ -1585,10 +1777,10 @@
                             this.api.container.style.setProperty('--player-volume-fill', volume + '%');
                         }
 
-                        // Auto-unmute when user changes volume
-                        if (volume > 0) {
-                            this.fbPlayer.isMuted().then(isMuted => {
-                                if (isMuted) {
+                        // Auto-unmute when user changes volume (supports sync or Promise SDK)
+                        if (volume > 0 && this.fbPlayer.isMuted) {
+                            this.toPromise(this.fbPlayer.isMuted()).then(isMuted => {
+                                if (isMuted && this.fbPlayer && !this.isDisposed) {
                                     this.fbPlayer.unmute();
                                     this.updateMuteUI(false);
                                 }
@@ -1607,7 +1799,7 @@
                 }
             };
 
-            // CRITICAL: Use capture phase to intercept BEFORE main player
+            // Use capture phase to intercept BEFORE main player
             volumeSlider.addEventListener('input', this.volumeSliderListener, true);
 
             if (this.api.player.options.debug) {
@@ -1619,34 +1811,28 @@
          * Update volume UI when volume changes
          */
         updateVolumeUI(volume) {
-            // Slider
             const volumeSlider = this.api.container.querySelector('.volume-slider');
             if (volumeSlider && volumeSlider.value != volume) {
                 volumeSlider.value = volume;
             }
 
-            // Progress bar fill
             const fill = this.api.container.querySelector('.volume-filled');
             if (fill) {
                 fill.style.width = volume + '%';
             }
 
-            // Update volume visual (main player method)
             if (this.api.player.updateVolumeSliderVisual) {
                 this.api.player.updateVolumeSliderVisual();
             }
 
-            // Update CSS custom property
             if (this.api.container) {
                 this.api.container.style.setProperty('--player-volume-fill', volume + '%');
             }
 
-            // Update tooltip
             if (this.api.player.updateVolumeTooltip) {
                 this.api.player.updateVolumeTooltip();
             }
 
-            // CRITICAL FIX: Also update tooltip position
             if (this.api.player.updateVolumeTooltipPosition) {
                 this.api.player.updateVolumeTooltipPosition(volume / 100);
             }
@@ -1695,15 +1881,14 @@
         }
 
         /**
- * CRITICAL: Remove ALL player overlays to expose Facebook player completely
- * EXCEPT the title overlay which should remain visible
- */
+         * Remove ALL player overlays to expose Facebook player completely
+         * EXCEPT the top bar / title overlay which should remain visible
+         */
         removeAllPlayerOverlays() {
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Removing all player overlays to expose Facebook player');
             }
 
-            // Remove poster overlay
             const posterOverlay = this.api.container.querySelector('.video-poster-overlay');
             if (posterOverlay) {
                 posterOverlay.style.display = 'none';
@@ -1712,7 +1897,6 @@
                 posterOverlay.style.pointerEvents = 'none';
             }
 
-            // Remove initial loading
             const initialLoading = this.api.container.querySelector('.initial-loading');
             if (initialLoading) {
                 initialLoading.style.display = 'none';
@@ -1720,7 +1904,6 @@
                 initialLoading.style.pointerEvents = 'none';
             }
 
-            // Remove loading overlay
             const loadingOverlay = this.api.container.querySelector('.loading-overlay');
             if (loadingOverlay) {
                 loadingOverlay.style.display = 'none';
@@ -1729,7 +1912,6 @@
                 loadingOverlay.style.pointerEvents = 'none';
             }
 
-            // Remove big play button if exists
             const bigPlayButton = this.api.container.querySelector('.big-play-button');
             if (bigPlayButton) {
                 bigPlayButton.style.display = 'none';
@@ -1737,12 +1919,11 @@
                 bigPlayButton.style.pointerEvents = 'none';
             }
 
-            // Remove any custom overlays EXCEPT title overlay
             const customOverlays = this.api.container.querySelectorAll('[class*="overlay"]');
             customOverlays.forEach(overlay => {
-                // Don't remove mouse move overlay, loading overlay we control, or title overlay
                 if (!overlay.classList.contains('fb-mousemove-overlay') &&
-                    !overlay.classList.contains('title-overlay')) {
+                    !overlay.classList.contains('title-overlay') &&
+                    !overlay.classList.contains('moreinfo-modal-overlay')) {
                     if (this.api.player.options.debug) {
                         console.log('FB Plugin: Hiding overlay:', overlay.className);
                     }
@@ -1806,20 +1987,100 @@
                 console.log('FB Plugin: Disposing');
             }
 
+            this.isDisposed = true;
+
+            // Clear all active timers and intervals
             if (this.timeUpdateInterval) {
                 clearInterval(this.timeUpdateInterval);
                 this.timeUpdateInterval = null;
             }
+            if (this.sdkCheckTimeout) {
+                clearTimeout(this.sdkCheckTimeout);
+                this.sdkCheckTimeout = null;
+            }
+            if (this.loadVideoRetryTimeout) {
+                clearTimeout(this.loadVideoRetryTimeout);
+                this.loadVideoRetryTimeout = null;
+            }
+            if (this.autoplayTimeout) {
+                clearTimeout(this.autoplayTimeout);
+                this.autoplayTimeout = null;
+            }
+            if (this.waitForPlayerTimeout) {
+                clearTimeout(this.waitForPlayerTimeout);
+                this.waitForPlayerTimeout = null;
+            }
+            if (this.fullscreenResizeTimeout) {
+                clearTimeout(this.fullscreenResizeTimeout);
+                this.fullscreenResizeTimeout = null;
+            }
+            if (this.facebookControlsTimeout) {
+                clearTimeout(this.facebookControlsTimeout);
+                this.facebookControlsTimeout = null;
+            }
+            if (this.styleTimeouts.length > 0) {
+                this.styleTimeouts.forEach(id => clearTimeout(id));
+                this.styleTimeouts = [];
+            }
 
+            // Disconnect MutationObserver
             if (this.styleObserver) {
                 this.styleObserver.disconnect();
                 this.styleObserver = null;
             }
 
-            // Clear Facebook controls timeout
-            if (this.facebookControlsTimeout) {
-                clearTimeout(this.facebookControlsTimeout);
-                this.facebookControlsTimeout = null;
+            // Release Facebook SDK event subscriptions
+            this.releaseFBSubscriptions();
+            if (this.fbReadySubscription && typeof this.fbReadySubscription.release === 'function') {
+                try {
+                    this.fbReadySubscription.release();
+                } catch (e) {
+                    // Ignore release errors
+                }
+                this.fbReadySubscription = null;
+            }
+
+            // Remove volume slider listener
+            const volumeSlider = this.api.container?.querySelector('.volume-slider');
+            if (volumeSlider && this.volumeSliderListener) {
+                volumeSlider.removeEventListener('input', this.volumeSliderListener, true);
+                this.volumeSliderListener = null;
+            }
+
+            // Remove progress tooltip listeners and element
+            const progContainer = this.api.container?.querySelector('.progress-container');
+            if (progContainer) {
+                if (this.progressTooltipListener) {
+                    progContainer.removeEventListener('mousemove', this.progressTooltipListener);
+                    this.progressTooltipListener = null;
+                }
+                if (this.tooltipMouseEnterListener) {
+                    progContainer.removeEventListener('mouseenter', this.tooltipMouseEnterListener);
+                    this.tooltipMouseEnterListener = null;
+                }
+                if (this.tooltipMouseLeaveListener) {
+                    progContainer.removeEventListener('mouseleave', this.tooltipMouseLeaveListener);
+                    this.tooltipMouseLeaveListener = null;
+                }
+            }
+            if (this.progressTooltipElement) {
+                this.progressTooltipElement.remove();
+                this.progressTooltipElement = null;
+            }
+
+            // Remove Facebook native controls button
+            if (this.controlsButtonElement) {
+                this.controlsButtonElement.remove();
+                this.controlsButtonElement = null;
+            }
+
+            // Remove fullscreen listeners
+            if (this.fullscreenChangeHandler) {
+                document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+                document.removeEventListener('webkitfullscreenchange', this.fullscreenChangeHandler);
+                document.removeEventListener('mozfullscreenchange', this.fullscreenChangeHandler);
+                document.removeEventListener('MSFullscreenChange', this.fullscreenChangeHandler);
+                this.fullscreenChangeHandler = null;
             }
 
             if (this.fbPlayer) {
@@ -1831,18 +2092,18 @@
                 this.fbContainer = null;
             }
 
-            // Dopo il cleanup di styleObserver
-            if (this.fullscreenChangeHandler) {
-                document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
-                document.removeEventListener('webkitfullscreenchange', this.fullscreenChangeHandler);
-                document.removeEventListener('mozfullscreenchange', this.fullscreenChangeHandler);
-                document.removeEventListener('MSFullscreenChange', this.fullscreenChangeHandler);
-                this.fullscreenChangeHandler = null;
-            }
-
             this.removeMouseMoveOverlay();
 
-            // CRITICAL: Restore original methods
+            // Remove facebook-active class and gradient styles if no other active instances remain
+            if (this.api.container) {
+                this.api.container.classList.remove('facebook-active');
+            }
+            if (!document.querySelector('.video-wrapper.facebook-active')) {
+                const styleEl = document.getElementById('facebook-controlbar-gradient-styles');
+                if (styleEl) styleEl.remove();
+            }
+
+            // Restore original methods
             if (this.originalMethods) {
                 if (this.originalMethods.play) this.player.play = this.originalMethods.play;
                 if (this.originalMethods.pause) this.player.pause = this.originalMethods.pause;
@@ -1852,9 +2113,10 @@
                 if (this.originalMethods.updateVolume) this.player.updateVolume = this.originalMethods.updateVolume;
                 if (this.originalMethods.setMuted) this.player.setMuted = this.originalMethods.setMuted;
                 if (this.originalMethods.toggleMute) this.player.toggleMute = this.originalMethods.toggleMute;
+                this.originalMethods = null;
             }
 
-            // CRITICAL: Restore speed and PiP buttons
+            // Restore speed and PiP buttons
             const speedButton = this.api.container.querySelector('.speed-btn');
             const speedMenu = this.api.container.querySelector('.speed-menu');
             const speedControl = this.api.container.querySelector('.speed-control');
@@ -1878,9 +2140,10 @@
 
             // Reset interaction flags
             this.userHasInteracted = false;
-            this.userHasInteracted = false;
             this.waitingForUserClick = false;
             this.autoplayAttempted = false;
+            this.isPlaying = false;
+            this.isPlayerReady = false;
 
             if (this.api.player.options.debug) {
                 console.log('FB Plugin: Disposed');

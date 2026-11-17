@@ -278,6 +278,7 @@
 
     const CACHE_PREFIX = 'myetv_autosub_';
     const CACHE_MAX_ENTRIES = 30;
+    const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
     let _transformersBundleText = null;
 
@@ -294,33 +295,52 @@
                 modelSize: 'base',
                 autoGenerate: false,
                 showButton: true,
-                position: 'right',    
+                position: 'right',
                 subtitleStyle: {},
                 cacheEnabled: true,
                 idCache: null,
-                autoTranslation: null,      
-                translationEngine: null, 
+                autoTranslation: null,
+                translationEngine: null,
             }, options);
 
+            this.isDisposed = false;
             this.isGenerating = false;
+            this._isTranslating = false;
+            this._autoTransTriggered = false;
             this.subtitles = [];           // Original segments (generated OR imported)
             this.subtitlesTrans = [];      // Translated segments
-            this.translateLang = 'off';    
+            this.translateLang = 'off';
             this._transCache = {};         // Persistent cache for translations { langCode: [...] }
             this.subVisible = false;
-            
+
             // Flags for Native Subtitle Integration
             this.hasNativeTracks = false;
             this.isImportedSubs = false;
 
+            // Display & cue lookup optimization state
             this.updateInterval = null;
+            this._lastCueKey = null;
+            this._lastCueIndex = 0;
+            this._videoPlaybackHandlers = null;
+
             this.btnWrapEl = null;
             this.btnEl = null;
             this.menuEl = null;
             this.overlayEl = null;
+            this.overlayText = null;
             this.panelEl = null;
             this.panelOpen = false;
             this._worker = null;
+
+            // Tracked async timers/listeners for cleanup
+            this._importInterval = null;
+            this._importTimeout = null;
+            this._autoTransCheckInterval = null;
+            this._panelCloseTimeout = null;
+            this._loadedMetaHandler = null;
+            this._activeCaptureStop = null;
+            this._captureVideoEndedHandler = null;
+
             // Drag state
             this._drag = { active: false, startX: 0, startY: 0, origLeft: 0, origTop: 0 };
             // Overlay position
@@ -332,44 +352,67 @@
             this._createOverlay();
             this._createPanel();
             if (this.opts.showButton) this._createButton();
-            
+
             // Integrate with player initialization lifecycle
             this.player.addEventListener('playerready', () => {
+                if (this.isDisposed) return;
                 this._checkForNativeTracks();
-                
-                // If autoTranslation is enabled and we have native tracks, import immediately!
+
+                // If autoTranslation is enabled and we have native tracks, import immediately
                 if (this.opts.autoTranslation && this.hasNativeTracks) {
-                    // Give fetch a moment to load custom tracks via the core player
-                    const attemptImport = setInterval(() => {
+                    const targetLang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
+
+                    this._importInterval = setInterval(() => {
+                        if (this.isDisposed) {
+                            clearInterval(this._importInterval);
+                            this._importInterval = null;
+                            return;
+                        }
                         if (this._importPlayerSubtitles()) {
-                            clearInterval(attemptImport);
+                            clearInterval(this._importInterval);
+                            this._importInterval = null;
+                            if (this._importTimeout) {
+                                clearTimeout(this._importTimeout);
+                                this._importTimeout = null;
+                            }
+
                             if (this.player.options.debug) console.log('[AutoSub] Auto-imported native tracks for translation');
                             this.subVisible = true;
                             this._startDisplay();
                             this._setBtnActive(true);
-                            
-                            // Trigger translation
-                            this._setTranslationLang(this.opts.autoTranslation.toLowerCase().trim().slice(0, 2));
+
+                            // Trigger translation once
+                            this._autoTransTriggered = true;
+                            this._setTranslationLang(targetLang);
                         }
                     }, 500);
+
                     // Stop trying after 5 seconds to avoid infinite loops
-                    setTimeout(() => clearInterval(attemptImport), 5000);
+                    this._importTimeout = setTimeout(() => {
+                        if (this._importInterval) {
+                            clearInterval(this._importInterval);
+                            this._importInterval = null;
+                        }
+                        this._importTimeout = null;
+                    }, 5000);
                 }
             });
 
             if (this.opts.autoTranslation) {
                 this._scheduleAutoTranslation();
             }
-            
-            if (this.opts.autoGenerate) {
-                this.video.addEventListener('loadedmetadata', () => {
+
+            if (this.opts.autoGenerate && this.video) {
+                this._loadedMetaHandler = () => {
+                    if (this.isDisposed) return;
                     // Do NOT generate if the player already loaded native tracks
                     if (!this._checkForNativeTracks()) {
                         this.generate();
                     }
-                }, { once: true });
+                };
+                this.video.addEventListener('loadedmetadata', this._loadedMetaHandler, { once: true });
             }
-            
+
             if (this.player.options.debug) console.log('[AutoSub] Plugin setup complete');
         }
 
@@ -389,22 +432,24 @@
         _importPlayerSubtitles() {
             if (this.player.customSubtitles && this.player.customSubtitles.length > 0) {
                 let track = null;
-                
+
                 // Try current active track first
                 if (this.player.currentCustomTrackIndex >= 0) {
-                     track = this.player.customSubtitles[this.player.currentCustomTrackIndex];
+                    track = this.player.customSubtitles[this.player.currentCustomTrackIndex];
                 }
-                
+
                 // Fallback to first available track with data
                 if (!track || !track.subtitles || track.subtitles.length === 0) {
-                     track = this.player.customSubtitles.find(t => t.subtitles && t.subtitles.length > 0);
+                    track = this.player.customSubtitles.find(t => t.subtitles && t.subtitles.length > 0);
                 }
 
                 if (track && track.subtitles && track.subtitles.length > 0) {
                     // Deep copy segments
                     this.subtitles = track.subtitles.map(s => ({ start: s.start, end: s.end, text: s.text }));
                     this.isImportedSubs = true;
-                    
+                    this._lastCueKey = null;
+                    this._lastCueIndex = 0;
+
                     if (track.language) {
                         this.opts.language = track.language;
                         this._lastDetectedLang = track.language;
@@ -414,13 +459,13 @@
                     if (typeof this.player.disableSubtitles === 'function') {
                         this.player.disableSubtitles();
                     }
-                    
+
                     // Load any previously cached translations for this imported subtitle
                     const cached = this._loadFromCache();
                     if (cached && cached.transCache) {
                         this._transCache = cached.transCache;
                     }
-                    
+
                     // Save imported state immediately
                     this._saveToCache(this.subtitles, null, null, this._lastDetectedLang);
 
@@ -435,24 +480,43 @@
             this.translateLang = lang;
 
             let tries = 0;
-            const check = setInterval(() => {
+            this._autoTransCheckInterval = setInterval(() => {
+                if (this.isDisposed) {
+                    clearInterval(this._autoTransCheckInterval);
+                    this._autoTransCheckInterval = null;
+                    return;
+                }
+
                 tries++;
                 // Wait until transcription/import is fully complete
                 if (this.subtitles.length > 0 && !this.isGenerating) {
-                    clearInterval(check);
+                    clearInterval(this._autoTransCheckInterval);
+                    this._autoTransCheckInterval = null;
+
+                    // Skip duplicate run if playerready import already triggered translation for this language
+                    if (this._autoTransTriggered && (this._isTranslating || this.subtitlesTrans.length > 0)) {
+                        return;
+                    }
+
                     if (this.player.options.debug) console.log('[AutoSub] autoTranslation final pass, lang:', lang);
-                    
+
+                    this._autoTransTriggered = true;
                     this.subtitlesTrans = [];
-                    // Note: We DO NOT clear this._transCache here, to preserve cached translations!
+                    this._lastCueKey = null;
                     this._setTranslationLang(lang);
                     this._updateMenu();
                     return;
                 }
-                if (tries > 300) clearInterval(check);
+                if (tries > 300) {
+                    clearInterval(this._autoTransCheckInterval);
+                    this._autoTransCheckInterval = null;
+                }
             }, 1000);
         }
 
         async handleButtonClick() {
+            if (this.isDisposed) return;
+
             // 1. If native tracks exist but haven't been imported yet, try to import them
             if (this._checkForNativeTracks() && this.subtitles.length === 0) {
                 const imported = this._importPlayerSubtitles();
@@ -481,7 +545,8 @@
                         // Let the user know we are processing the native tracks
                         this._updatePanel('Reading native subtitles...', 100);
                         this._openPanel();
-                        setTimeout(() => this._closePanel(), 1500);
+                        if (this._panelCloseTimeout) clearTimeout(this._panelCloseTimeout);
+                        this._panelCloseTimeout = setTimeout(() => this._closePanel(), 1500);
                         return;
                     }
                 }
@@ -494,7 +559,7 @@
                     this.subtitles = cached.subtitles;
                     this._transCache = cached.transCache || {};
                     this.isImportedSubs = cached.isImportedSubs || false;
-                    
+
                     if (this.opts.autoTranslation) {
                         const tLang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
                         this.translateLang = tLang;
@@ -511,22 +576,22 @@
                     if (this.translateLang && this.translateLang !== 'off') {
                         this._setTranslationLang(this.translateLang);
                     }
-                    
+
                     if (this.player.options.debug)
                         console.log('[AutoSub] Loaded from cache:', cached.subtitles.length, 'segments');
-                        
+
                     this._toggleMenu();
                     return;
                 }
             }
-            
+
             // Default: Toggle the menu
             this._toggleMenu();
         }
 
         async generate() {
-            // Block generation if we are already using native imported subtitles
-            if (this.isGenerating || this.isImportedSubs) return;
+            // Block generation if disposed or already using native imported subtitles
+            if (this.isDisposed || this.isGenerating || this.isImportedSubs) return;
 
             let partialCache = null;
 
@@ -536,7 +601,7 @@
                     this.subtitles = cached.subtitles;
                     this._transCache = cached.transCache || {};
                     this.isImportedSubs = cached.isImportedSubs || false;
-                    
+
                     if (this.opts.autoTranslation) {
                         const tLang = this.opts.autoTranslation.toLowerCase().trim().slice(0, 2);
                         this.translateLang = tLang;
@@ -555,7 +620,7 @@
                         return;
                     }
 
-                    partialCache = cached; 
+                    partialCache = cached;
                     if (this.player.options.debug)
                         console.log('[AutoSub] Partial cache found — resuming from chunk', cached.chunksCompleted, 'of', cached.totalChunks);
                 }
@@ -566,12 +631,19 @@
             this._updatePanel('Extracting audio...', 5);
             try {
                 const audioData = await this._extractAudio();
+                if (this.isDisposed) return;
+
                 this._updatePanel('Downloading Transformers.js bundle...', 30);
                 await this._ensureBundle();
+                if (this.isDisposed) return;
+
                 this._updatePanel('Preparing Whisper worker...', 38);
                 await this._transcribeChunksStreaming(audioData, partialCache);
+                if (this.isDisposed) return;
 
                 this.subtitles.sort((a, b) => a.start - b.start);
+                this._lastCueKey = null;
+                this._lastCueIndex = 0;
 
                 this._saveToCache(this.subtitles, null, null, this._lastDetectedLang || null);
                 this._updatePanel('Subtitles ready!', 100);
@@ -581,12 +653,13 @@
                 // Re-trigger translation if one was active
                 if (this.translateLang && this.translateLang !== 'off') {
                     const lang = this.translateLang;
-                    this.translateLang = 'off';       
+                    this.translateLang = 'off';
                     this.subtitlesTrans = [];
-                    await this._setTranslationLang(lang); 
+                    await this._setTranslationLang(lang);
                 }
 
-                setTimeout(() => { this._closePanel(); }, 800);
+                if (this._panelCloseTimeout) clearTimeout(this._panelCloseTimeout);
+                this._panelCloseTimeout = setTimeout(() => { this._closePanel(); }, 800);
 
                 if (this.player.options.debug) console.log('[AutoSub] Generation complete:', this.subtitles.length, 'segments');
             } catch (err) {
@@ -606,21 +679,98 @@
         }
 
         dispose() {
+            this.isDisposed = true;
             this._stopDisplay();
             this._destroyDrag();
+
             if (this._resizeObserver) {
                 this._resizeObserver.disconnect();
                 this._resizeObserver = null;
             }
+
+            if (this._importInterval) { clearInterval(this._importInterval); this._importInterval = null; }
+            if (this._importTimeout) { clearTimeout(this._importTimeout); this._importTimeout = null; }
+            if (this._autoTransCheckInterval) { clearInterval(this._autoTransCheckInterval); this._autoTransCheckInterval = null; }
+            if (this._panelCloseTimeout) { clearTimeout(this._panelCloseTimeout); this._panelCloseTimeout = null; }
             if (this._captureTimer) { clearTimeout(this._captureTimer); this._captureTimer = null; }
             if (this._captureProgressInterval) { clearInterval(this._captureProgressInterval); this._captureProgressInterval = null; }
-            if (this._worker) { this._worker.terminate(); this._worker = null; }
-            if (this.overlayEl) this.overlayEl.remove();
-            if (this.panelEl) this.panelEl.remove();
-            if (this.btnWrapEl) this.btnWrapEl.remove();
-            if (this.menuEl) this.menuEl.remove();
-            if (this._menuOutsideHandler) document.removeEventListener('click', this._menuOutsideHandler);
-            if (this._menuEscHandler) document.removeEventListener('keydown', this._menuEscHandler);
+
+            if (this.video) {
+                if (this._loadedMetaHandler) {
+                    this.video.removeEventListener('loadedmetadata', this._loadedMetaHandler);
+                    this._loadedMetaHandler = null;
+                }
+                if (this._captureVideoEndedHandler) {
+                    this.video.removeEventListener('ended', this._captureVideoEndedHandler);
+                    this._captureVideoEndedHandler = null;
+                }
+            }
+
+            if (this._activeCaptureStop) {
+                try { this._activeCaptureStop(); } catch (_) { }
+                this._activeCaptureStop = null;
+            }
+
+            if (this._worker) {
+                if (this._worker._bundleURL) URL.revokeObjectURL(this._worker._bundleURL);
+                if (this._worker._workerURL) URL.revokeObjectURL(this._worker._workerURL);
+                this._worker.terminate();
+                this._worker = null;
+            }
+
+            if (this.overlayEl) { this.overlayEl.remove(); this.overlayEl = null; }
+            this.overlayText = null;
+            if (this.panelEl) { this.panelEl.remove(); this.panelEl = null; }
+            if (this.btnWrapEl) { this.btnWrapEl.remove(); this.btnWrapEl = null; }
+            this.btnEl = null;
+            if (this.menuEl) { this.menuEl.remove(); this.menuEl = null; }
+
+            if (this._menuOutsideHandler) {
+                document.removeEventListener('click', this._menuOutsideHandler);
+                this._menuOutsideHandler = null;
+            }
+            if (this._menuEscHandler) {
+                document.removeEventListener('keydown', this._menuEscHandler);
+                this._menuEscHandler = null;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // PRIVATE — URL & TEXT VALIDATION HELPERS
+        // ─────────────────────────────────────────────────────────────────────────
+
+        _isSafeHttpUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            try {
+                const parsed = new URL(url.trim(), window.location.origin);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+            } catch (_) {
+                return false;
+            }
+        }
+
+        _decodeEntitiesSafe(text) {
+            if (!text || typeof text !== 'string') return '';
+            const entityMap = {
+                '&amp;': '&',
+                '&lt;': '<',
+                '&gt;': '>',
+                '&quot;': '"',
+                '&#39;': "'",
+                '&#x27;': "'",
+                '&apos;': "'",
+                '&nbsp;': ' '
+            };
+            return text
+                .replace(/&(amp|lt|gt|quot|apos|nbsp|#39|#x27);/gi, (m) => entityMap[m.toLowerCase()] || m)
+                .replace(/&#(\d+);/g, (_, code) => {
+                    const n = parseInt(code, 10);
+                    return Number.isFinite(n) && n > 0 && n <= 0x10FFFF ? String.fromCodePoint(n) : '';
+                })
+                .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+                    const n = parseInt(hex, 16);
+                    return Number.isFinite(n) && n > 0 && n <= 0x10FFFF ? String.fromCodePoint(n) : '';
+                });
         }
 
         // ─────────────────────────────────────────────────────────────────────────
@@ -673,7 +823,7 @@
         }
 
         _applyResponsiveFontSize() {
-            if (!this.overlayText) return;
+            if (!this.overlayText || !this.container) return;
 
             const rect = this.container.getBoundingClientRect();
             const w = rect.width;
@@ -770,6 +920,7 @@
             overlay.addEventListener('touchstart', onStart, { passive: false });
             handle.addEventListener('touchstart', onStart, { passive: false });
 
+            this._drag._onMove = onMove;
             this._drag._onEnd = onEnd;
         }
 
@@ -782,10 +933,17 @@
         }
 
         _destroyDrag() {
+            if (this._drag._onMove) {
+                document.removeEventListener('mousemove', this._drag._onMove);
+                document.removeEventListener('touchmove', this._drag._onMove);
+                this._drag._onMove = null;
+            }
             if (this._drag._onEnd) {
                 document.removeEventListener('mouseup', this._drag._onEnd);
                 document.removeEventListener('touchend', this._drag._onEnd);
+                this._drag._onEnd = null;
             }
+            this._drag.active = false;
         }
 
         // ─────────────────────────────────────────────────────────────────────────
@@ -815,8 +973,17 @@
             this._panelLabel = panel.querySelector('.myetv-autosub-progress-label');
         }
 
-        _openPanel() { this.panelOpen = true; this.panelEl.classList.remove('hidden'); }
-        _closePanel() { this.panelOpen = false; this.panelEl.classList.add('hidden'); }
+        _openPanel() {
+            if (!this.panelEl) return;
+            this.panelOpen = true;
+            this.panelEl.classList.remove('hidden');
+        }
+
+        _closePanel() {
+            if (!this.panelEl) return;
+            this.panelOpen = false;
+            this.panelEl.classList.add('hidden');
+        }
 
         _updatePanel(statusText, pct) {
             const p = Math.min(100, Math.max(0, pct));
@@ -876,7 +1043,7 @@
             this.menuEl = menu;
 
             this._menuOutsideHandler = (e) => {
-                if (!menu.contains(e.target) && e.target !== btn) {
+                if (!menu.contains(e.target) && !btn.contains(e.target)) {
                     this._closeMenuNow();
                 }
             };
@@ -889,7 +1056,7 @@
         }
 
         _toggleMenu() {
-            if (!this.menuEl) return;
+            if (!this.menuEl || !this.btnEl) return;
             const isOpen = this.menuEl.classList.contains('open');
 
             if (this.player.closeAllMenus) this.player.closeAllMenus();
@@ -943,7 +1110,7 @@
             const isOn = this.subVisible;
             const translateLang = this.translateLang;
 
-            this.menuEl.innerHTML = '';
+            this.menuEl.textContent = '';
 
             // ── SECTION 1: ON / OFF ───────────────────────────────────────────────
             const sec1 = this._menuSection('Subtitles');
@@ -970,8 +1137,10 @@
                     this.subtitles = [];
                     this.subtitlesTrans = [];
                     this._transCache = {};
+                    this._lastCueKey = null;
+                    this._lastCueIndex = 0;
                     this._closeMenuNow();
-                    this.generate(); 
+                    this.generate();
                 });
 
                 const itemPanel = this._menuItem('📊 Show progress', false, !isGenerating, () => {
@@ -1052,13 +1221,19 @@
         }
 
         // ─────────────────────────────────────────────────────────────────────────
-        // PRIVATE — TRANSLATION (MyMemory API — free, no key required)
+        // PRIVATE — TRANSLATION (MyMemory / LibreTranslate / MarianMT)
         // ─────────────────────────────────────────────────────────────────────────
 
         async _setTranslationLang(langCode) {
+            if (this.isDisposed) return;
+
             this.translateLang = langCode;
+            this._lastCueKey = null;
+            this._lastCueIndex = 0;
+
             if (langCode === 'off') {
                 this.subtitlesTrans = [];
+                if (this.subVisible) this._tick();
                 if (this.player.options.debug) console.log('[AutoSub] Translation disabled');
                 return;
             }
@@ -1068,32 +1243,40 @@
                 if (this.player.options.debug) console.log('[AutoSub] Source = target lang, skipping translation');
                 this.subtitlesTrans = [];
                 this.translateLang = 'off';
+                if (this.subVisible) this._tick();
                 return;
             }
 
             if (this._transCache[langCode]) {
                 this.subtitlesTrans = this._transCache[langCode];
+                if (this.subVisible) this._tick();
                 if (this.player.options.debug) console.log('[AutoSub] Translation cache hit:', langCode);
                 return;
             }
 
             if (this.player.options.debug) console.log('[AutoSub] Translating to', langCode, '...');
+            this._isTranslating = true;
             this._setBtnGenerating(true);
 
             try {
                 const translated = await this._translateBatch(this.subtitles, langCode);
+                if (this.isDisposed) return;
+
                 this.subtitlesTrans = translated;
                 this._transCache[langCode] = translated;
-                
+                this._lastCueKey = null;
+
                 // Save translations persistently to cache
                 this._saveToCache(this.subtitles, null, null, this._lastDetectedLang);
 
+                if (this.subVisible) this._tick();
                 if (this.player.options.debug) console.log('[AutoSub] Translation done:', translated.length, 'segments');
             } catch (err) {
                 if (this.player.options.debug) console.warn('[AutoSub] Translation error:', err.message);
                 this.translateLang = 'off';
                 this.subtitlesTrans = [];
             } finally {
+                this._isTranslating = false;
                 this._setBtnGenerating(false);
             }
         }
@@ -1102,13 +1285,17 @@
             const engine = this.opts.translationEngine;
 
             if (!engine || engine.type === 'mymemory') {
-                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(sourceLang)}|${encodeURIComponent(targetLang)}`;
                 const resp = await fetch(url);
                 const json = await resp.json();
                 if (json.responseStatus && json.responseStatus !== 200) {
                     throw new Error('MyMemory error: ' + json.responseDetails + ' (status ' + json.responseStatus + ')');
                 }
                 return json.responseData?.translatedText ?? text;
+            }
+
+            if (!this._isSafeHttpUrl(engine.url)) {
+                throw new Error('Unsafe translation engine URL');
             }
 
             if (engine.type === 'libretranslate') {
@@ -1175,17 +1362,22 @@
             const engine = this.opts.translationEngine;
 
             if (engine?.type === 'libretranslate') {
+                if (!this._isSafeHttpUrl(engine.url)) {
+                    throw new Error('Unsafe LibreTranslate URL');
+                }
+
                 const BATCH_SIZE = 50;
                 const result = [];
-                
+
                 let url = engine.url.replace(/\/$/, '');
                 if (!url.endsWith('/translate') && !url.includes('.php')) url += '/translate';
 
                 for (let i = 0; i < segments.length; i += BATCH_SIZE) {
+                    if (this.isDisposed) break;
                     const batch = segments.slice(i, i + BATCH_SIZE);
                     try {
                         const body = {
-                            q: batch.map(s => s.text),  
+                            q: batch.map(s => s.text),
                             source: sourceLang,
                             target: normTarget,
                             format: 'text'
@@ -1233,10 +1425,11 @@
 
             const result = [];
             for (const batch of batches) {
+                if (this.isDisposed) break;
                 const sourceText = batch.map(s => s.text).join(SEP);
                 try {
                     const translated = await this._translateText(sourceText, sourceLang, normTarget);
-                    const parts = translated.split(SEP).map(s => s.trim().replace(/&amp;/g, '&'));
+                    const parts = translated.split(SEP).map(s => this._decodeEntitiesSafe(s.trim()));
                     batch.forEach((seg, i) => result.push({
                         start: seg.start, end: seg.end, text: parts[i] ?? seg.text
                     }));
@@ -1250,26 +1443,116 @@
         }
 
         // ─────────────────────────────────────────────────────────────────────────
-        // PRIVATE — DISPLAY
+        // PRIVATE — DISPLAY (idle-aware polling & cue caching)
         // ─────────────────────────────────────────────────────────────────────────
 
         _startDisplay() {
             this._stopDisplay();
-            this._applyResponsiveFontSize(); 
-            this.updateInterval = setInterval(() => this._tick(), 80);
+            this._applyResponsiveFontSize();
+            this._lastCueKey = null;
+
+            const startPolling = () => {
+                if (!this.subVisible || this.isDisposed || this.updateInterval) return;
+                this.updateInterval = setInterval(() => this._tick(), 80);
+            };
+
+            const pausePolling = () => {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                    this.updateInterval = null;
+                }
+            };
+
+            if (this.video) {
+                this._videoPlaybackHandlers = {
+                    onPlay: () => { startPolling(); this._tick(); },
+                    onPause: () => { pausePolling(); this._tick(); },
+                    onEnded: () => { pausePolling(); this._tick(); },
+                    onSeeked: () => { this._tick(); }
+                };
+                this.video.addEventListener('play', this._videoPlaybackHandlers.onPlay);
+                this.video.addEventListener('playing', this._videoPlaybackHandlers.onPlay);
+                this.video.addEventListener('pause', this._videoPlaybackHandlers.onPause);
+                this.video.addEventListener('ended', this._videoPlaybackHandlers.onEnded);
+                this.video.addEventListener('seeked', this._videoPlaybackHandlers.onSeeked);
+            }
+
+            // Start polling only when video is actively playing; always render current position immediately
+            this._tick();
+            if (!this.video || (!this.video.paused && !this.video.ended)) {
+                startPolling();
+            }
         }
 
         _stopDisplay() {
-            if (this.updateInterval) { clearInterval(this.updateInterval); this.updateInterval = null; }
+            if (this.updateInterval) {
+                clearInterval(this.updateInterval);
+                this.updateInterval = null;
+            }
+            if (this.video && this._videoPlaybackHandlers) {
+                this.video.removeEventListener('play', this._videoPlaybackHandlers.onPlay);
+                this.video.removeEventListener('playing', this._videoPlaybackHandlers.onPlay);
+                this.video.removeEventListener('pause', this._videoPlaybackHandlers.onPause);
+                this.video.removeEventListener('ended', this._videoPlaybackHandlers.onEnded);
+                this.video.removeEventListener('seeked', this._videoPlaybackHandlers.onSeeked);
+                this._videoPlaybackHandlers = null;
+            }
         }
 
         _clearOverlay() {
-            this.overlayEl.classList.add('hidden');
-            this.overlayText.textContent = '';
+            this._lastCueKey = null;
+            if (this.overlayEl) this.overlayEl.classList.add('hidden');
+            if (this.overlayText) this.overlayText.textContent = '';
+        }
+
+        /**
+         * Find active subtitle segment using O(1) sequential check + O(log N) binary search fallback
+         */
+        _findActiveCue(pool, t) {
+            const len = pool.length;
+            if (len === 0) return null;
+
+            // Fast path: check cached index and its immediate successor
+            if (this._lastCueIndex >= 0 && this._lastCueIndex < len) {
+                const cur = pool[this._lastCueIndex];
+                if (t >= cur.start && t < cur.end) return cur;
+
+                const nextIdx = this._lastCueIndex + 1;
+                if (nextIdx < len) {
+                    const next = pool[nextIdx];
+                    if (t >= next.start && t < next.end) {
+                        this._lastCueIndex = nextIdx;
+                        return next;
+                    }
+                    // Still in gap before next cue
+                    if (t >= cur.end && t < next.start) {
+                        return null;
+                    }
+                }
+            }
+
+            // Binary search fallback (after seek or initial start)
+            let lo = 0;
+            let hi = len - 1;
+            while (lo <= hi) {
+                const mid = (lo + hi) >> 1;
+                const seg = pool[mid];
+                if (t < seg.start) {
+                    hi = mid - 1;
+                } else if (t >= seg.end) {
+                    lo = mid + 1;
+                } else {
+                    this._lastCueIndex = mid;
+                    return seg;
+                }
+            }
+
+            this._lastCueIndex = Math.max(0, Math.min(len - 1, lo));
+            return null;
         }
 
         _tick() {
-            if (!this.subVisible) return;
+            if (!this.subVisible || !this.overlayEl || !this.overlayText || !this.video) return;
 
             const pool = (this.translateLang !== 'off' && this.subtitlesTrans.length > 0)
                 ? this.subtitlesTrans
@@ -1278,7 +1561,13 @@
             if (pool.length === 0) return;
 
             const t = this.video.currentTime;
-            const cur = pool.find(s => t >= s.start && t < s.end);
+            const cur = this._findActiveCue(pool, t);
+            const cueKey = cur ? `${cur.start}:${cur.end}:${cur.text}` : '';
+
+            // Skip DOM mutations when the displayed subtitle has not changed
+            if (cueKey === this._lastCueKey) return;
+            this._lastCueKey = cueKey;
+
             if (cur) {
                 this.overlayText.textContent = cur.text;
                 this.overlayEl.classList.remove('hidden');
@@ -1354,6 +1643,9 @@
         }
 
         async _extractAudioFromDash(mpdUrl) {
+            if (!this._isSafeHttpUrl(mpdUrl)) {
+                throw new Error('Unsafe MPD URL');
+            }
             this._updatePanel('Fetching DASH manifest...', 8);
 
             const resp = await fetch(mpdUrl, { mode: 'cors', credentials: 'omit' });
@@ -1374,7 +1666,7 @@
             const representation = this._findLowestBitrateRepresentation(audioSet);
             if (!representation) throw new Error('No audio Representation found');
 
-            const segmentUrls = this._buildSegmentUrlList(mpdDoc, audioSet, representation, baseUrl);
+            const segmentUrls = this._buildSegmentUrlList(mpdDoc, audioSet, representation, baseUrl).filter(Boolean);
             if (segmentUrls.length === 0) throw new Error('No audio segments found in MPD');
 
             if (this.player.options.debug)
@@ -1386,6 +1678,7 @@
             const segmentBuffers = new Array(segmentUrls.length);
 
             for (let i = 0; i < segmentUrls.length; i += BATCH) {
+                if (this.isDisposed) throw new Error('Plugin disposed');
                 const batchUrls = segmentUrls.slice(i, i + BATCH);
                 const results = await Promise.all(
                     batchUrls.map(url =>
@@ -1518,10 +1811,15 @@
         }
 
         _resolveUrl(url, baseUrl) {
-            if (!url) return '';
-            if (url.startsWith('http://') || url.startsWith('https://')) return url;
-            if (url.startsWith('/')) return new URL(url, baseUrl).href;
-            return baseUrl + url;
+            if (!url || typeof url !== 'string') return '';
+            const trimmed = url.trim();
+            try {
+                const resolved = new URL(trimmed, baseUrl);
+                if (resolved.protocol === 'http:' || resolved.protocol === 'https:') {
+                    return resolved.href;
+                }
+            } catch (_) { }
+            return '';
         }
 
         _parseDuration(iso) {
@@ -1584,18 +1882,28 @@
                 const stop = () => {
                     if (stopped) return;
                     stopped = true;
+                    this._activeCaptureStop = null;
                     if (this._captureProgressInterval) {
                         clearInterval(this._captureProgressInterval);
                         this._captureProgressInterval = null;
                     }
+                    if (this._captureTimer) {
+                        clearTimeout(this._captureTimer);
+                        this._captureTimer = null;
+                    }
+                    if (this.video && this._captureVideoEndedHandler) {
+                        this.video.removeEventListener('ended', this._captureVideoEndedHandler);
+                        this._captureVideoEndedHandler = null;
+                    }
                     if (recorder.state !== 'inactive') recorder.stop();
                 };
 
+                this._activeCaptureStop = stop;
                 this._onAudioChunkReady = null;
                 this._onCaptureStop = null;
 
                 recorder.ondataavailable = async (e) => {
-                    if (e.data.size === 0) return;
+                    if (this.isDisposed || e.data.size === 0) return;
                     chunkQueue.push(e.data);
 
                     const totalSize = chunkQueue.reduce((s, b) => s + b.size, 0);
@@ -1611,6 +1919,7 @@
                 };
 
                 recorder.onstop = async () => {
+                    if (this.isDisposed) return;
                     if (chunkQueue.length > 0 && this._onAudioChunkReady) {
                         const blob = new Blob([...chunkQueue], { type: recorder.mimeType || 'audio/webm' });
                         chunkQueue.length = 0;
@@ -1628,14 +1937,16 @@
                 if (duration) {
                     const captureStart = this.video.currentTime;
                     this._captureProgressInterval = setInterval(() => {
+                        if (this.isDisposed) {
+                            stop();
+                            return;
+                        }
                         const elapsed = this.video.currentTime - captureStart;
                         const pct = Math.min(30, 8 + Math.round((elapsed / duration) * 22));
                         this._updatePanel(
                             `Capturing audio... ${Math.round((elapsed / duration) * 100)}%`, pct
                         );
                         if (elapsed >= duration - 0.5) {
-                            clearInterval(this._captureProgressInterval);
-                            this._captureProgressInterval = null;
                             stop();
                         }
                     }, 500);
@@ -1643,7 +1954,8 @@
                     this._captureTimer = setTimeout(stop, (duration + 3) * 1000);
                 }
 
-                this.video.addEventListener('ended', stop, { once: true });
+                this._captureVideoEndedHandler = stop;
+                this.video.addEventListener('ended', this._captureVideoEndedHandler, { once: true });
 
                 recorder.start(2000);
 
@@ -1717,6 +2029,18 @@ self.onmessage = async function(e) {
             return worker;
         }
 
+        _revokeWorkerUrls(worker) {
+            if (!worker) return;
+            if (worker._bundleURL) {
+                URL.revokeObjectURL(worker._bundleURL);
+                worker._bundleURL = null;
+            }
+            if (worker._workerURL) {
+                URL.revokeObjectURL(worker._workerURL);
+                worker._workerURL = null;
+            }
+        }
+
         _sendChunk(worker, float32Audio, index, chunkSize, totalChunks, lang, chunkSec) {
             const offset = index * chunkSize;
             const chunk = float32Audio.slice(offset, offset + chunkSize);
@@ -1751,6 +2075,7 @@ self.onmessage = async function(e) {
                 const promise = new Promise((res, rej) => { resolveAll = res; rejectAll = rej; });
 
                 const decodeAndTranscribe = async (blob, offset, isLast) => {
+                    if (this.isDisposed) return;
                     try {
                         const arrayBuffer = await blob.arrayBuffer();
                         const nativeCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1771,6 +2096,7 @@ self.onmessage = async function(e) {
                             float32 = Float32Array.from(resampled.getChannelData(0));
                         }
 
+                        if (this.isDisposed || !this._worker) return;
                         worker.postMessage(
                             {
                                 type: 'transcribe', payload: {
@@ -1789,18 +2115,20 @@ self.onmessage = async function(e) {
                 };
 
                 const processNext = () => {
-                    if (activeJob || jobQueue.length === 0) return;
+                    if (activeJob || jobQueue.length === 0 || this.isDisposed) return;
                     activeJob = true;
                     const job = jobQueue.shift();
                     decodeAndTranscribe(job.blob, job.offset, job.isLast);
                 };
 
                 worker.onerror = e => {
+                    this._revokeWorkerUrls(worker);
                     worker.terminate(); this._worker = null;
                     rejectAll(new Error('Worker error: ' + (e.message || String(e))));
                 };
 
                 worker.onmessage = ({ data }) => {
+                    if (this.isDisposed) return;
                     const { type, payload } = data;
 
                     if (type === 'progress' && payload.total) {
@@ -1809,8 +2137,7 @@ self.onmessage = async function(e) {
                     }
 
                     if (type === 'ready') {
-                        URL.revokeObjectURL(worker._bundleURL);
-                        URL.revokeObjectURL(worker._workerURL);
+                        this._revokeWorkerUrls(worker);
                         workerReady = true;
                         this._updatePanel('Worker ready — waiting for audio chunks...', 55);
                         pendingChunks.forEach(j => jobQueue.push(j));
@@ -1847,8 +2174,7 @@ self.onmessage = async function(e) {
                     }
 
                     if (type === 'error') {
-                        URL.revokeObjectURL(worker._bundleURL);
-                        URL.revokeObjectURL(worker._workerURL);
+                        this._revokeWorkerUrls(worker);
                         worker.terminate(); this._worker = null;
                         rejectAll(new Error(payload));
                     }
@@ -1890,13 +2216,13 @@ self.onmessage = async function(e) {
 
             return new Promise((resolve, reject) => {
                 worker.onerror = e => {
-                    URL.revokeObjectURL(worker._bundleURL);
-                    URL.revokeObjectURL(worker._workerURL);
+                    this._revokeWorkerUrls(worker);
                     worker.terminate(); this._worker = null;
                     reject(new Error('Worker error: ' + (e.message || String(e))));
                 };
 
                 worker.onmessage = ({ data }) => {
+                    if (this.isDisposed) return;
                     const { type, payload } = data;
 
                     if (type === 'progress' && payload.total) {
@@ -1905,8 +2231,7 @@ self.onmessage = async function(e) {
                     }
 
                     if (type === 'ready') {
-                        URL.revokeObjectURL(worker._bundleURL);
-                        URL.revokeObjectURL(worker._workerURL);
+                        this._revokeWorkerUrls(worker);
                         if (this.player.options.debug) console.log('[AutoSub] Worker ready — sending chunk', startChunk + 1, 'of', totalChunks);
                         this._updatePanel('Transcribing chunk ' + (startChunk + 1) + ' of ' + totalChunks + '...', 64);
                         this._sendChunk(worker, float32Audio, startChunk, chunkSize, totalChunks, detectedLang, CHUNK_SEC);
@@ -1919,7 +2244,6 @@ self.onmessage = async function(e) {
                             detectedLang = payload.detectedLang;
                             if (this.player.options.debug) console.log('[AutoSub] Language auto-detected:', detectedLang);
                         }
-                        this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
 
                         let rawChunks = (result.chunks || [])
                             .filter(c => c.text?.trim())
@@ -1936,12 +2260,13 @@ self.onmessage = async function(e) {
                         const normalized = this._normalizeChunks(rawChunks);
                         this.subtitles.push(...normalized);
 
+                        // Save once per completed chunk after appending normalized cues
                         this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
 
                         if (this.translateLang && this.translateLang !== 'off' && normalized.length > 0) {
                             const currentLang = this.translateLang;
                             this._translateBatch(normalized, currentLang).then(translated => {
-                                if (this.translateLang === currentLang) {
+                                if (!this.isDisposed && this.translateLang === currentLang) {
                                     this.subtitlesTrans.push(...translated);
                                     this.subtitlesTrans.sort((a, b) => a.start - b.start);
 
@@ -1951,13 +2276,12 @@ self.onmessage = async function(e) {
                                     this._saveToCache(this.subtitles, chunkIndex + 1, totalChunks, detectedLang);
                                 }
                             }).catch(() => {
-                                if (this.translateLang === currentLang) {
+                                if (!this.isDisposed && this.translateLang === currentLang) {
                                     this.subtitlesTrans.push(...normalized);
                                     this.subtitlesTrans.sort((a, b) => a.start - b.start);
                                 }
                             });
                         }
-
 
                         const next = chunkIndex + 1;
                         if (next < totalChunks) {
@@ -1967,14 +2291,13 @@ self.onmessage = async function(e) {
                         } else {
                             if (this.player.options.debug) console.log('[AutoSub] All chunks done, subtitles:', this.subtitles.length);
                             worker.terminate(); this._worker = null;
-                            resolve();
                             this._lastDetectedLang = detectedLang;
+                            resolve();
                         }
                     }
 
                     if (type === 'error') {
-                        URL.revokeObjectURL(worker._bundleURL);
-                        URL.revokeObjectURL(worker._workerURL);
+                        this._revokeWorkerUrls(worker);
                         worker.terminate(); this._worker = null;
                         reject(new Error(payload));
                     }
@@ -2042,20 +2365,45 @@ self.onmessage = async function(e) {
             }
         }
 
+        _sanitizeCueList(list) {
+            if (!Array.isArray(list)) return [];
+            return list.filter(s =>
+                s &&
+                typeof s === 'object' &&
+                typeof s.start === 'number' && Number.isFinite(s.start) &&
+                typeof s.end === 'number' && Number.isFinite(s.end) &&
+                typeof s.text === 'string'
+            ).map(s => ({ start: s.start, end: s.end, text: s.text }));
+        }
+
         _loadFromCache() {
             if (!this.opts.cacheEnabled) return null;
             try {
                 const raw = localStorage.getItem(this._getCacheKey());
                 if (!raw) return null;
                 const parsed = JSON.parse(raw);
-                if (!Array.isArray(parsed.subtitles) || !parsed.subtitles.length) return null;
+                const safeSubtitles = this._sanitizeCueList(parsed?.subtitles);
+                if (!safeSubtitles.length) return null;
+
+                const safeTransCache = {};
+                if (parsed.transCache && typeof parsed.transCache === 'object' && !Array.isArray(parsed.transCache)) {
+                    for (const langKey of Object.keys(parsed.transCache)) {
+                        if (!DANGEROUS_KEYS.has(langKey) && /^[a-zA-Z0-9_-]+$/.test(langKey)) {
+                            const sanitizedList = this._sanitizeCueList(parsed.transCache[langKey]);
+                            if (sanitizedList.length) {
+                                safeTransCache[langKey] = sanitizedList;
+                            }
+                        }
+                    }
+                }
+
                 return {
-                    subtitles: parsed.subtitles,
+                    subtitles: safeSubtitles,
                     chunksCompleted: parsed.chunksCompleted ?? null,
                     totalChunks: parsed.totalChunks ?? null,
-                    detectedLang: parsed.detectedLang ?? null,
-                    transCache: parsed.transCache || {},
-                    isImportedSubs: parsed.isImportedSubs || false
+                    detectedLang: typeof parsed.detectedLang === 'string' ? parsed.detectedLang : null,
+                    transCache: safeTransCache,
+                    isImportedSubs: Boolean(parsed.isImportedSubs)
                 };
             } catch {
                 return null;

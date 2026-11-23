@@ -12,7 +12,7 @@
 
             const defaultSlideDuration =
                 options.slideDuration !== undefined ? Number(options.slideDuration) :
-                    options.duration !== undefined ? Number(options.duration) : 5000;
+                options.duration !== undefined ? Number(options.duration) : 5000;
 
             this.options = {
                 // Media input: string, object, or array of strings/objects
@@ -78,6 +78,8 @@
             this.lastTickTime = null;
             this.lastTimeUpdateEvent = 0;
             this.currentImageLoaded = false;
+            this._allowLoadingOverlay = false;
+            this.loadingDelayTimer = null;
 
             // Zoom & Pan state
             this.zoom = 1;
@@ -112,6 +114,7 @@
             // Backup for overridden player methods & hidden controls
             this.originalMethods = {};
             this.hiddenControlElements = [];
+            this.savedVideoSources = [];
             this.boundListeners = [];
             this.initialTitle = this.player.options.videoTitle || '';
             this.initialSubtitle = this.player.options.videoSubtitle || '';
@@ -141,6 +144,21 @@
                 return this.player.decodeHTMLEntities(text);
             }
             return text;
+        }
+
+        /**
+         * Force-clear the player loading overlay safely
+         */
+        forceHidePlayerLoading() {
+            if (this.loadingDelayTimer) {
+                clearTimeout(this.loadingDelayTimer);
+                this.loadingDelayTimer = null;
+            }
+            this._allowLoadingOverlay = false;
+            this.player.hideLoading();
+            if (this.player.loadingOverlay) {
+                this.player.loadingOverlay.classList.remove('active');
+            }
         }
 
         /**
@@ -225,6 +243,9 @@
             this.bindStageEvents();
             this.bindKeyboardEvents();
 
+            // Clear any loading overlay triggered by native video initialization
+            this.forceHidePlayerLoading();
+
             // Load initial slide
             this.renderSlide(0, { instant: true });
             this.syncTimelineUI();
@@ -234,7 +255,9 @@
             const onReady = () => {
                 if (this.isDisposed) return;
 
-                this.player.hideLoading();
+                if (this.currentImageLoaded) {
+                    this.forceHidePlayerLoading();
+                }
                 this.syncTimelineUI();
                 this.createSlideMarkers();
 
@@ -496,7 +519,11 @@
 
             this.player.originalSrc = null;
             this.player.originalSources = [];
+            this.savedVideoSources = Array.from(video.querySelectorAll('source'));
+            this.savedVideoSources.forEach((srcEl) => srcEl.remove());
+
             video.pause();
+            video.preload = 'none';
             video.removeAttribute('src');
             video.style.display = 'none';
 
@@ -689,6 +716,13 @@
             override('togglePlayPause', () => self.togglePlayPause());
             override('isPaused', () => !self.isPlaying);
             override('restartVideo', () => self.restart());
+
+            // Prevent native <video> loadstart/waiting events from showing the loading overlay
+            override('showLoading', () => {
+                if (self._allowLoadingOverlay && !self.currentImageLoaded && self.originalMethods.showLoading) {
+                    self.originalMethods.showLoading.call(p);
+                }
+            });
 
             override('getCurrentTime', () => self.currentTimeMs / 1000);
             override('setCurrentTime', (sec) => {
@@ -1074,6 +1108,10 @@
                 }
             }
 
+            if (this.currentImageLoaded) {
+                this.forceHidePlayerLoading();
+            }
+
             if (this.isPlaying) return;
 
             this.isPlaying = true;
@@ -1323,6 +1361,11 @@
             const prevIndex = this.currentIndex;
             this.currentIndex = index;
 
+            if (this.loadingDelayTimer) {
+                clearTimeout(this.loadingDelayTimer);
+                this.loadingDelayTimer = null;
+            }
+
             if (this.options.resetZoomOnSlideChange) {
                 this.resetZoom(false);
             }
@@ -1355,10 +1398,14 @@
             this.activeImg = newImg;
             this.viewportElement.appendChild(newImg);
 
-            newImg.onload = () => {
-                if (this.isDisposed || this.activeImg !== newImg) return;
+            let finalized = false;
+
+            const finalizeImageLoad = () => {
+                if (finalized || this.isDisposed || this.activeImg !== newImg) return;
+                finalized = true;
+
                 this.currentImageLoaded = true;
-                this.player.hideLoading();
+                this.forceHidePlayerLoading();
 
                 requestAnimationFrame(() => {
                     newImg.style.opacity = '1';
@@ -1385,10 +1432,14 @@
                 }
             };
 
+            newImg.onload = finalizeImageLoad;
+
             newImg.onerror = () => {
-                if (this.isDisposed || this.activeImg !== newImg) return;
+                if (finalized || this.isDisposed || this.activeImg !== newImg) return;
+                finalized = true;
+
                 this.currentImageLoaded = true;
-                this.player.hideLoading();
+                this.forceHidePlayerLoading();
                 if (previousImg && previousImg.parentNode) previousImg.remove();
 
                 const errDiv = document.createElement('div');
@@ -1399,7 +1450,16 @@
 
             newImg.src = slide.src;
             if (newImg.complete && newImg.naturalWidth > 0) {
-                newImg.onload();
+                finalizeImageLoad();
+            } else {
+                // Delay spinner by 100ms so cached images never trigger a stuck loading overlay
+                this.loadingDelayTimer = setTimeout(() => {
+                    this.loadingDelayTimer = null;
+                    if (!this.isDisposed && !this.currentImageLoaded && this.activeImg === newImg) {
+                        this._allowLoadingOverlay = true;
+                        this.player.showLoading();
+                    }
+                }, 100);
             }
 
             // Update counter & arrow states
@@ -1675,6 +1735,7 @@
 
         dispose() {
             this.isDisposed = true;
+            this.forceHidePlayerLoading();
             this.stopTickLoop();
 
             // Remove all bound event listeners
@@ -1704,6 +1765,8 @@
                 this.player.container.classList.remove('myetv-image-gallery-active');
             }
             if (this.player.video) {
+                this.savedVideoSources.forEach((srcEl) => this.player.video.appendChild(srcEl));
+                this.savedVideoSources = [];
                 this.player.video.style.display = '';
             }
         }
